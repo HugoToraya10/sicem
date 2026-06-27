@@ -17,4 +17,5 @@ app.get('/ping', (req, res) => {
 
 app.use('/usuarios', userRoutes)
 
+
 app.listen(PORT, () => {console.log(`Servicio de usuarios. Puerto: ${PORT}`)})

@@ -1,18 +1,106 @@
 const db = require('../config/db')
 
 const createCredential = (email, passwordHash, callback) => {
-    const sql = `INSERT INTO user_credentials (email, password_hash, created_at,
-    is_active) VALUES (?, ?, NOW(), 1)`;
+    const sql = `INSERT INTO user_credentials (email, password_hash, created_at, updated_at, is_active) VALUES (?, ?, NOW(), NOW(), 1)`;
 
     db.query(sql, [email, passwordHash], callback);
 }
 
-const createProfile = (userId, institutionId, roleId, firstName, firstSurname, secondSurname, phone, callback) => {
+const createProfile = (userCredentialId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
+                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone, callback) => {
     const sql = `INSERT INTO user_profiles (user_credential_id, institution_id, role_id, first_name, first_surname,
-    second_surname, phone_number, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`;
+    second_surname, phone_number, birth_date, curp, emergency_contact, emergency_phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
 
-    const values = [userId, institutionId, roleId, firstName, firstSurname, secondSurname, phone]
+    const values = [userCredentialId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
+                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone]
+
+    db.query(sql, values, callback);
+
+}
+
+const login = (email, callback) => {
+    const sql = `SELECT t1.user_profile_id, t1.role_id, t2.user_credential_id, t2.email, t2.password_hash FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
+	t1.USER_CREDENTIAL_ID = t2.USER_CREDENTIAL_ID WHERE t2.EMAIL = ?`;
+    db.query(sql, [email], callback);
+}
+
+const toggleActiveUser = (userCredentialId, callback) => {
+    const sql = `UPDATE user_credentials SET is_active = NOT is_active, updated_at = NOW() WHERE user_credential_id = ?`;
+    db.query(sql, [userCredentialId], callback);
+}
+
+const requestUserStatus = (userCredentialId, callback) => {
+    const sql = `SELECT is_active FROM user_credentials WHERE user_credential_id = ?`;
+    db.query(sql, [userCredentialId], callback);
+}
+
+const editUserProfile = (userProfileId, institutionId, roleId, firstName, firstSurname, secondSurname, phone, birth,
+    cveUnicaRegistroPob, emergencyContact, emergencyPhone, callback) => {
+    const sql = `UPDATE user_profiles SET institution_id = ?, role_id = ?, first_name = ?, first_surname = ?, second_surname = ?,
+    phone_number = ?, birth_date = ?, curp = ?, emergency_contact = ?, emergency_phone = ?, updated_at = NOW() WHERE user_profile_id = ?`;
+    
+    const values = [institutionId, roleId, firstName, firstSurname, secondSurname, phone, birth,
+    cveUnicaRegistroPob, emergencyContact, emergencyPhone, userProfileId]
+
+    db.query(sql, values, callback)
+}
+
+const editUserCredentials = (userCredentialId, email, password, callback) => {
+    const sql = `UPDATE user_credentials SET email = ?, password_hash = ?, updated_at = NOW() WHERE user_credential_id = ?`;
+    const values = [email, password, userCredentialId];
     db.query(sql, values, callback);
 }
 
-module.exports = {createCredential, createProfile}
+
+
+
+const getAllUsers = (callback) => {
+    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname, 
+                t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
+                t2.email, t2.is_active, t2.user_credential_id,
+                t1.institution_id, t1.role_id
+                FROM user_profiles t1
+                LEFT JOIN user_credentials t2 ON t1.user_credential_id = t2.user_credential_id`;
+    db.query(sql, callback);
+}
+
+const getUserById = (userProfileId, callback) => {
+    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
+                t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
+                t2.email, t2.is_active, t2.user_credential_id,
+                t1.institution_id, t1.role_id
+                FROM user_profiles t1
+                LEFT JOIN user_credentials t2 ON t1.user_credential_id = t2.user_credential_id
+                WHERE t1.user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
+}
+
+const getAllRoles = (callback) => {
+    const sql = `SELECT * FROM roles`;
+    db.query(sql, callback);
+}
+
+const getAllInstitutions = (callback) => {
+    const sql = `SELECT * FROM institutions`;
+    db.query(sql, callback);
+}
+
+const getAllInstitutionTypes = (callback) => {
+    const sql = `SELECT * FROM institution_types`;
+    db.query(sql, callback);
+}
+
+const getAllStates = (callback) => {
+    const sql = `SELECT * FROM states ORDER BY name ASC`;
+    db.query(sql, callback);
+}
+
+const getCitiesByState = (stateId, callback) => {
+    const sql = `SELECT * FROM cities WHERE state_id = ?`;
+    db.query(sql, [stateId], callback);
+}
+
+
+module.exports = { createCredential, createProfile, login, toggleActiveUser, requestUserStatus, 
+                editUserProfile, editUserCredentials, getAllUsers, getUserById, 
+                getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState }

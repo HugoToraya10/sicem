@@ -1,0 +1,21 @@
+const express = require('express')
+const cors = require('cors')
+require('dotenv').config()
+const db = require('./config/db')
+const patientRoutes = require('./routes/patient')
+
+const app = express();
+const PORT = process.env.PORT
+
+
+app.use(cors())
+app.use(express.json())
+
+app.get('/ping', (req, res) => {
+    res.json({mensaje:'pong'})
+})
+
+app.use('/pacientes', patientRoutes)
+
+
+app.listen(PORT, () => {console.log(`Servicio de pacientes. Puerto: ${PORT}`)})
