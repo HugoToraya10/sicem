@@ -19,7 +19,7 @@ const createProfile = (userCredentialId, institutionId, roleId, firstName, first
 }
 
 const login = (email, callback) => {
-    const sql = `SELECT t1.user_profile_id, t1.role_id, t2.user_credential_id, t2.email, t2.password_hash FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
+    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.role_id, t2.user_credential_id, t2.email, t2.password_hash FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
 	t1.USER_CREDENTIAL_ID = t2.USER_CREDENTIAL_ID WHERE t2.EMAIL = ?`;
     db.query(sql, [email], callback);
 }

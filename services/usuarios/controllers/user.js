@@ -137,10 +137,14 @@ const login = (req, res) => {
             return res.status(404).json({ message: "Error leyendo datos" });
           } else {
             if (r === true) {
+              let userFirstName = result[0].first_name
+              let userFirstSurname = result[0].first_surname
+              let userProfileId = result[0].user_profile_id
+              let roleId = result[0].role_id
               let payload = {
-                userProfileId: result[0].user_profile_id,
+                userProfileId: userProfileId,
                 userCredentialId: result[0].user_credential_id,
-                roleId: result[0].role_id,
+                roleId: roleId,
               };
               let jwtOptions = {
                 expiresIn: "8h",
@@ -149,7 +153,9 @@ const login = (req, res) => {
               let token = jwt.sign(payload, jwtKey, jwtOptions);
               return res
                 .status(200)
-                .json({ message: "Ingreso exitoso", jwtToken: token });
+                .json({ message: "Ingreso exitoso", jwtToken: token,
+                  user : {
+                    profileId:userProfileId, role:roleId, firstName:userFirstName, firstSurname:userFirstSurname}});
             } else {
               return res.status(401).json({ message: "Las credenciales son incorrectas" });
             }
