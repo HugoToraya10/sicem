@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {useAuth} from "../context/AuthContext";
+import {useNavigate} from "react-router-dom"
 
 const Login = () => {
     const {user, token, login, logout} = useAuth();
     const [email, setEmail] = useState('');
     const [pass, setPass] = useState('');
+    const navigate = useNavigate();
 
     return (
         <>
@@ -22,7 +24,13 @@ const Login = () => {
                     })
                 })
                 .then(res => res.json())
-                .then(data => { login(data.jwtToken, data.user) })
+                .then(data => { 
+                    if (data.jwtToken) {
+                        login(data.jwtToken, data.user); navigate('/dashboard') 
+                    }
+                    else {
+                        console.error(data.message);
+                    }})
                 .catch((error) => {console.error('Ocurrió un error', error)})
             }
             }>Login</button>
