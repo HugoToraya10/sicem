@@ -60,7 +60,7 @@ const Dashboard = () => {
                                 statusLabel={em.status_name}
                                 severity={/* TODO (Hugo): derivar de em.emergency_type_id o triage */ 'stable'}
                                 onCardClick={()=>{
-                                    
+                                    navigate(`/EmergencyCard/${emergency_id}`)
                                 }}
                             />
                         ))}
