@@ -7,6 +7,8 @@
     padding: 0 24px;
     height: 52px;
     border-bottom: 1px solid #23233a;
+    position: relative;
+    z-index: 100;
 }
 
 .navbar-logo {
@@ -20,9 +22,10 @@
 .navbar-links {
     display: flex;
     gap: 28px;
+    align-items: center;
 }
 
-.navbar-links a {
+.navbar-links > a {
     color: #8888a0;
     font-size: 13px;
     font-weight: 500;
@@ -32,15 +35,89 @@
     transition: color 0.15s ease;
 }
 
-.navbar-links a:hover {
+.navbar-links > a:hover {
     color: #d0d0e0;
 }
 
-.navbar-links a.active {
+.navbar-links > a.active {
     color: white;
     border-bottom-color: var(--role-accent, #C0272D);
 }
 
+/* ── Dropdown de Administrador ──────────────────────────── */
+.navbar-dropdown {
+    position: relative;
+}
+
+.navbar-dropdown-trigger {
+    background: none;
+    border: none;
+    color: #8888a0;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.15s ease;
+}
+
+.navbar-dropdown-trigger:hover {
+    color: #d0d0e0;
+}
+
+.navbar-dropdown-trigger.active {
+    color: white;
+    border-bottom-color: var(--role-accent, #C0272D);
+}
+
+.navbar-dropdown-arrow {
+    font-size: 10px;
+    transition: transform 0.15s ease;
+}
+
+.navbar-dropdown-arrow.open {
+    transform: rotate(180deg);
+}
+
+.navbar-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    background: #1a1a2e;
+    border: 1px solid #2a2a45;
+    border-radius: 6px;
+    padding: 6px;
+    min-width: 160px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.navbar-dropdown-menu a {
+    color: #b0b0c0;
+    font-size: 12.5px;
+    text-decoration: none;
+    padding: 8px 10px;
+    border-radius: 4px;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.navbar-dropdown-menu a:hover {
+    background: #2a2a45;
+    color: white;
+}
+
+.navbar-dropdown-menu a.active {
+    background: #2a2a45;
+    color: var(--role-accent, #C0272D);
+    font-weight: 600;
+}
+
+/* ── Usuario ─────────────────────────────────────────────── */
 .navbar-user {
     font-size: 12px;
     color: #8888a0;

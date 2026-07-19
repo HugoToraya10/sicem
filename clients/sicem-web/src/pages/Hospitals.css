@@ -1,0 +1,111 @@
+.hospitals-page {
+    min-height: 100vh;
+    background: #f0f2f5;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.hospitals-body {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 24px 32px;
+}
+
+.hospitals-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+}
+
+.hospitals-subtitle {
+    font-size: 12.5px;
+    color: #8888a0;
+    margin-bottom: 20px;
+}
+
+.hospitals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.hospital-card {
+    background: white;
+    border: 1px solid #e4e4ec;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.hospital-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 12px;
+}
+
+.hospital-beds-row {
+    margin-bottom: 14px;
+}
+
+.hospital-beds-numbers {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    margin-bottom: 6px;
+}
+
+.beds-available {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.beds-total {
+    font-size: 11.5px;
+    color: #999;
+}
+
+.hospital-progress-bar {
+    height: 6px;
+    background: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.hospital-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+}
+
+.fill-low { background: #2E7D32; }
+.fill-mid { background: #E67E22; }
+.fill-high { background: #C0272D; }
+
+.hospital-specialities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.speciality-tag {
+    background: #f0f2f5;
+    color: #555;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+.speciality-empty {
+    font-size: 10.5px;
+    color: #bbb;
+    font-style: italic;
+}
+
+.hospitals-empty {
+    padding: 32px;
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+}

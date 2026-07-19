@@ -1,0 +1,291 @@
+.institutions-page {
+    min-height: 100vh;
+    background: #f0f2f5;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.institutions-body {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 24px 32px;
+}
+
+.institutions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.institutions-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.institutions-header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.institutions-add-btn {
+    background: #C0272D;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.institutions-add-btn:hover {
+    background: #a3181e;
+}
+
+.institutions-secondary-btn {
+    background: white;
+    color: #1a1a2e;
+    border: 1px solid #dcdce4;
+    border-radius: 6px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.institutions-secondary-btn:hover {
+    border-color: #1a1a2e;
+}
+
+.institutions-form {
+    background: white;
+    border: 1px solid #e4e4ec;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.institutions-form h3 {
+    font-size: 14px;
+    color: #1a1a2e;
+}
+
+.institutions-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.institutions-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.institutions-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.institutions-field input,
+.institutions-field select {
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.institutions-field input:focus,
+.institutions-field select:focus {
+    outline: none;
+    border-color: #C0272D;
+}
+
+.institutions-form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.institutions-form-submit {
+    background: #C0272D;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.institutions-form-cancel {
+    background: white;
+    color: #666;
+    border: 1px solid #dcdce4;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.institutions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.institution-admin-card {
+    background: white;
+    border: 1px solid #e4e4ec;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.institution-admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+
+.institution-admin-header h4 {
+    font-size: 13px;
+    color: #1a1a2e;
+    flex: 1;
+}
+
+.institutions-status {
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.status-active { background: #e2efda; color: #276221; }
+.status-inactive { background: #ffc7ce; color: #9c0006; }
+
+.institution-admin-beds {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.beds-current {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.beds-total {
+    font-size: 11px;
+    color: #999;
+}
+
+.institution-admin-specialities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 12px;
+    min-height: 22px;
+}
+
+.speciality-chip {
+    background: #f0f2f5;
+    color: #555;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+.no-specialities {
+    font-size: 10.5px;
+    color: #bbb;
+    font-style: italic;
+}
+
+.institution-admin-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.institutions-edit-btn,
+.institutions-toggle-btn {
+    background: white;
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    flex: 1;
+}
+
+.institutions-edit-btn:hover {
+    border-color: #1a1a2e;
+    color: #1a1a2e;
+}
+
+.institutions-toggle-btn:hover {
+    border-color: #C0272D;
+    color: #C0272D;
+}
+
+.beds-edit-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.beds-edit-form input {
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 6px 8px;
+    font-size: 12px;
+    grid-column: span 1;
+}
+
+.beds-edit-form button {
+    grid-column: span 1;
+    border: none;
+    border-radius: 5px;
+    padding: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.beds-edit-form button[type="submit"] {
+    background: #C0272D;
+    color: white;
+}
+
+.beds-edit-form button[type="button"] {
+    background: white;
+    border: 1px solid #dcdce4;
+    color: #666;
+}
+
+.institutions-empty {
+    padding: 32px;
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+}

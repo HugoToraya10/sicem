@@ -1,26 +1,33 @@
 .map-area {
     position: relative;
-    background: #e9edf3;
-    background-image:
-        linear-gradient(#dde3ec 1px, transparent 1px),
-        linear-gradient(90deg, #dde3ec 1px, transparent 1px);
-    background-size: 28px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: 100%;
+    width: 100%;
 }
 
-.map-placeholder-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    color: #99a0ad;
+.leaflet-container-full {
+    height: 100%;
+    width: 100%;
+    border-radius: 0;
+    z-index: 1;
 }
 
-.map-placeholder-icon { font-size: 28px; }
-.map-placeholder-text { font-size: 13px; font-weight: 600; color: #7a8290; }
-.map-placeholder-sub { font-size: 11px; color: #aab0bb; }
+.ambulance-marker-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.emergency-marker-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50% 50% 50% 0;
+    background: #C0272D;
+    border: 2px solid white;
+    transform: rotate(-45deg);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
 
 .map-legend {
     position: absolute;
@@ -32,6 +39,7 @@
     padding: 10px 14px;
     font-size: 11px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    z-index: 1000;
 }
 
 .legend-item {
@@ -47,4 +55,13 @@
     height: 8px;
     border-radius: 50%;
     display: inline-block;
+}
+
+.legend-hint {
+    font-size: 10px;
+    color: #999;
+    font-style: italic;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #eee;
 }

@@ -4,40 +4,87 @@ import EmergencyCard from '../components/emergencies/EmergencyCard'
 import MapArea from '../components/map/MapArea'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { toLowerCaseKeys } from '../utils/formatData'
+import { connectEmergencySocket } from '../sockets/emergencySocket'
 import './Dashboard.css'
+import { getNavLinks } from '../utils/Navlinks';
 
-const navLinks = [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/emergencias/nueva', label: 'Nueva Emergencia' },
-    { to: '/solicitudes', label: 'Solicitudes' },
-]
-
-const roleLabels = {
-    1: 'Administrador',
-    2: 'Despachador',
-    3: 'Paramédico',
-    4: 'Hospital',
-    5: 'Paciente'
-}
+const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 const Dashboard = () => {
     const { user, token } = useAuth()
-    const navigate = useNavigate();
+    const navLinks = getNavLinks(user?.roleId)
+    console.log('roleId actual:', user?.roleId)
+console.log('navLinks calculados:', navLinks)
+    const navigate = useNavigate()
 
-    // TODO (Hugo): estos dos van a venir de tus propios fetch al Gateway
     const [emergencies, setEmergencies] = useState([])
     const [ambulances, setAmbulances] = useState([])
 
-    // TODO (Hugo): useEffect que haga fetch a
-    // GET http://localhost:3000/emergencias/emergencias-activas
-    // con el header Authorization: Bearer <token>
+    // Emergencias activas
     useEffect(() => {
-
+        fetch('http://localhost:3000/emergencias/emergencias-activas', {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        })
+            .then(res => res.json())
+            .then(({ data }) => setEmergencies(data.map(em => toLowerCaseKeys(em))))
+            .catch(error => console.error('Ha ocurrido un error buscando las emergencias activas', error))
     }, [])
 
-    // TODO (Hugo): conexión Socket.io a localhost:3005 (emergencias) y 3003 (unidades)
-    // escuchando eventEmergencyRegistered, eventEmergencyStatusUpdated,
-    // eventEmergencyClosed, eventoUbicacionAmbulancia
+    // Ambulancias con su última ubicación conocida, para pintarlas en el mapa
+    useEffect(() => {
+        fetch('http://localhost:3000/unidades/ambulancias', {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        })
+            .then(res => res.json())
+            .then(({ data }) => {
+                const ambulancesLower = data.map(amb => toLowerCaseKeys(amb))
+
+                // Por cada ambulancia, pedimos su última ubicación conocida
+                const locationPromises = ambulancesLower.map((amb) =>
+                    fetch(`http://localhost:3000/unidades/ubicacion/${amb.ambulance_id}`, {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        }
+                    })
+                        .then((res) => res.ok ? res.json() : { data: null })
+                        .then(({ data: locationData }) => ({
+                            ...amb,
+                            latitude: locationData ? toLowerCaseKeys(locationData).latitude : null,
+                            longitude: locationData ? toLowerCaseKeys(locationData).longitude : null,
+                        }))
+                        .catch(() => ({ ...amb, latitude: null, longitude: null }))
+                )
+
+                Promise.all(locationPromises).then((ambulancesWithLocation) => {
+                    setAmbulances(ambulancesWithLocation)
+                })
+            })
+            .catch(error => console.error('Error recuperando ambulancias. ', error))
+    }, [])
+
+    // Socket.io — emergencias en tiempo real
+    useEffect(() => {
+        const emergencySocket = connectEmergencySocket(token)
+
+        emergencySocket.on('eventEmergencyRegistered', data => {
+            setEmergencies(currentEmergencies => [toLowerCaseKeys(data), ...currentEmergencies])
+        })
+
+        emergencySocket.on('eventEmergencyClosed', ({ emergency_id, emergencyId }) => {
+            const closedId = emergency_id || emergencyId
+            setEmergencies(current => current.filter(em => em.emergency_id !== closedId))
+        })
+
+        return () => emergencySocket.disconnect()
+    }, [])
 
     return (
         <div className="dashboard-page">
@@ -55,13 +102,11 @@ const Dashboard = () => {
                                 key={em.emergency_id}
                                 type={em.type_name}
                                 location={em.description}
-                                elapsedLabel={/*TODO (Hugo): calcular con em.created_at */ ''}
-                                unitCode={/* TODO (Hugo): sacar de assignments de esta emergencia */ ''}
+                                elapsedLabel=""
+                                unitCode=""
                                 statusLabel={em.status_name}
-                                severity={/* TODO (Hugo): derivar de em.emergency_type_id o triage */ 'stable'}
-                                onCardClick={()=>{
-                                    navigate(`/EmergencyCard/${emergency_id}`)
-                                }}
+                                severity="stable"
+                                onCardClick={() => navigate(`/emergencias/${em.emergency_id}`)}
                             />
                         ))}
                         {emergencies.length === 0 && (
@@ -69,12 +114,12 @@ const Dashboard = () => {
                         )}
                     </div>
 
-                    <h4 className="sidebar-title" style={{ marginTop: 20 }}>Unidades Disponibles</h4>
+                    <h4 className="sidebar-title" style={{ marginTop: 20 }}>Unidades</h4>
                     <div className="unit-list">
                         {ambulances.map((amb) => (
                             <div key={amb.ambulance_id} className="unit-list-item">
                                 <span className="unit-dot" />
-                                {amb.unit_number} — {amb.institution_name}
+                                {amb.unit_number}
                             </div>
                         ))}
                     </div>
