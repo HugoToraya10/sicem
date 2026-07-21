@@ -6,10 +6,14 @@ import Requests from './pages/Requests'
 import Users from './pages/admin/Users'
 import Institutions from './pages/admin/Institutions'
 import Ambulances from './pages/admin/Ambulances'
+import Patients from './pages/admin/Patients'
+import EmergencyCatalogs from './pages/admin/EmergencyCatalogs'
 import { AuthProvider } from './context/AuthContext'
 import NewEmergency from './pages/NewEmergency'
 import Hospitals from './pages/Hospitals'
 import Charts from './pages/Charts'
+import History from './pages/History'
+import Profile from './pages/Profile'
 
 
 
@@ -31,9 +35,15 @@ function App() {
 
           <Route path="/graficas" element={<Charts />} />
 
+          <Route path="/historial" element={<History />} />
+
+          <Route path="/perfil" element={<Profile />} />
+
           <Route path="/admin/usuarios" element={<Users />} />
           <Route path="/admin/instituciones" element={<Institutions />} />
           <Route path="/admin/ambulancias" element={<Ambulances />} />
+          <Route path="/admin/pacientes" element={<Patients />} />
+          <Route path="/admin/catalogos-emergencias" element={<EmergencyCatalogs />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

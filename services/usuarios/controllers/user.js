@@ -7,7 +7,6 @@ const { verifyToken } = require("../middlewares/auth");
 
 //función utilizada para reutilizarla en los controllers register y registerPatient
 const createUserWithCredentials = (req, res) => {
-  //Esto se llama destructuring
   const {
     email,
     password,
@@ -23,8 +22,6 @@ const createUserWithCredentials = (req, res) => {
     emergencyPhone,
   } = req.body;
 
-  //hasheo de contraseña
-  //el 10 es un saltRound, entre mayor número, mayor seguridad
   bcrypt.hash(password, 10, (error, hash) => {
     if (error) return res.status(500).json({ message: "Error encriptando" });
     else {
@@ -54,7 +51,7 @@ const createUserWithCredentials = (req, res) => {
             } else {
               return res
                 .status(201)
-                .json({ message: "Usuario creado con éxito" });
+                .json({ message: "Usuario creado con éxito", userProfileId: result.insertId });
             }
           },
         );
@@ -73,7 +70,6 @@ const register = (req, res) => {
 };
 
 // controller para registrar un usuario sin credenciales
-// (paramédico registrando un paciente, es decir, solo le crea un perfil e historial clínico en campo)
 const registerPatient = (req, res) => {
   req.body.roleId = 5;
   const {
@@ -110,10 +106,13 @@ const registerPatient = (req, res) => {
       emergencyPhone,
       (e, r) => {
         if (e) {
+          if (e.code === 'ER_DATA_TOO_LONG') {
+            return res.status(400).json({message: "Uno de los campos excede la longitud máxima permitida (revisa la CURP, que debe tener máximo 18 caracteres)."})
+          }
           return res.status(500).json({message:"Error creando perfil."})
         } else {
           console.log('Paciente creado sin credenciales')
-          return res.status(201).json({message: "Usuario creado con éxito."})
+          return res.status(201).json({message: "Usuario creado con éxito.", userProfileId: r.insertId})
         }
       }
     );
@@ -140,22 +139,29 @@ const login = (req, res) => {
               let userFirstName = result[0].first_name
               let userFirstSurname = result[0].first_surname
               let userProfileId = result[0].user_profile_id
+              let institutionId = result[0].institution_id
               let roleId = result[0].role_id
-              let payload = {
-                userProfileId: userProfileId,
-                userCredentialId: result[0].user_credential_id,
-                roleId: roleId,
-              };
-              let jwtOptions = {
-                expiresIn: "8h",
-              };
-              let jwtKey = process.env.JWT_SECRET;
-              let token = jwt.sign(payload, jwtKey, jwtOptions);
-              return res
-                .status(200)
-                .json({ message: "Ingreso exitoso", jwtToken: token,
-                  user : {
-                    profileId:userProfileId, role:roleId, firstName:userFirstName, firstSurname:userFirstSurname}});
+              let isActive = result[0].is_active
+              if(isActive === 0){
+                return res.status(401).json({message: "Este usuario está desactivado"});
+              } else {
+                let payload = {
+                  userProfileId: userProfileId,
+                  userCredentialId: result[0].user_credential_id,
+                  roleId: roleId,
+                };
+                let jwtOptions = {
+                  expiresIn: "8h",
+                };
+                let jwtKey = process.env.JWT_SECRET;
+                let token = jwt.sign(payload, jwtKey, jwtOptions);
+                return res
+                  .status(200)
+                  .json({ message: "Ingreso exitoso", jwtToken: token,
+                    user : {
+                      profileId:userProfileId, roleId:roleId, firstName:userFirstName, firstSurname:userFirstSurname, 
+                      institutionId: institutionId}});
+              }
             } else {
               return res.status(401).json({ message: "Las credenciales son incorrectas" });
             }
@@ -169,6 +175,11 @@ const login = (req, res) => {
 // Controller para desactivar usuario
 const toggleActiveUser = (req, res) => {
   if(req.decoded.roleId === 1){
+  // Nadie puede desactivar su propia cuenta, ni siquiera el admin — evita quedar
+  // bloqueado del sistema por accidente.
+  if (req.decoded.userCredentialId === parseInt(req.body.userCredentialId)) {
+    return res.status(403).json({message: "No puedes desactivar tu propia cuenta."})
+  }
   const userId = req.body.userCredentialId;
   userModel.toggleActiveUser(userId, (e, r)=>{
     if (e){
@@ -193,7 +204,7 @@ const toggleActiveUser = (req, res) => {
 //Controller para editar datos del perfil del usuario
 const editUserProfile = (req, res) => {
   const editProfile = (req, res) =>{
-    const {userCredentialId,
+    const {userProfileId,
           institutionId, 
           roleId, 
           firstName, 
@@ -205,7 +216,7 @@ const editUserProfile = (req, res) => {
           emergencyContact, 
           emergencyPhone } = req.body
 
-    userModel.editUserProfile(userCredentialId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
+    userModel.editUserProfile(userProfileId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
     birthDate, cveUnicaRegistroPob, emergencyContact, emergencyPhone, (e, r) => {
       if (e) {
         console.log(e)
@@ -219,7 +230,8 @@ const editUserProfile = (req, res) => {
     if(req.decoded.roleId === 1){
       editProfile(req, res)
     } else {
-    if ((req.decoded.userCredentialId === parseInt(req.body.userCredentialId)) && (req.decoded.roleId === 5)){
+    // Cualquier rol autenticado puede editar su propio perfil (antes limitado solo al rol 5)
+    if (req.decoded.userProfileId === parseInt(req.body.userProfileId)){
       editProfile(req, res)
       } else {
         return res.status(403).json({ message: "Acceso denegado" })
@@ -255,8 +267,8 @@ const editUserCredentials = (req, res) => {
   // si se es usuario admin
   if(req.decoded.roleId === 1){
     editCredentials(userCredentialId, email, password);
-  } else { // si se es usuario paciente (roleId === 5) 
-    if ((req.decoded.userCredentialId === parseInt(req.body.userCredentialId)) && (req.decoded.roleId === 5)){
+  } else { // cualquier rol autenticado puede editar sus propias credenciales (antes limitado solo al rol 5)
+    if (req.decoded.userCredentialId === parseInt(req.body.userCredentialId)){
       editCredentials(userCredentialId, email, password);
     } else {
       return res.status(403).json({message: "Fuera de mi territorio. REGRESA POR DONDE VINISTE PUTA"})
@@ -287,10 +299,13 @@ const getAllUsers = (req, res) => {
 //Controller para obtener un solo usuario dependiendo del ID
 const getUserById = (req, res) => {
   const allowedRoles = [1, 2, 3, 4]
-  if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+  const { userProfileId } = req.params;
+  // Cualquier rol puede consultar su propio perfil (p.ej. paciente en Mi Perfil),
+  // además del acceso amplio ya existente para 1-4 sobre cualquier perfil.
+  const isSelf = req.decoded.userProfileId === parseInt(userProfileId);
+  if (!allowedRoles.includes(parseInt(req.decoded.roleId)) && !isSelf) {
     return res.status(403).json({message: "Acceso denegado."})
   } else {
-    const { userProfileId } = req.params;
     userModel.getUserById(userProfileId, (e, r)=>{
       if(e){
         return res.status(500).json({message: "Error del servidor."})
@@ -306,6 +321,16 @@ const getUserById = (req, res) => {
   }
 }
 
+
+//Controller para obtener el historial de activaciones/desactivaciones de una cuenta (admin)
+const getCredentialHistory = (req, res) => {
+  if (parseInt(req.decoded.roleId) !== 1) return res.status(403).json({message: "Acceso denegado."})
+  const { userCredentialId } = req.params;
+  userModel.getCredentialHistory(userCredentialId, (e, r) => {
+    if (e) return res.status(500).json({message: "Error del servidor."})
+    res.status(200).json({message: "Historial de la cuenta", history: r})
+  })
+}
 
 //Controller para obtener todos los roles
 const getAllRoles = (req, res) => {
@@ -364,7 +389,17 @@ const getCitiesByState = (req, res) => {
     });
 }
 
+const getUserByCURP = (req, res) => {
+    const { curp } = req.params;
+    userModel.getUserByCURP(curp, (e, r) => {
+        if (e) {
+            return res.status(500).json({message: "Error del servidor."});
+        } else {
+            res.status(200).json({message: "Búsqueda por CURP", data: r});
+        }
+    });
+}
 
 
-module.exports = { register, login, registerPatient, toggleActiveUser, editUserProfile, editUserCredentials, 
-                  getAllUsers, getUserById, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState};
+module.exports = { register, login, registerPatient, toggleActiveUser, editUserProfile, editUserCredentials, getUserByCURP,
+                  getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState};

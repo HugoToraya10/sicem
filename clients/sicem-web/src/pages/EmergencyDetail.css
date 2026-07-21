@@ -38,6 +38,30 @@
     text-transform: uppercase;
 }
 
+.detail-triage-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 10px;
+    color: white;
+    text-transform: uppercase;
+}
+
+.detail-advance-btn {
+    border: 1px solid #C0272D;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #C0272D;
+    background: white;
+    cursor: pointer;
+}
+
+.detail-advance-btn:hover {
+    background: #fdeceb;
+}
+
 .detail-close-btn {
     margin-left: auto;
     background: #1a1a2e;
@@ -144,6 +168,24 @@
     text-transform: uppercase;
 }
 
+.assignment-unassign-btn {
+    align-self: flex-start;
+    background: white;
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.assignment-unassign-btn:hover {
+    border-color: #C0272D;
+    color: #C0272D;
+}
+
 .patient-card {
     border: 1px solid #e4e4ec;
     border-radius: 8px;
@@ -168,6 +210,153 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 10.5px;
     color: #999;
+}
+
+.patient-blood-type {
+    font-size: 10px;
+    font-weight: 700;
+    color: #C0272D;
+    background: #fdeceb;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.patient-clinical-info {
+    background: #fafafb;
+    border: 1px solid #e4e4ec;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.clinical-row {
+    font-size: 12px;
+    color: #444;
+}
+
+.patient-id-curp-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.patient-id-curp-row input {
+    flex: 1;
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 9px 11px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.patient-id-curp-row button {
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 9px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.patient-id-curp-row button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.patient-id-found {
+    font-size: 11.5px;
+    color: #2E7D32;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.patient-id-notfound {
+    font-size: 11.5px;
+    color: #E67E22;
+    font-style: italic;
+    margin-bottom: 10px;
+}
+
+.patient-id-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.patient-id-row input {
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.patient-id-row input[readonly] {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.unit-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.unit-card {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: white;
+    border: 1px solid #e4e4ec;
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+}
+
+.unit-card:hover {
+    border-color: #C0272D;
+}
+
+.unit-card.selected {
+    border-color: #C0272D;
+    background: #fdeceb;
+}
+
+.unit-card input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #C0272D;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.unit-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.unit-card-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.unit-card-plate {
+    font-size: 9.5px;
+    color: #999;
+    font-family: 'JetBrains Mono', monospace;
 }
 
 .patient-notes {
@@ -337,4 +526,62 @@
     color: #999;
     font-style: italic;
     margin-bottom: 12px;
+}
+
+/* ── Línea de tiempo ─────────────────────────────────────── */
+.timeline {
+    display: flex;
+    flex-direction: column;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 14px;
+}
+
+.timeline-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 12px;
+}
+
+.timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #C0272D;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+.timeline-line {
+    flex: 1;
+    width: 2px;
+    background: #e4e4ec;
+    margin: 2px 0;
+}
+
+.timeline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 18px;
+}
+
+.timeline-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: #999;
+}
+
+.timeline-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.timeline-detail {
+    font-size: 12px;
+    color: #555;
 }

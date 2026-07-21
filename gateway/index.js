@@ -5,8 +5,9 @@ const app = express();
 const PORT = process.env.PORT
 const {createProxyMiddleware} = require('http-proxy-middleware')
 
-app.use(cors())
-
+app.use(cors({
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE']
+}))
 app.use('/usuarios', createProxyMiddleware({target: 'http://localhost:3001/usuarios', changeOrigin: true}))
 app.use('/hospitales', createProxyMiddleware({target: 'http://localhost:3002/hospitales', changeOrigin: true}))
 app.use('/unidades', createProxyMiddleware({target: 'http://localhost:3003/unidades', changeOrigin: true}))

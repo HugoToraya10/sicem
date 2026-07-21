@@ -5,7 +5,7 @@ const { getIo } = require('../config/socket');
 //--- posts -------------------------
 const registerLocations = (req, res) => {
     const io = getIo();
-    if(!(parseInt(req.decoded.roleId) === 3)) {
+    if(!(parseInt(req.decoded.roleId) === 3 || parseInt(req.decoded.roleId) === 1)) {
         return res.status(403).json({message:"Acceso denegado."})
     } else {
         const { ambulanceId, longitude, latitude } = req.body
@@ -114,6 +114,53 @@ const toggleAmbulanceStatus = (req, res) => {
     }
 }
 
+const updateAmbulanceType = (req, res) => {
+    if(!(parseInt(req.decoded.roleId) === 1)) {
+        return res.status(403).json({message:"Acceso denegado."})
+    } else {
+        const {ambulanceTypeId, ambulanceType} = req.body;
+        unitModel.updateAmbulanceType(ambulanceTypeId, ambulanceType, (e, r) => {
+            if(e) {
+                return res.status(500).json({message:"Error del servidor."})
+            } else {
+                res.status(200).json({message:"Tipo de ambulancia actualizado."})
+            }
+        })
+    }
+}
+
+const updateAmbulanceStatusCatalog = (req, res) => {
+    if(!(parseInt(req.decoded.roleId) === 1)) {
+        return res.status(403).json({message:"Acceso denegado."})
+    } else {
+        const {ambulanceStatusId, name, description} = req.body;
+        unitModel.updateAmbulanceStatusCatalog(ambulanceStatusId, name, description, (e, r) => {
+            if(e) {
+                return res.status(500).json({message:"Error del servidor."})
+            } else {
+                res.status(200).json({message:"Estado de ambulancia (catálogo) actualizado."})
+            }
+        })
+    }
+}
+
+const updateAmbulance = (req, res) => {
+    if(!(parseInt(req.decoded.roleId) === 1)) {
+        return res.status(403).json({message:"Acceso denegado."})
+    } else {
+        unitModel.updateAmbulance(req.body, (e, r) => {
+            if(e) {
+                if(e.code === 'ER_DUP_ENTRY') {
+                    return res.status(409).json({message:"Ya existe una ambulancia con ese número de unidad o placa."})
+                }
+                return res.status(500).json({message:"Error del servidor."})
+            } else {
+                res.status(200).json({message:"Ambulancia actualizada con éxito."})
+            }
+        })
+    }
+}
+
 //--- gets --------------------------
 const getAllAmbulances = (req, res) => {
     unitModel.getAllAmbulances((e, r) => {
@@ -121,6 +168,28 @@ const getAllAmbulances = (req, res) => {
             return res.status(500).json({message:"Error del servidor."})
         } else {
             res.status(200).json({message:"Ambulancias activas", data: r})
+        }
+    })
+}
+
+const getAvailableAmbulances = (req, res) => {
+    const { institutionId } = req.params;
+    unitModel.getAvailableAmbulances(institutionId, (e, r) => {
+        if(e) {
+            return res.status(500).json({message:"Error del servidor."})
+        } else {
+            res.status(200).json({message:"Ambulancias disponibles", data: r})
+        }
+    })
+}
+
+const getExternalAvailableAmbulances = (req, res) => {
+    const { institutionId } = req.params;
+    unitModel.getExternalAvailableAmbulances(institutionId, (e, r) => {
+        if(e) {
+            return res.status(500).json({message:"Error del servidor."})
+        } else {
+            res.status(200).json({message:"Ambulancias externas disponibles", data: r})
         }
     })
 }
@@ -195,9 +264,54 @@ const getLocationsByAmbulance = (req, res) => {
     }
 }
 
+//--- gets de administración: incluyen activos e inactivos --------------------------
+const getAllAmbulancesAdmin = (req, res) => {
+    if(!(parseInt(req.decoded.roleId) === 1)) {
+        return res.status(403).json({message:"Acceso denegado."})
+    } else {
+        unitModel.getAllAmbulancesAdmin((e, r) => {
+            if(e) {
+                return res.status(500).json({message:"Error del servidor."})
+            } else {
+                res.status(200).json({message:"Todas las ambulancias (admin)", data: r})
+            }
+        })
+    }
+}
+
+const getAllAmbulanceTypesAdmin = (req, res) => {
+    if(!(parseInt(req.decoded.roleId) === 1)) {
+        return res.status(403).json({message:"Acceso denegado."})
+    } else {
+        unitModel.getAllAmbulanceTypesAdmin((e, r) => {
+            if(e) {
+                return res.status(500).json({message:"Error del servidor."})
+            } else {
+                res.status(200).json({message:"Todos los tipos de ambulancia (admin)", data: r})
+            }
+        })
+    }
+}
+
+const getAllAmbulanceStatusesAdmin = (req, res) => {
+    if(!(parseInt(req.decoded.roleId) === 1)) {
+        return res.status(403).json({message:"Acceso denegado."})
+    } else {
+        unitModel.getAllAmbulanceStatusesAdmin((e, r) => {
+            if(e) {
+                return res.status(500).json({message:"Error del servidor."})
+            } else {
+                res.status(200).json({message:"Todos los estados de ambulancia (admin)", data: r})
+            }
+        })
+    }
+}
+
 module.exports = {
     registerLocations, registerAmbulance, createAmbulanceType, registerAmbulanceStatus,
-    toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus,
-    getAllAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
+    toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus, getExternalAvailableAmbulances,
+    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance,
+    getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
+    getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance
 }

@@ -52,11 +52,43 @@ const toggleAmbulanceStatus = (ambulanceStatusId, callback) => {
     db.query(sql, [ambulanceStatusId], callback);
 }
 
+const updateAmbulanceType = (ambulanceTypeId, ambulanceType, callback) => {
+    const sql = `UPDATE ambulance_types SET ambulance_type = ? WHERE ambulance_type_id = ?`;
+    db.query(sql, [ambulanceType, ambulanceTypeId], callback);
+}
+
+const updateAmbulanceStatusCatalog = (ambulanceStatusId, name, description, callback) => {
+    const sql = `UPDATE ambulances_statuses SET name = ?, description = ? WHERE ambulance_status_id = ?`;
+    db.query(sql, [name, description, ambulanceStatusId], callback);
+}
+
+const updateAmbulance = (data, callback) => {
+    const { ambulanceId, unitNumber, licensePlate, ambulanceTypeId, institutionId } = data;
+    const sql = `UPDATE ambulances SET unit_number = ?, license_plate = ?, ambulance_type_id = ?,
+                institution_id = ?, updated_at = NOW() WHERE ambulance_id = ?`;
+    db.query(sql, [unitNumber, licensePlate, ambulanceTypeId, institutionId, ambulanceId], callback);
+}
+
 
 //---- GETs ------------------------
 const getAllAmbulances = (callback) => {
     const sql = `SELECT * FROM ambulances WHERE is_active = 1`;
     db.query(sql, callback);
+}
+
+// Ambulancias disponibles de la misma institución del despachador (asignación directa)
+const getAvailableAmbulances = (institutionId, callback) => {
+    const sql = `SELECT * FROM ambulances WHERE is_active = 1 AND ambulance_status_id = 1 AND institution_id = ?`;
+    db.query(sql, [institutionId], callback);
+}
+
+// Ambulancias disponibles de otras instituciones (requieren solicitud interinstitucional)
+const getExternalAvailableAmbulances = (institutionId, callback) => {
+    const sql = `SELECT a.*, i.name AS institution_name 
+                FROM ambulances a
+                LEFT JOIN institutions i ON a.institution_id = i.institution_id
+                WHERE a.is_active = 1 AND a.ambulance_status_id = 1 AND a.institution_id != ?`;
+    db.query(sql, [institutionId], callback);
 }
 
 const getAmbulanceByUnitNumber = (unitNumber, callback) => {
@@ -84,11 +116,30 @@ const getLocationsByAmbulance = (ambulanceId, callback) => {
     db.query(sql, [ambulanceId], callback);
 }
 
+//-------- gets para administración: sin filtrar por is_active, el admin necesita ver todo --------
+
+const getAllAmbulancesAdmin = (callback) => {
+    const sql = `SELECT * FROM ambulances`;
+    db.query(sql, callback);
+}
+
+const getAllAmbulanceTypesAdmin = (callback) => {
+    const sql = `SELECT * FROM ambulance_types`;
+    db.query(sql, callback);
+}
+
+const getAllAmbulanceStatusesAdmin = (callback) => {
+    const sql = `SELECT * FROM ambulances_statuses`;
+    db.query(sql, callback);
+}
+
 
 
 module.exports = {
     registerLocations, registerAmbulance, createAmbulanceType, registerAmbulanceStatus,
-    toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus,
-    getAllAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
+    toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus, getExternalAvailableAmbulances,
+    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance,
+    getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
+    getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance
 }

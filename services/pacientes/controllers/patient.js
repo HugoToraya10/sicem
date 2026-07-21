@@ -95,6 +95,52 @@ const toggleMedication = (req, res) => {
     })
 }
 
+//-Todos los updates------------------------------------------------
+
+//Controller para editar los datos generales de un expediente clínico (ECE)
+const updateClinicalRecord = (req, res) => {
+    const allowedRoles = [1, 3, 5];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId)))
+        return res.status(403).json({message: "Acceso no autorizado"})
+    patientModel.updateClinicalRecord(req.body, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor"})
+        res.status(200).json({message: "Expediente actualizado con éxito"})
+    })
+}
+
+//Controller para editar una alergia de un paciente
+const updateAllergy = (req, res) => {
+    const allowedRoles = [1, 3, 5];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId)))
+        return res.status(403).json({message: "Acceso no autorizado"})
+    patientModel.updateAllergy(req.body, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor"})
+        res.status(200).json({message: "Alergia actualizada con éxito"})
+    })
+}
+
+//Controller para editar una condición de un paciente
+const updateCondition = (req, res) => {
+    const allowedRoles = [1, 3, 5];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId)))
+        return res.status(403).json({message: "Acceso no autorizado"})
+    patientModel.updateCondition(req.body, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor"})
+        res.status(200).json({message: "Condición actualizada con éxito"})
+    })
+}
+
+//Controller para editar un medicamento de un paciente
+const updateMedication = (req, res) => {
+    const allowedRoles = [1, 3, 5];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId)))
+        return res.status(403).json({message: "Acceso no autorizado"})
+    patientModel.updateMedication(req.body, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor"})
+        res.status(200).json({message: "Medicamento actualizado con éxito"})
+    })
+}
+
 
 
 //-Todos los gets de cada tabla para obtener datos------------------------------
@@ -233,15 +279,88 @@ const getAllBloodTypes = (req, res) => {
     });
 }
 
+//-Historial de activaciones/desactivaciones (admin) -------------------------------------------
 
-module.exports = { 
-    createClinicalRecord, 
-    registerAllergy, toggleAllergy, 
-    registerCondition, toggleCondition, 
+const getAllergyHistory = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) return res.status(403).json({message: "Acceso no autorizado"})
+    const { patientAllergyId } = req.params;
+    patientModel.getAllergyHistory(patientAllergyId, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        res.status(200).json({message: "Historial de la alergia", history: r})
+    })
+}
+
+const getConditionHistory = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) return res.status(403).json({message: "Acceso no autorizado"})
+    const { patientConditionId } = req.params;
+    patientModel.getConditionHistory(patientConditionId, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        res.status(200).json({message: "Historial de la condición", history: r})
+    })
+}
+
+const getMedicationHistory = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) return res.status(403).json({message: "Acceso no autorizado"})
+    const { patientMedicationId } = req.params;
+    patientModel.getMedicationHistory(patientMedicationId, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        res.status(200).json({message: "Historial del medicamento", history: r})
+    })
+}
+
+//-Todos los gets de administración: todos los registros, sin necesitar un expediente puntual----
+
+const getAllClinicalRecords = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso no autorizado"})
+    }
+    patientModel.getAllClinicalRecords((e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        res.status(200).json({message: "Todos los expedientes clínicos", clinicalRecords: r})
+    })
+}
+
+const getAllAllergies = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso no autorizado"})
+    }
+    patientModel.getAllAllergies((e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        res.status(200).json({message: "Todas las alergias", allergies: r})
+    })
+}
+
+const getAllConditions = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso no autorizado"})
+    }
+    patientModel.getAllConditions((e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        res.status(200).json({message: "Todas las condiciones", conditions: r})
+    })
+}
+
+const getAllMedications = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso no autorizado"})
+    }
+    patientModel.getAllMedications((e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        res.status(200).json({message: "Todos los medicamentos", medications: r})
+    })
+}
+
+module.exports = {
+    createClinicalRecord,
+    registerAllergy, toggleAllergy,
+    registerCondition, toggleCondition,
     registerMedication, toggleMedication,
+    updateClinicalRecord, updateAllergy, updateCondition, updateMedication,
+    getAllergyHistory, getConditionHistory, getMedicationHistory,
     getClinicalRecordByUser,
     getAllergiesByRecord,
     getConditionsByRecord,
     getMedicationsByRecord,
-    getAllBloodTypes
+    getAllBloodTypes,
+    getAllClinicalRecords, getAllAllergies, getAllConditions, getAllMedications
 }

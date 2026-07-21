@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import MapArea from "../components/map/MapArea";
 import { getNavLinks } from "../utils/Navlinks";
+import { parseResponse } from '../utils/apiRequest';
 import './NewEmergency.css';
 
 const NewEmergency = () => {
@@ -16,6 +17,8 @@ const NewEmergency = () => {
     const [reporterPhone, setReporterPhone] = useState('');
     const [numPatients, setNumPatients] = useState('');
     const [emergencyTypes, setEmergencyTypes] = useState([]);
+    const [triageLevelId, setTriageLevelId] = useState('');
+    const [triageLevels, setTriageLevels] = useState([]);
     const { token, user } = useAuth();
     const navigate = useNavigate();
     const navLinks = getNavLinks(user?.roleId)
@@ -50,6 +53,14 @@ const NewEmergency = () => {
             .then((res) => res.json())
             .then(({data}) => setEmergencyTypes(data.map(t => toLowerCaseKeys(t))))
             .catch(error => console.error('Error recuperando los tipos de emergencia. ', error))
+    }, []);
+
+    useEffect(() => {
+        fetch('http://localhost:3000/emergencias/niveles-triage',
+            { headers: { "Content-Type": "application/json" } })
+            .then((res) => res.json())
+            .then(({data}) => setTriageLevels((data || []).map(t => toLowerCaseKeys(t))))
+            .catch(error => console.error('Error recuperando los niveles de triage. ', error))
     }, []);
 
     useEffect(()=>{
@@ -103,10 +114,20 @@ const NewEmergency = () => {
                     description: description,
                     reporterName: reporterName,
                     reporterPhone: reporterPhone,
-                    numPatients: numPatients
+                    numPatients: numPatients,
+                    triageLevelId: triageLevelId || null
                 }),})
-                .then(res => res.json())
+                .then(parseResponse)
+                .catch(error => {
+                    console.error('Error registrando la emergencia. ', error)
+                    alert(error.message)
+                    throw error // nunca se creó nada — aborta el flujo, es seguro reintentar
+                })
                 .then(emergencyData => {
+                    // La emergencia YA existe en este punto. Si asignar unidades o mandar
+                    // solicitudes falla, no lo tratamos como que "todo falló" (evita que el
+                    // despachador reintente el formulario y duplique la emergencia) — solo
+                    // avisamos qué parte específica no se pudo completar.
                     const assignPromise = selectedUnits.length !== 0
                         ? fetch('http://localhost:3000/emergencias/registrar-asignacion', {
                             method: "POST",
@@ -117,7 +138,10 @@ const NewEmergency = () => {
                                 userProfileId: user.profileId,
                                 notes: notes,
                             })
-                        }).then(res => res.json())
+                        }).then(parseResponse).catch(error => {
+                            console.error('Error asignando unidades. ', error)
+                            alert(`La emergencia se registró, pero no se pudieron asignar las unidades: ${error.message}`)
+                        })
                         : Promise.resolve(null)
 
                     const requestPromises = selectedExternalUnits.map((ambulanceId) => {
@@ -133,7 +157,10 @@ const NewEmergency = () => {
                                 requestingInstitutionId: user.institutionId,
                                 receivingInstitutionId: externalUnit.institution_id,
                             })
-                        }).then(res => res.json())
+                        }).then(parseResponse).catch(error => {
+                            console.error('Error enviando solicitud interinstitucional. ', error)
+                            alert(`La emergencia se registró, pero no se pudo enviar la solicitud para la unidad ${externalUnit?.unit_number || ''}: ${error.message}`)
+                        })
                     })
 
                     return Promise.all([assignPromise, ...requestPromises]).then(() => emergencyData)
@@ -151,7 +178,9 @@ const NewEmergency = () => {
                     )
                     setStep(2)
                 })
-                .catch(error => console.error('Se ha producido un error en fetch. ', error))
+                .catch(() => {
+                    // El registro inicial ya mostró su propio error arriba; no dupliques el alert.
+                })
     }
 
     const handleAddressSearch = () => {
@@ -241,7 +270,7 @@ const NewEmergency = () => {
                         userProfileId: patient.userProfileId,
                         notes: patient.notes,
                     })
-                }).then(res => res.json())
+                }).then(parseResponse)
             }
 
             // Si no existe, primero creamos su perfil básico SIN credenciales
@@ -261,7 +290,7 @@ const NewEmergency = () => {
                     emergencyPhone: '',
                 })
             })
-                .then(res => res.json())
+                .then(parseResponse)
                 .then((newProfile) => {
                     // Ahora sí vinculamos usando el userProfileId real que regresa el backend
                     return fetch('http://localhost:3000/emergencias/registrar-paciente', {
@@ -272,13 +301,17 @@ const NewEmergency = () => {
                             userProfileId: newProfile.userProfileId,
                             notes: patient.notes,
                         })
-                    }).then(res => res.json())
+                    }).then(parseResponse)
                 })
         })
 
         Promise.all(promises)
             .then(() => navigate('/dashboard'))
-            .catch(error => console.error('Error registrando pacientes. ', error))
+            .catch(error => {
+                console.error('Error registrando pacientes. ', error)
+                alert(`La emergencia ya está registrada y en curso. No se pudo guardar la identificación de uno o más pacientes: ${error.message}. Puedes agregarla después desde el detalle de la emergencia.`)
+                navigate('/dashboard')
+            })
     }
 
     const handleSkipPatients = () => {
@@ -394,12 +427,14 @@ const NewEmergency = () => {
                                         value={patient.firstName}
                                         onChange={(e) => updatePatientField(index, 'firstName', e.target.value)}
                                         readOnly={patient.found === true}
+                                        maxLength={100}
                                     />
                                     <input
                                         type="text" placeholder="Apellido paterno"
                                         value={patient.firstSurname}
                                         onChange={(e) => updatePatientField(index, 'firstSurname', e.target.value)}
                                         readOnly={patient.found === true}
+                                        maxLength={150}
                                     />
                                 </div>
                                 <div className="patient-id-row">
@@ -408,12 +443,14 @@ const NewEmergency = () => {
                                         value={patient.secondSurname}
                                         onChange={(e) => updatePatientField(index, 'secondSurname', e.target.value)}
                                         readOnly={patient.found === true}
+                                        maxLength={150}
                                     />
                                     <input
                                         type="text" placeholder="Teléfono"
                                         value={patient.phone}
                                         onChange={(e) => updatePatientField(index, 'phone', e.target.value)}
                                         readOnly={patient.found === true}
+                                        maxLength={10}
                                     />
                                 </div>
 
@@ -548,6 +585,26 @@ const NewEmergency = () => {
                     <div className="ne-field">
                         <label>Número de pacientes</label>
                         <input type="number" value={numPatients} onChange={(e) => setNumPatients(e.target.value)} min="1" required />
+                    </div>
+
+                    <div className="ne-field">
+                        <label>Nivel de urgencia estimado (opcional)</label>
+                        <div className="ne-triage-row">
+                            <select value={triageLevelId} onChange={(e) => setTriageLevelId(e.target.value)}>
+                                <option value="">Sin estimar todavía</option>
+                                {triageLevels.map((t) => (
+                                    <option key={t.triage_level_id} value={t.triage_level_id}>
+                                        Nivel {t.level} — {t.color}
+                                    </option>
+                                ))}
+                            </select>
+                            {triageLevelId && (
+                                <span
+                                    className="ne-triage-swatch"
+                                    style={{ background: triageLevels.find(t => String(t.triage_level_id) === String(triageLevelId))?.hex_color }}
+                                />
+                            )}
+                        </div>
                     </div>
 
                     <div className="ne-field">

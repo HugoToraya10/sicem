@@ -1,0 +1,89 @@
+/* Solo estilos que no tienen equivalente en Institutions.css (barra de búsqueda/filtro
+   de paciente, reutilizada tanto en el filtro por pestaña como en el autocompletado por
+   CURP del formulario de expedientes). El resto de la página (tabs, forms, tablas,
+   badges de estado) reutiliza las clases de Institutions.css. Sigue el mismo patrón
+   visual que .ambulances-search-row en Ambulances.css. */
+
+.patient-search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.patient-search-row select {
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: white;
+}
+
+.patient-search-row input {
+    flex: 1;
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.patient-search-form {
+    display: flex;
+    gap: 8px;
+}
+
+.patient-search-form select {
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: white;
+}
+
+.patient-search-form input {
+    flex: 1;
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.patient-search-form button,
+.patient-search-row button {
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.patient-search-form button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.patient-clear-btn {
+    background: white !important;
+    color: #666 !important;
+    border: 1px solid #dcdce4 !important;
+}
+
+.patient-search-error {
+    color: #C0272D;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.clinical-history {
+    background: #fafafb;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: #444;
+}

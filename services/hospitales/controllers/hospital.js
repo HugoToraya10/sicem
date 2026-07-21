@@ -53,6 +53,9 @@ const createInstitutionsSpecialities = (req, res) => {
     } else {
         hospitalModel.createInstitutionsSpecialities(req.body, (e, r) => {
             if (e) {
+                if (e.code === 'ER_DUP_ENTRY') {
+                    return res.status(409).json({message: "Esta especialidad ya está asignada a esta institución."});
+                }
                 return res.status(500).json({message: "Error del servidor."});
             } else {
                 res.status(201).json({message: "Especialidad asignada a institución con éxito."});
@@ -77,6 +80,21 @@ const createInstitutionNotification = (req, res) => {
 }
 
 // ------- patches... got patches... -------------------------------------------
+
+const identifyPatient = (req, res) => {
+    const allowedRoles = [1, 4]; // admin o personal hospitalario
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        hospitalModel.identifyPatient(req.body, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Paciente identificado con éxito."});
+            }
+        });
+    }
+}
 
 const toggleInstitution = (req, res) => {
     if (parseInt(req.decoded.roleId) !== 1) {
@@ -204,6 +222,50 @@ const updateBedCapacityIS = (req, res) => {
     }
 }
 
+const updateInstitutionType = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { institutionTypeId, institutionType } = req.body;
+        hospitalModel.updateInstitutionType(institutionTypeId, institutionType, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Tipo de institución actualizado."});
+            }
+        });
+    }
+}
+
+const updateSpeciality = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { specialityId, name, description } = req.body;
+        hospitalModel.updateSpeciality(specialityId, name, description, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Especialidad actualizada."});
+            }
+        });
+    }
+}
+
+const updateInstitution = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        hospitalModel.updateInstitution(req.body, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Institución actualizada."});
+            }
+        });
+    }
+}
+
 // ------- gets ------------------------------
 
 const getAllInstitutions = (req, res) => {
@@ -212,6 +274,16 @@ const getAllInstitutions = (req, res) => {
             return res.status(500).json({message: "Error del servidor."});
         } else {
             res.status(200).json({message: "Todas las instituciones", data: r});
+        }
+    });
+}
+
+const getInstitutionsForDestination = (req, res) => {
+    hospitalModel.getInstitutionsForDestination((e, r) => {
+        if (e) {
+            return res.status(500).json({message: "Error del servidor."});
+        } else {
+            res.status(200).json({message: "Instituciones para destino", data: r});
         }
     });
 }
@@ -314,10 +386,56 @@ const getAllInstitutionTypes = (req, res) => {
     });
 }
 
+// ------- gets de administración: incluyen activos e inactivos ------------------------------
+
+const getAllInstitutionsAdmin = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        hospitalModel.getAllInstitutionsAdmin((e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Todas las instituciones (admin)", data: r});
+            }
+        });
+    }
+}
+
+const getAllInstitutionTypesAdmin = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        hospitalModel.getAllInstitutionTypesAdmin((e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Todos los tipos de institución (admin)", data: r});
+            }
+        });
+    }
+}
+
+const getAllSpecialitiesAdmin = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        hospitalModel.getAllSpecialitiesAdmin((e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Todas las especialidades (admin)", data: r});
+            }
+        });
+    }
+}
+
 module.exports = {
     registerInstitution, createSpeciality, createInstitutionType, createInstitutionsSpecialities, createInstitutionNotification,
-    toggleInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType,
+    toggleInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
     updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS,
+    updateInstitutionType, updateSpeciality, updateInstitution, getInstitutionsForDestination,
+    getAllInstitutionsAdmin, getAllInstitutionTypesAdmin, getAllSpecialitiesAdmin,
     getAllInstitutions, getInstitutionByName, getInstitutionNotifications, getInstitutionNotificationByName,
     getAllInstitutionSpecialities, getInstitutionSpecialityByName, getAllSpecialities, getSpecialityByName, getAllInstitutionTypes
 }

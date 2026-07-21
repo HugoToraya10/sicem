@@ -220,3 +220,121 @@
     font-size: 13px;
     color: #999;
 }
+
+.ambulance-history {
+    background: #fafafb;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+}
+
+.ambulance-history-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.ambulance-history-dates {
+    color: #888;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.ambulances-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e4e4ec;
+}
+
+.ambulances-tab {
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #8888a0;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.ambulances-tab:hover {
+    color: #1a1a2e;
+}
+
+.ambulances-tab.active {
+    color: #C0272D;
+    border-bottom-color: #C0272D;
+}
+
+.ambulances-tab-header {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.status-filter-select {
+    border: 1px solid #dcdce4;
+    border-radius: 6px;
+    padding: 9px 10px;
+    font-size: 13px;
+    background: white;
+    margin-right: auto;
+}
+
+.ambulances-search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.ambulances-search-row select {
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: white;
+}
+
+.ambulances-search-row input {
+    flex: 1;
+    border: 1px solid #dcdce4;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 13px;
+}
+
+.ambulances-search-row input:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.ambulances-search-row button {
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ambulances-search-row button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ambulances-clear-btn {
+    background: white !important;
+    color: #666 !important;
+    border: 1px solid #dcdce4 !important;
+}

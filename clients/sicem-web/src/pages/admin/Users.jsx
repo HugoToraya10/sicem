@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { toLowerCaseKeys } from '../../utils/formatData';
 import Navbar from '../../components/layout/Navbar';
 import { getNavLinks } from '../../utils/Navlinks';
+import { parseResponse } from '../../utils/apiRequest';
+import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import './Users.css';
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
@@ -42,6 +44,27 @@ const Users = () => {
     const [expandedUserId, setExpandedUserId] = useState(null);
     const [userDetail, setUserDetail] = useState(null);
 
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const [historyUserId, setHistoryUserId] = useState(null);
+    const [credentialHistory, setCredentialHistory] = useState([]);
+
+    const filterByStatus = (list, filter) => {
+        if (filter === 'active') return list.filter(item => item.is_active)
+        if (filter === 'inactive') return list.filter(item => !item.is_active)
+        return list
+    }
+
+    const matchesSearch = (u, query) => {
+        if (!query.trim()) return true
+        const q = query.trim().toLowerCase()
+        const name = [u.first_name, u.first_surname, u.second_surname].filter(Boolean).join(' ').toLowerCase()
+        return name.includes(q) || (u.email || '').toLowerCase().includes(q) || (u.curp || '').toLowerCase().includes(q)
+    }
+
+    const visibleUsers = filterByStatus(users, statusFilter).filter(u => matchesSearch(u, searchQuery))
+
     //---------------------------------consultar, gets--------------------------------------------------
 
     const fetchUsers = () => {
@@ -51,6 +74,21 @@ const Users = () => {
             .then(res => res.json())
             .then(({ data }) => setUsers(data.map(u => toLowerCaseKeys(u))))
             .catch(error => console.error('Error consultando usuarios. ', error))
+    }
+
+    const fetchCredentialHistory = (userCredentialId) => {
+        fetch(`http://localhost:3000/usuarios/historial-cuenta/${userCredentialId}`, {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        })
+            .then(parseResponse)
+            .then(({ history }) => setCredentialHistory((history || []).map(h => toLowerCaseKeys(h))))
+            .catch(error => { console.error('Error consultando historial de cuenta. ', error); alert(error.message) })
+    }
+
+    const toggleCredentialHistory = (u) => {
+        if (historyUserId === u.user_profile_id) { setHistoryUserId(null); setCredentialHistory([]); return }
+        setHistoryUserId(u.user_profile_id)
+        fetchCredentialHistory(u.user_credential_id)
     }
 
     useEffect(() => { fetchUsers() }, []);
@@ -83,13 +121,13 @@ const Users = () => {
         fetch(`http://localhost:3000/usuarios/obtener-usuario-id/${userProfileId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
-            .then(res => res.json())
+            .then(parseResponse)
             .then(({ user: userData }) => {
                 // getUserById responde con un array (result), tomamos el primer elemento
                 const detail = Array.isArray(userData) ? userData[0] : userData
                 setUserDetail(detail ? toLowerCaseKeys(detail) : null)
             })
-            .catch(error => console.error('Error consultando detalle de usuario. ', error))
+            .catch(error => { console.error('Error consultando detalle de usuario. ', error); alert(error.message) })
     }
 
     //---------------------------------registrar / actualizar empleado--------------------------------------------------
@@ -147,10 +185,12 @@ const Users = () => {
                     emergencyPhone: form.emergencyPhone,
                 })
             })
-                .then(res => res.json())
+                .then(parseResponse)
                 .then(() => { setShowForm(false); fetchUsers(); })
-                .catch(error => console.error('Error actualizando usuario. ', error))
+                .catch(error => { console.error('Error actualizando usuario. ', error); alert(error.message) })
         } else {
+            if (blockIfDuplicate(users, 'email', form.email, 'correo')) return
+            if (blockIfDuplicate(users, 'curp', form.cveUnicaRegistroPob, 'CURP')) return
             fetch('http://localhost:3000/usuarios/registro', {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -169,22 +209,24 @@ const Users = () => {
                     emergencyPhone: form.emergencyPhone,
                 })
             })
-                .then(res => res.json())
+                .then(parseResponse)
                 .then(() => { setShowForm(false); fetchUsers(); })
-                .catch(error => console.error('Error registrando usuario. ', error))
+                .catch(error => { console.error('Error registrando usuario. ', error); alert(error.message) })
         }
     }
 
-    const handleToggleActive = (userCredentialId) => {
-        if (!userCredentialId) return
+    const handleToggleActive = (u) => {
+        if (!u.user_credential_id) return
+        const action = u.is_active ? 'desactivar' : 'activar'
+        if (!window.confirm(`¿Seguro que quieres ${action} a ${u.first_name} ${u.first_surname || ''}?`)) return
         fetch('http://localhost:3000/usuarios/invertir-estado-usuario', {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ userCredentialId })
+            body: JSON.stringify({ userCredentialId: u.user_credential_id })
         })
-            .then(res => res.json())
+            .then(parseResponse)
             .then(() => fetchUsers())
-            .catch(error => console.error('Error cambiando estado del usuario. ', error))
+            .catch(error => { console.error('Error cambiando estado del usuario. ', error); alert(error.message) })
     }
 
     //---------------------------------registrar paciente--------------------------------------------------
@@ -202,6 +244,8 @@ const Users = () => {
 
     const handleRegisterPatient = (e) => {
         e.preventDefault();
+        if (blockIfDuplicate(users, 'curp', patientForm.cveUnicaRegistroPob, 'CURP')) return
+        if (patientForm.hasCredentials && blockIfDuplicate(users, 'email', patientForm.email, 'correo')) return
         // Nota: el controller fuerza roleId = 5 internamente, no hace falta mandarlo
         const body = {
             institutionId: patientForm.institutionId,
@@ -224,9 +268,9 @@ const Users = () => {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(body)
         })
-            .then(res => res.json())
+            .then(parseResponse)
             .then(() => { setShowPatientForm(false); fetchUsers(); })
-            .catch(error => console.error('Error registrando paciente. ', error))
+            .catch(error => { console.error('Error registrando paciente. ', error); alert(error.message) })
     }
 
     //---------------------------------editar credenciales--------------------------------------------------
@@ -249,9 +293,9 @@ const Users = () => {
                 password: credentialsForm.password,
             })
         })
-            .then(res => res.json())
+            .then(parseResponse)
             .then(() => { setShowCredentialsForm(false); fetchUsers(); })
-            .catch(error => console.error('Error actualizando credenciales. ', error))
+            .catch(error => { console.error('Error actualizando credenciales. ', error); alert(error.message) })
     }
 
     return (
@@ -281,7 +325,7 @@ const Users = () => {
                         <div className="users-form-row">
                             <div className="users-field">
                                 <label>Correo electrónico</label>
-                                <input type="email" value={credentialsForm.email} onChange={(e) => setCredentialsForm(p => ({ ...p, email: e.target.value }))} required />
+                                <input type="email" value={credentialsForm.email} onChange={(e) => setCredentialsForm(p => ({ ...p, email: e.target.value }))} maxLength={150} required />
                             </div>
                             <div className="users-field">
                                 <label>Nueva contraseña</label>
@@ -312,7 +356,7 @@ const Users = () => {
                             <div className="users-form-row">
                                 <div className="users-field">
                                     <label>Correo electrónico</label>
-                                    <input type="email" value={patientForm.email} onChange={(e) => handlePatientFieldChange('email', e.target.value)} required />
+                                    <input type="email" value={patientForm.email} onChange={(e) => handlePatientFieldChange('email', e.target.value)} maxLength={150} required />
                                 </div>
                                 <div className="users-field">
                                     <label>Contraseña</label>
@@ -387,7 +431,7 @@ const Users = () => {
                             <div className="users-form-row">
                                 <div className="users-field">
                                     <label>Correo electrónico</label>
-                                    <input type="email" value={form.email} onChange={(e) => handleFieldChange('email', e.target.value)} required />
+                                    <input type="email" value={form.email} onChange={(e) => handleFieldChange('email', e.target.value)} maxLength={150} required />
                                 </div>
                                 <div className="users-field">
                                     <label>Contraseña</label>
@@ -469,6 +513,21 @@ const Users = () => {
                     </form>
                 )}
 
+                <div className="users-filter-row">
+                    <select className="status-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                        <option value="all">Todos</option>
+                        <option value="active">Activos</option>
+                        <option value="inactive">Inactivos</option>
+                    </select>
+                    <input
+                        type="text"
+                        className="users-search-input"
+                        placeholder="Buscar por nombre, correo o CURP..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
                 <div className="users-table-wrapper">
                     <table className="users-table">
                         <thead>
@@ -483,7 +542,7 @@ const Users = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {users.map((u) => (
+                            {visibleUsers.map((u) => (
                                 <Fragment key={u.user_profile_id}>
                                     <tr>
                                         <td className="users-id">#{u.user_profile_id}</td>
@@ -500,10 +559,12 @@ const Users = () => {
                                             <button className="users-view-btn" onClick={() => toggleUserDetail(u.user_profile_id)}>Ver</button>
                                             <button className="users-edit-btn" onClick={() => openEditForm(u)}>Editar</button>
                                             <button className="users-cred-btn" onClick={() => openCredentialsForm(u)} disabled={!u.user_credential_id}>Credenciales</button>
+                                            <button className="users-cred-btn" onClick={() => toggleCredentialHistory(u)} disabled={!u.user_credential_id}>Historial</button>
                                             <button
                                                 className="users-toggle-btn"
-                                                onClick={() => handleToggleActive(u.user_credential_id)}
-                                                disabled={!u.user_credential_id}
+                                                onClick={() => handleToggleActive(u)}
+                                                disabled={!u.user_credential_id || parseInt(u.user_profile_id) === parseInt(user?.profileId)}
+                                                title={parseInt(u.user_profile_id) === parseInt(user?.profileId) ? 'No puedes desactivar tu propia cuenta' : undefined}
                                             >
                                                 {u.is_active ? 'Desactivar' : 'Activar'}
                                             </button>
@@ -522,13 +583,32 @@ const Users = () => {
                                             </td>
                                         </tr>
                                     )}
+                                    {historyUserId === u.user_profile_id && (
+                                        <tr className="users-detail-row">
+                                            <td colSpan={7}>
+                                                <div className="users-detail-content">
+                                                    <strong>Historial de la cuenta:</strong>
+                                                    <span className="users-history-scope-note">Este historial registra únicamente activaciones y desactivaciones de la cuenta, no ediciones de perfil.</span>
+                                                    {credentialHistory.length === 0 ? (
+                                                        <span>Sin activaciones o desactivaciones registradas todavía.</span>
+                                                    ) : (
+                                                        credentialHistory.map((h) => (
+                                                            <span key={h.user_credential_history_id}>
+                                                                {h.is_active ? 'Activada' : 'Desactivada'} — {new Date(h.changed_at).toLocaleString('es-MX')}
+                                                            </span>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                 </Fragment>
                             ))}
                         </tbody>
                     </table>
 
-                    {users.length === 0 && (
-                        <p className="users-empty">No hay usuarios registrados todavía.</p>
+                    {visibleUsers.length === 0 && (
+                        <p className="users-empty">No hay usuarios que coincidan con el filtro.</p>
                     )}
                 </div>
             </div>

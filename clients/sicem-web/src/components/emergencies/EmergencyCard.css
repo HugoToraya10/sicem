@@ -17,6 +17,18 @@
     font-size: 13px;
     font-weight: 700;
     color: #1a1a2e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ec-triage-badge {
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
 }
 
 .ec-loc {

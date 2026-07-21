@@ -57,6 +57,16 @@ const createInstitutionType = (institutionType, callback) => {
 
 //-------Todos los updates --------------------------------
 
+// Permite al hospital completar/corregir la identidad de un paciente
+// que llegó sin identificar (por ejemplo, sin CURP en el momento del incidente)
+const identifyPatient = (data, callback) => {
+    const { userProfileId, firstName, firstSurname, secondSurname, cveUnicaRegistroPob, birthDate, phone } = data;
+    const sql = `UPDATE user_profiles SET first_name = ?, first_surname = ?, second_surname = ?,
+                curp = ?, birth_date = ?, phone_number = ?, updated_at = NOW()
+                WHERE user_profile_id = ?`;
+    db.query(sql, [firstName, firstSurname, secondSurname, cveUnicaRegistroPob, birthDate, phone, userProfileId], callback);
+}
+
 const toggleInstitution = (institutionId, callback) => {
     const sql = `UPDATE institutions SET is_active = NOT is_active WHERE institution_id = ?`;
     db.query(sql, [institutionId], callback);
@@ -97,10 +107,49 @@ const updateBedCapacityIS = (institutionSpecialityId, totalBeds, callback) => {
     db.query(sql, [totalBeds, institutionSpecialityId], callback);
 }
 
+const updateInstitutionType = (institutionTypeId, institutionType, callback) => {
+    const sql = `UPDATE institution_types SET institution_type = ? WHERE institution_type_id = ?`;
+    db.query(sql, [institutionType, institutionTypeId], callback);
+}
+
+const updateSpeciality = (specialityId, name, description, callback) => {
+    const sql = `UPDATE specialities SET name = ?, description = ? WHERE speciality_id = ?`;
+    db.query(sql, [name, description, specialityId], callback);
+}
+
+const updateInstitution = (data, callback) => {
+    const {
+        institutionId,
+        name,
+        institutionTypeId,
+        cityId,
+        streetAddress,
+        zipCode,
+        longitude,
+        latitude
+    } = data
+    const sql = `UPDATE institutions SET name = ?, institution_type_id = ?, city_id = ?, street_address = ?,
+                zip_code = ?, longitude = ?, latitude = ? WHERE institution_id = ?`;
+    db.query(sql, [name, institutionTypeId, cityId, streetAddress, zipCode, longitude, latitude, institutionId], callback);
+}
+
 //-------------todos los gets---------------------------------
 const getAllInstitutions = (callback) => {
     const sql = `SELECT institution_id, city_id, institution_type_id, name, bed_capacity, available_beds,
-	street_address, zip_code, longitude, latitude, created_at FROM institutions WHERE is_active = 1`;
+	street_address, zip_code, longitude, latitude, created_at, is_active FROM institutions WHERE is_active = 1`;
+    db.query(sql, callback);
+}
+
+// Instituciones con sus camas disponibles y especialidades, para elegir destino de traslado
+const getInstitutionsForDestination = (callback) => {
+    const sql = `SELECT i.institution_id, i.name, i.available_beds, i.bed_capacity,
+                GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') AS specialities
+                FROM institutions i
+                LEFT JOIN institutions_specialities ist ON i.institution_id = ist.institution_id AND ist.is_active = 1
+                LEFT JOIN specialities s ON ist.speciality_id = s.speciality_id
+                WHERE i.is_active = 1
+                GROUP BY i.institution_id
+                ORDER BY i.available_beds DESC`;
     db.query(sql, callback);
 }
 
@@ -109,10 +158,15 @@ const getInstitutionByName = (name, callback) => {
     db.query(sql, [`%${name}%`], callback);
 }
 
-//Se obtienen todas las notificaciones de las instituciones (activas o no)
+//Se obtienen todas las notificaciones de las instituciones (activas o no), con nombre de
+//institución y datos de la emergencia relacionada ya resueltos (no solo los IDs crudos)
 const getInstitutionNotifications = (callback) => {
-    const sql = `SELECT t1.is_active, t1.name, t1.institution_type_id, t2.* FROM institutions AS t1 INNER JOIN institution_notifications AS t2
-	ON t1.institution_id = t2.institution_id`;
+    const sql = `SELECT t1.is_active, t1.name AS institution_name, t1.institution_type_id, t2.*,
+                et.name AS emergency_type_name, e.description AS emergency_description
+                FROM institutions AS t1
+                INNER JOIN institution_notifications AS t2 ON t1.institution_id = t2.institution_id
+                LEFT JOIN emergencies e ON t2.emergency_id = e.emergency_id
+                LEFT JOIN emergency_types et ON e.emergency_type_id = et.emergency_type_id`;
     db.query(sql, callback);
 }
 
@@ -150,10 +204,29 @@ const getAllInstitutionTypes = (callback) => {
     db.query(sql, callback);
 }
 
-module.exports = { 
+//-------- gets para administración: sin filtrar por is_active, el admin necesita ver todo --------
+
+const getAllInstitutionsAdmin = (callback) => {
+    const sql = `SELECT * FROM institutions`;
+    db.query(sql, callback);
+}
+
+const getAllInstitutionTypesAdmin = (callback) => {
+    const sql = `SELECT * FROM institution_types`;
+    db.query(sql, callback);
+}
+
+const getAllSpecialitiesAdmin = (callback) => {
+    const sql = `SELECT * FROM specialities`;
+    db.query(sql, callback);
+}
+
+module.exports = {
     registerInstitution, createSpeciality, createInstitutionNotification, createInstitutionsSpecialities, createInstitutionType,
-    toggleInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType,
-    updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS,
+    toggleInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
+    updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS, getInstitutionsForDestination,
+    updateInstitutionType, updateSpeciality, updateInstitution,
+    getAllInstitutionsAdmin, getAllInstitutionTypesAdmin, getAllSpecialitiesAdmin,
     getAllInstitutions, getInstitutionByName, getInstitutionNotifications, getInstitutionNotificationByName,
     getAllInstitutionSpecialities, getInstitutionSpecialityByName, getAllSpecialities, getSpecialityByName, getAllInstitutionTypes
 }

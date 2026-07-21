@@ -4,14 +4,16 @@ import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
 import './Requests.css';
 import { getNavLinks } from '../utils/Navlinks';
+import { parseResponse } from '../utils/apiRequest';
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
-// request_status_id: 1 = Pendiente, 2 = Aceptada, 3 = Rechazada
+// request_status_id: 1 = Pendiente, 2 = Aceptada, 3 = Rechazada, 4 = Cancelada
 const statusClass = {
     1: 'status-pending',
     2: 'status-accepted',
     3: 'status-rejected',
+    4: 'status-cancelled',
 }
 
 const Requests = () => {
@@ -19,15 +21,33 @@ const Requests = () => {
     const navLinks = getNavLinks(user?.roleId)
     const [requests, setRequests] = useState([]);
     const [expandedId, setExpandedId] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all');
 
-    useEffect(() => {
+    const fetchRequests = () => {
         fetch('http://localhost:3000/emergencias/solicitudes', {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
             .then(({ data }) => setRequests(data.map(r => toLowerCaseKeys(r))))
             .catch(error => console.error('Error consultando solicitudes. ', error))
-    }, []);
+    }
+    useEffect(() => { fetchRequests() }, []);
+
+    const visibleRequests = statusFilter === 'all'
+        ? requests
+        : requests.filter(r => String(r.request_status_id) === statusFilter)
+
+    const handleCancelRequest = (req) => {
+        if (!window.confirm('¿Seguro que quieres cancelar esta solicitud interinstitucional?')) return
+        fetch('http://localhost:3000/emergencias/cancelar-solicitud', {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ interInstitutionalRequestId: req.inter_institutional_request_id })
+        })
+            .then(parseResponse)
+            .then(() => fetchRequests())
+            .catch(error => { console.error('Error cancelando la solicitud. ', error); alert(error.message) })
+    }
 
     const formatTime = (dateString) => {
         if (!dateString) return '—'
@@ -46,6 +66,16 @@ const Requests = () => {
             <div className="requests-body">
                 <h2 className="requests-title">Solicitudes Interinstitucionales</h2>
 
+                <div className="requests-filter-row">
+                    <select className="status-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                        <option value="all">Todos</option>
+                        <option value="1">Pendientes</option>
+                        <option value="2">Aceptadas</option>
+                        <option value="3">Rechazadas</option>
+                        <option value="4">Canceladas</option>
+                    </select>
+                </div>
+
                 <div className="requests-table-wrapper">
                     <table className="requests-table">
                         <thead>
@@ -61,7 +91,7 @@ const Requests = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {requests.map((req) => (
+                            {visibleRequests.map((req) => (
                                 <Fragment key={req.inter_institutional_request_id}>
                                     <tr>
                                         <td className="req-id">#{String(req.inter_institutional_request_id).padStart(3, '0')}</td>
@@ -85,6 +115,14 @@ const Requests = () => {
                                             >
                                                 Ver
                                             </button>
+                                            {parseInt(req.request_status_id) === 1 && (parseInt(req.user_profile_id) === parseInt(user?.profileId) || parseInt(user?.roleId) === 1) && (
+                                                <button
+                                                    className="req-cancel-btn"
+                                                    onClick={() => handleCancelRequest(req)}
+                                                >
+                                                    Cancelar
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                     {expandedId === req.inter_institutional_request_id && (
@@ -105,8 +143,8 @@ const Requests = () => {
                         </tbody>
                     </table>
 
-                    {requests.length === 0 && (
-                        <p className="requests-empty">No hay solicitudes interinstitucionales registradas todavía.</p>
+                    {visibleRequests.length === 0 && (
+                        <p className="requests-empty">No hay solicitudes que coincidan con el filtro.</p>
                     )}
                 </div>
             </div>

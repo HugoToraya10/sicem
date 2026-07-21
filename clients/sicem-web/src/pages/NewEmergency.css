@@ -163,6 +163,24 @@
     min-height: 55px;
 }
 
+.ne-triage-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ne-triage-row select {
+    flex: 1;
+}
+
+.ne-triage-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
 .ne-submit {
     width: 100%;
     background: #C0272D;

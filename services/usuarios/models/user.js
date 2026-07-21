@@ -1,4 +1,4 @@
-const db = require('../config/db')
+const db = require('../config/db');
 
 const createCredential = (email, passwordHash, callback) => {
     const sql = `INSERT INTO user_credentials (email, password_hash, created_at, updated_at, is_active) VALUES (?, ?, NOW(), NOW(), 1)`;
@@ -19,18 +19,33 @@ const createProfile = (userCredentialId, institutionId, roleId, firstName, first
 }
 
 const login = (email, callback) => {
-    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.role_id, t2.user_credential_id, t2.email, t2.password_hash FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
+    const sql = `SELECT t1.user_profile_id, t1.institution_id, t1.first_name, t1.first_surname, t1.role_id, t2.user_credential_id, 
+    t2.email, t2.password_hash, t2.is_active FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
 	t1.USER_CREDENTIAL_ID = t2.USER_CREDENTIAL_ID WHERE t2.EMAIL = ?`;
     db.query(sql, [email], callback);
 }
 
 const toggleActiveUser = (userCredentialId, callback) => {
     const sql = `UPDATE user_credentials SET is_active = NOT is_active, updated_at = NOW() WHERE user_credential_id = ?`;
-    db.query(sql, [userCredentialId], callback);
+    db.query(sql, [userCredentialId], (e, r) => {
+        if (e) return callback(e, r);
+        db.query(`SELECT is_active FROM user_credentials WHERE user_credential_id = ?`, [userCredentialId], (e2, r2) => {
+            if (!e2 && r2.length > 0) {
+                db.query(`INSERT INTO user_credential_history (user_credential_id, is_active, changed_at) VALUES (?, ?, NOW())`,
+                    [userCredentialId, r2[0].is_active], (e3) => { if (e3) console.error('Error registrando historial de cuenta:', e3) });
+            }
+            callback(e, r);
+        });
+    });
 }
 
 const requestUserStatus = (userCredentialId, callback) => {
     const sql = `SELECT is_active FROM user_credentials WHERE user_credential_id = ?`;
+    db.query(sql, [userCredentialId], callback);
+}
+
+const getCredentialHistory = (userCredentialId, callback) => {
+    const sql = `SELECT * FROM user_credential_history WHERE user_credential_id = ? ORDER BY changed_at DESC`;
     db.query(sql, [userCredentialId], callback);
 }
 
@@ -100,7 +115,13 @@ const getCitiesByState = (stateId, callback) => {
     db.query(sql, [stateId], callback);
 }
 
+const getUserByCURP = (curp, callback) => {
+    const sql = `SELECT user_profile_id, first_name, first_surname, second_surname, 
+                phone_number, birth_date, curp
+                FROM user_profiles WHERE curp = ?`;
+    db.query(sql, [curp], callback);
+}
 
-module.exports = { createCredential, createProfile, login, toggleActiveUser, requestUserStatus, 
-                editUserProfile, editUserCredentials, getAllUsers, getUserById, 
+module.exports = { createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
+                editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP,
                 getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState }

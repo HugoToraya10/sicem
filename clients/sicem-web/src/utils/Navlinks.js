@@ -5,6 +5,7 @@ const baseNavLinks = [
     { to: '/solicitudes', label: 'Solicitudes' },
     { to: '/hospitales', label: 'Hospitales' },
     { to: '/graficas', label: 'Gráficas' },
+    { to: '/historial', label: 'Historial' },
 ]
 
 // Menú desplegable de administración — solo visible para el rol admin.
@@ -16,6 +17,8 @@ const adminDropdown = {
         { to: '/admin/usuarios', label: 'Usuarios' },
         { to: '/admin/instituciones', label: 'Instituciones' },
         { to: '/admin/ambulancias', label: 'Ambulancias' },
+        { to: '/admin/pacientes', label: 'Pacientes' },
+        { to: '/admin/catalogos-emergencias', label: 'Catálogos de Emergencias' },
 
     ]
 }

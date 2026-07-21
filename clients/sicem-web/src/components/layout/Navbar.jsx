@@ -1,11 +1,19 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import './Navbar.css'
 
 const Navbar = ({ userName, roleLabel, links }) => {
     const location = useLocation()
+    const navigate = useNavigate()
+    const { logout } = useAuth()
     const [openDropdown, setOpenDropdown] = useState(null)
     const dropdownRef = useRef(null)
+
+    const handleLogout = () => {
+        logout()
+        navigate('/login')
+    }
 
     // Cierra el dropdown si el usuario hace clic fuera de él
     useEffect(() => {
@@ -70,10 +78,15 @@ const Navbar = ({ userName, roleLabel, links }) => {
                     )
                 })}
             </div>
-            <span className="navbar-user">
-                <span className="navbar-user-dot" />
-                {userName} — {roleLabel}
-            </span>
+            <div className="navbar-right">
+                <Link to="/perfil" className={`navbar-user ${location.pathname === '/perfil' ? 'active' : ''}`}>
+                    <span className="navbar-user-dot" />
+                    {userName} — {roleLabel}
+                </Link>
+                <button className="navbar-logout-btn" onClick={handleLogout}>
+                    Cerrar sesión
+                </button>
+            </div>
         </nav>
     )
 }
