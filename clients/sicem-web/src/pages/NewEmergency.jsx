@@ -37,7 +37,6 @@ const NewEmergency = () => {
     const [searchingAddress, setSearchingAddress] = useState(false);
 
     const [destinationInstitutions, setDestinationInstitutions] = useState([]);
-    const [destinationInstitutionId, setDestinationInstitutionId] = useState('');
 
     // ── Paso 2: identificación de pacientes (opcional, no bloqueante) ──
     const [step, setStep] = useState(1); // 1 = registro de emergencia, 2 = identificación de pacientes
@@ -173,7 +172,8 @@ const NewEmergency = () => {
                         Array.from({ length: count }, () => ({
                             curp: '', found: null, userProfileId: null,
                             firstName: '', firstSurname: '', secondSurname: '',
-                            phone: '', birthDate: '', notes: ''
+                            phone: '', birthDate: '', notes: '',
+                            destinationInstitutionId: '', ambulanceId: ''
                         }))
                     )
                     setStep(2)
@@ -248,71 +248,126 @@ const NewEmergency = () => {
             .finally(() => setSearchingCurpIndex(null))
     }
 
-    const handleConfirmPatients = () => {
-        // Validación: cada paciente necesita al menos un dato (CURP, nombre, o notas)
-        const hasAnyData = (p) =>
-            p.curp.trim() || p.firstName.trim() || p.firstSurname.trim() || p.notes.trim()
+const handleConfirmPatients = () => {
+    // Cualquier CURP escrita pero nunca verificada contra el backend (o editada
+    // después de una búsqueda anterior) se resuelve aquí, automáticamente, antes
+    // de registrar nada. Sin esto, una CURP ya existente pero no buscada se trata
+    // como paciente nuevo y el backend la rechaza por duplicada — con la emergencia
+    // ya creada de antes.
+    const needsLookup = patientForms
+        .map((p, index) => ({ ...p, index }))
+        .filter(p => p.curp.trim() && p.curp.trim() !== p.searchedCurp)
 
-        const emptyIndex = patientForms.findIndex((p) => !hasAnyData(p))
-        if (emptyIndex !== -1) {
-            alert(`El Paciente ${emptyIndex + 1} no tiene ningún dato. Llena al menos un campo (CURP, nombre o notas) o usa "Omitir por ahora".`)
-            return
+    const lookups = needsLookup.map(({ curp, index }) =>
+        fetch(`http://localhost:3000/usuarios/obtener-usuario-curp/${curp.trim()}`, {
+            headers: { "Content-Type": "application/json" }
+        })
+            .then(res => res.json())
+            .then(({ data }) => ({ index, data }))
+    )
+
+    Promise.all(lookups)
+        .then((results) => {
+            const resolvedForms = [...patientForms]
+            results.forEach(({ index, data }) => {
+                const curp = resolvedForms[index].curp.trim()
+                if (data && data.length > 0) {
+                    const found = toLowerCaseKeys(data[0])
+                    resolvedForms[index] = {
+                        ...resolvedForms[index],
+                        found: true,
+                        userProfileId: found.user_profile_id,
+                        firstName: found.first_name || '',
+                        firstSurname: found.first_surname || '',
+                        secondSurname: found.second_surname || '',
+                        phone: found.phone_number || '',
+                        birthDate: found.birth_date ? found.birth_date.split('T')[0] : '',
+                        searchedCurp: curp,
+                    }
+                } else {
+                    resolvedForms[index] = { ...resolvedForms[index], found: false, userProfileId: null, searchedCurp: curp }
+                }
+            })
+            setPatientForms(resolvedForms)
+            proceedWithConfirmation(resolvedForms)
+        })
+        .catch(error => {
+            console.error('Error verificando CURPs antes de registrar. ', error)
+            alert('No se pudo verificar las CURPs contra el sistema. Revisa tu conexión e intenta de nuevo.')
+        })
+}
+
+const proceedWithConfirmation = (forms) => {
+    const hasAnyData = (p) =>
+        p.curp.trim() || p.firstName.trim() || p.firstSurname.trim() || p.notes.trim()
+
+    const emptyIndex = forms.findIndex((p) => !hasAnyData(p))
+    if (emptyIndex !== -1) {
+        alert(`El Paciente ${emptyIndex + 1} no tiene ningún dato. Llena al menos un campo (CURP, nombre o notas) o usa "Omitir por ahora".`)
+        return
+    }
+
+    const filledCurps = forms.map(p => p.curp.trim()).filter(curp => curp !== '')
+    const duplicatedCurp = filledCurps.find((curp, index) => filledCurps.indexOf(curp) !== index)
+    if (duplicatedCurp) {
+        alert(`La CURP ${duplicatedCurp} está repetida en más de un paciente. Cada paciente debe tener una CURP distinta.`)
+        return
+    }
+
+    // el resto es idéntico a lo que ya tenías, solo cambia patientForms por forms:
+    const promises = forms.map((patient) => {
+        if (patient.userProfileId) {
+            return fetch('http://localhost:3000/emergencias/registrar-paciente', {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({
+                    emergencyId: registeredEmergencyId,
+                    userProfileId: patient.userProfileId,
+                    notes: patient.notes,
+                    destinationInstitutionId: patient.destinationInstitutionId || null,
+                    ambulanceId: patient.ambulanceId || null,
+                })
+            }).then(parseResponse)
         }
-
-        const promises = patientForms.map((patient) => {
-            // Si ya existe (encontrado por CURP), solo lo asociamos a la emergencia
-            if (patient.userProfileId) {
+        return fetch('http://localhost:3000/usuarios/registro-paciente', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({
+                institutionId: user.institutionId,
+                firstName: patient.firstName || 'No identificado',
+                firstSurname: patient.firstSurname || '',
+                secondSurname: patient.secondSurname || '',
+                phone: patient.phone,
+                birthDate: patient.birthDate || null,
+                cveUnicaRegistroPob: patient.curp || null,
+                emergencyContact: '',
+                emergencyPhone: '',
+            })
+        })
+            .then(parseResponse)
+            .then((newProfile) => {
                 return fetch('http://localhost:3000/emergencias/registrar-paciente', {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                     body: JSON.stringify({
                         emergencyId: registeredEmergencyId,
-                        userProfileId: patient.userProfileId,
+                        userProfileId: newProfile.userProfileId,
                         notes: patient.notes,
+                        destinationInstitutionId: patient.destinationInstitutionId || null,
+                        ambulanceId: patient.ambulanceId || null,
                     })
                 }).then(parseResponse)
-            }
-
-            // Si no existe, primero creamos su perfil básico SIN credenciales
-            // (el paramédico nunca asigna email/password, eso lo hace el paciente después)
-            return fetch('http://localhost:3000/usuarios/registro-paciente', {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({
-                    institutionId: user.institutionId,
-                    firstName: patient.firstName || 'No identificado',
-                    firstSurname: patient.firstSurname || '',
-                    secondSurname: patient.secondSurname || '',
-                    phone: patient.phone,
-                    birthDate: patient.birthDate || null,
-                    cveUnicaRegistroPob: patient.curp || null,
-                    emergencyContact: '',
-                    emergencyPhone: '',
-                })
             })
-                .then(parseResponse)
-                .then((newProfile) => {
-                    // Ahora sí vinculamos usando el userProfileId real que regresa el backend
-                    return fetch('http://localhost:3000/emergencias/registrar-paciente', {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                        body: JSON.stringify({
-                            emergencyId: registeredEmergencyId,
-                            userProfileId: newProfile.userProfileId,
-                            notes: patient.notes,
-                        })
-                    }).then(parseResponse)
-                })
+    })
+
+    Promise.all(promises)
+        .then(() => navigate('/dashboard'))
+        .catch(error => {
+            console.error('Error registrando pacientes. ', error)
+            alert(`La emergencia ya está registrada y en curso. No se pudo guardar la identificación de uno o más pacientes: ${error.message}. Puedes agregarla después desde el detalle de la emergencia.`)
+            navigate('/dashboard')
         })
-
-        Promise.all(promises)
-            .then(() => navigate('/dashboard'))
-            .catch(error => {
-                console.error('Error registrando pacientes. ', error)
-                alert(`La emergencia ya está registrada y en curso. No se pudo guardar la identificación de uno o más pacientes: ${error.message}. Puedes agregarla después desde el detalle de la emergencia.`)
-                navigate('/dashboard')
-            })
-    }
+}
 
     const handleSkipPatients = () => {
         navigate('/dashboard')
@@ -374,6 +429,13 @@ const NewEmergency = () => {
     const allUnitsForMap = [...availableUnits, ...externalUnits]
 
     //---------------------------------PASO 2: JSX de identificación de pacientes--------------------------------------------------
+
+    // Unidades ya asignadas a esta emergencia en el Paso 1 (propias + externas), con su
+    // unit_number, para elegir por paciente a cuál va cada uno
+    const assignedUnitsForPatients = [
+        ...availableUnits.filter((u) => selectedUnits.includes(u.ambulance_id)),
+        ...externalUnits.filter((u) => selectedExternalUnits.includes(u.ambulance_id)),
+    ]
 
     if (step === 2) {
         return (
@@ -468,6 +530,31 @@ const NewEmergency = () => {
                                     onChange={(e) => updatePatientField(index, 'notes', e.target.value)}
                                     maxLength={300}
                                 />
+
+                                <div className="patient-id-row">
+                                    <select
+                                        value={patient.destinationInstitutionId}
+                                        onChange={(e) => updatePatientField(index, 'destinationInstitutionId', e.target.value)}
+                                    >
+                                        <option value="">Hospital destino — sin definir</option>
+                                        {destinationInstitutions.map((inst) => (
+                                            <option key={inst.institution_id} value={inst.institution_id}>
+                                                {inst.name} — {inst.available_beds} camas
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={patient.ambulanceId}
+                                        onChange={(e) => updatePatientField(index, 'ambulanceId', e.target.value)}
+                                    >
+                                        <option value="">Unidad asignada — sin definir</option>
+                                        {assignedUnitsForPatients.map((unit) => (
+                                            <option key={unit.ambulance_id} value={unit.ambulance_id}>
+                                                {unit.unit_number}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -605,18 +692,6 @@ const NewEmergency = () => {
                                 />
                             )}
                         </div>
-                    </div>
-
-                    <div className="ne-field">
-                        <label>Hospital de destino sugerido</label>
-                        <select value={destinationInstitutionId} onChange={(e) => setDestinationInstitutionId(e.target.value)}>
-                            <option value="">Sin definir todavía</option>
-                            {destinationInstitutions.map((inst) => (
-                                <option key={inst.institution_id} value={inst.institution_id}>
-                                    {inst.name} — {inst.available_beds} camas{inst.specialities ? ` — ${inst.specialities}` : ''}
-                                </option>
-                            ))}
-                        </select>
                     </div>
 
                     <button className="ne-submit" type="submit">

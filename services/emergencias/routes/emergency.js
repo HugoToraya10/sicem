@@ -34,6 +34,7 @@ router.get('/emergencias-activas', middleware.verifyToken, emergencyController.g
 router.get('/emergencias-cerradas', middleware.verifyToken, emergencyController.getAllClosedEmergencies); // TODO
 router.get('/emergencia/:emergencyId', middleware.verifyToken, emergencyController.getEmergencyById); // ✅ EmergencyDetail.jsx
 router.get('/pacientes/:emergencyId', middleware.verifyToken, emergencyController.getPatientsByEmergency); // ✅ EmergencyDetail.jsx
+router.get('/pacientes-en-camino/:institutionId', middleware.verifyToken, emergencyController.getIncomingPatientsByInstitution);
 router.get('/notas/:emergencyPatientId', middleware.verifyToken, emergencyController.getNotesByEmergencyPatient); // ✅ EmergencyDetail.jsx
 router.get('/asignaciones/:emergencyId', middleware.verifyToken, emergencyController.getAssignmentsByEmergency); // ✅ EmergencyDetail.jsx
 router.get('/asignaciones-ambulancia/:ambulanceId', middleware.verifyToken, emergencyController.getAssignmentsByAmbulance);
@@ -57,5 +58,10 @@ router.get('/analiticas/solicitudes-por-estado', middleware.verifyToken, emergen
 router.get('/analiticas/tiempo-respuesta', middleware.verifyToken, emergencyController.getResponseTimeByDay);
 router.get('/analiticas/tiempo-respuesta-hoy', middleware.verifyToken, emergencyController.getResponseTimeToday);
 router.get('/analiticas/emergencias-por-institucion', middleware.verifyToken, emergencyController.getEmergenciesByInstitution);
+
+// analíticas filtradas por hospital (a diferencia de las de arriba, que son globales)
+router.get('/analiticas/pacientes-por-tipo/:institutionId', middleware.verifyToken, emergencyController.getPatientsByTypeForInstitution);
+router.get('/analiticas/pacientes-por-mes/:institutionId', middleware.verifyToken, emergencyController.getPatientsByMonthForInstitution);
+router.get('/analiticas/tiempo-traslado/:institutionId', middleware.verifyToken, emergencyController.getAvgTransferTimeForInstitution);
 
 module.exports = router

@@ -1,0 +1,9 @@
+.incoming-layout { padding: 20px 24px; }
+.section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1565C0;
+}
+.empty-state { color: #888; font-size: 13px; }

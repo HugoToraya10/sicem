@@ -1,0 +1,19 @@
+:root {
+    /* Acento de rol — azul (institución receptora / personal hospitalario) */
+    --role-accent: #1565C0;
+
+    /* Colores de estado, compartidos con sicem-web */
+    --status-available: #2E7D32;
+    --status-warning: #E67E22;
+    --status-critical: #E65100;
+
+    /* Navbar oscuro, compartido con sicem-web */
+    --navbar-bg: #12121f;
+    --navbar-border: #23233a;
+    --navbar-dropdown-bg: #1a1a2e;
+    --navbar-dropdown-border: #2a2a45;
+
+    /* Tipografía */
+    --font-sans: 'Inter', 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}

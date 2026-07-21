@@ -560,6 +560,7 @@
 
 .patient-id-row input,
 .patient-id-date,
+.patient-id-card select,
 .patient-id-card textarea {
     border: 1px solid #dcdce4;
     border-radius: 5px;
@@ -568,6 +569,7 @@
     width: 100%;
     box-sizing: border-box;
     margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
 }
 
 .patient-id-row input[readonly] {
@@ -701,6 +703,7 @@
 
 .patient-id-row input,
 .patient-id-date,
+.patient-id-card select,
 .patient-id-card textarea {
     border: 1px solid #dcdce4;
     border-radius: 5px;
@@ -709,6 +712,7 @@
     width: 100%;
     box-sizing: border-box;
     margin-bottom: 8px;
+    font-family: 'Inter', sans-serif;
 }
 
 .patient-id-row input[readonly] {

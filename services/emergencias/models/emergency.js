@@ -24,10 +24,11 @@ const registerEmergency = (data, callback) => {
 }
 
 const registerEmergencyPatient = (data, callback) => {
-    const { emergencyId, userProfileId, notes } = data;
-    const sql = `INSERT INTO emergencies_patients (emergency_id, user_profile_id, notes, created_at)
-                VALUES (?, ?, ?, NOW())`;
-    db.query(sql, [emergencyId, userProfileId, notes], callback);
+    const { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId } = data;
+    const sql = `INSERT INTO emergencies_patients (emergency_id, user_profile_id, notes,
+                destination_institution_id, ambulance_id, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())`;
+    db.query(sql, [emergencyId, userProfileId, notes, destinationInstitutionId || null, ambulanceId || null], callback);
 }
 
 const registerEmergencyNote = (data, callback) => {
@@ -347,6 +348,21 @@ const getPatientsByEmergency = (emergencyId, callback) => {
     db.query(sql, [emergencyId], callback);
 }
 
+// Pacientes con destino asignado a esta institución, de emergencias todavía activas
+// (para que el hospital vea quién viene en camino)
+const getIncomingPatientsByInstitution = (institutionId, callback) => {
+    const sql = `SELECT ep.*, e.emergency_type_id, e.description, e.closed_at,
+                up.first_name, up.first_surname, up.second_surname, up.curp,
+                amb.unit_number, i.name AS institution_name
+                FROM emergencies_patients ep
+                JOIN emergencies e ON ep.emergency_id = e.emergency_id
+                LEFT JOIN user_profiles up ON ep.user_profile_id = up.user_profile_id
+                LEFT JOIN ambulances amb ON ep.ambulance_id = amb.ambulance_id
+                LEFT JOIN institutions i ON amb.institution_id = i.institution_id
+                WHERE ep.destination_institution_id = ? AND e.closed_at IS NULL`;
+    db.query(sql, [institutionId], callback);
+}
+
 // Notas de urgencia de un paciente en una emergencia
 const getNotesByEmergencyPatient = (emergencyPatientId, callback) => {
     const sql = `SELECT en.*, tl.level, tl.color, tl.description AS triage_description
@@ -521,6 +537,39 @@ const getEmergenciesByInstitution = (callback) => {
     db.query(sql, callback);
 }
 
+//-----------------------------analíticas filtradas por hospital (a diferencia de las de arriba, que son globales)-----------------------------//
+// Conteo de pacientes recibidos por esta institución, agrupados por tipo de emergencia
+const getPatientsByTypeForInstitution = (institutionId, callback) => {
+    const sql = `SELECT et.name AS type_name, COUNT(*) AS patient_count
+                FROM emergencies_patients ep
+                INNER JOIN emergencies e ON ep.emergency_id = e.emergency_id
+                INNER JOIN emergency_types et ON e.emergency_type_id = et.emergency_type_id
+                WHERE ep.destination_institution_id = ?
+                GROUP BY et.emergency_type_id, et.name
+                ORDER BY patient_count DESC`;
+    db.query(sql, [institutionId], callback);
+}
+
+// Conteo de pacientes recibidos por esta institución, agrupados por mes
+const getPatientsByMonthForInstitution = (institutionId, callback) => {
+    const sql = `SELECT DATE_FORMAT(ep.created_at, '%Y-%m') AS month, COUNT(*) AS patient_count
+                FROM emergencies_patients ep
+                WHERE ep.destination_institution_id = ?
+                GROUP BY month
+                ORDER BY month ASC`;
+    db.query(sql, [institutionId], callback);
+}
+
+// Tiempo promedio de traslado (minutos entre el registro del paciente y el cierre de
+// la emergencia) para los pacientes recibidos por esta institución
+const getAvgTransferTimeForInstitution = (institutionId, callback) => {
+    const sql = `SELECT AVG(TIMESTAMPDIFF(MINUTE, ep.created_at, e.closed_at)) AS avg_minutes
+                FROM emergencies_patients ep
+                INNER JOIN emergencies e ON ep.emergency_id = e.emergency_id
+                WHERE ep.destination_institution_id = ? AND e.closed_at IS NOT NULL`;
+    db.query(sql, [institutionId], callback);
+}
+
 
 module.exports = {
     // POST
@@ -534,11 +583,13 @@ module.exports = {
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
     // GET
     getAllActiveEmergencies, getAllClosedEmergencies, getEmergencyById,
-    getPatientsByEmergency, getNotesByEmergencyPatient, getAssignmentsByEmergency,
+    getPatientsByEmergency, getIncomingPatientsByInstitution, getNotesByEmergencyPatient, getAssignmentsByEmergency,
     getAssignmentsByAmbulance, getEmergenciesByPatient,
     getPendingInterInstitutionalRequests, getAllInterInstitutionalRequests,
     getAllEmergencyTypes, getAllEmergencyStatuses, getAllRequestStatuses, getAllTriageLevels,
     getAllEmergencyTypesAdmin, getAllEmergencyStatusesAdmin, getAllRequestStatusesAdmin, getAllTriageLevelsAdmin,
     //GETs de estadísticas
-    getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution
+    getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution,
+    //GETs de estadísticas filtradas por hospital
+    getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution
 }

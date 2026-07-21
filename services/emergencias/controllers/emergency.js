@@ -37,9 +37,9 @@ const registerEmergencyPatient = (req, res) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
-                //se muestra la info del paciente al frontend inmediatamente se registra 
-                const { emergencyId, userProfileId, notes } = req.body;
-                io.to('hospital').emit('eventPatientRegistered', { emergencyId, userProfileId, notes })
+                //se muestra la info del paciente al frontend inmediatamente se registra
+                const { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId } = req.body;
+                io.to('hospital').emit('eventPatientRegistered', { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId })
                 res.status(201).json({message: "Paciente registrado en la emergencia.", emergencyPatientId: r.insertId});
             }
         });
@@ -454,6 +454,27 @@ const getPatientsByEmergency = (req, res) => {
     }
 }
 
+// Pacientes en camino hacia una institución (hospital consulta la suya, admin cualquiera).
+// El JWT actual no incluye institutionId (ver userModel.login), así que igual que el resto
+// de endpoints existentes (p.ej. getInstitutionNotifications), se confía en el :institutionId
+// que manda el frontend sin cruzarlo contra el token — inconsistencia ya existente en el
+// proyecto, no se corrige aquí.
+const getIncomingPatientsByInstitution = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const {institutionId} = req.params;
+        emergencyModel.getIncomingPatientsByInstitution(institutionId, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Pacientes en camino", data: r});
+            }
+        });
+    }
+}
+
 const getNotesByEmergencyPatient = (req, res) => {
     const allowedRoles = [1, 2, 3, 4];
     if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
@@ -675,6 +696,55 @@ const getEmergenciesByInstitution = (req, res) => {
     });
 }
 
+//----------------------------------------------GETs de estadísticas filtradas por hospital------------------------------//
+const getPatientsByTypeForInstitution = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const {institutionId} = req.params;
+        emergencyModel.getPatientsByTypeForInstitution(institutionId, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Pacientes por tipo", data: r});
+            }
+        });
+    }
+}
+
+const getPatientsByMonthForInstitution = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const {institutionId} = req.params;
+        emergencyModel.getPatientsByMonthForInstitution(institutionId, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Pacientes por mes", data: r});
+            }
+        });
+    }
+}
+
+const getAvgTransferTimeForInstitution = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const {institutionId} = req.params;
+        emergencyModel.getAvgTransferTimeForInstitution(institutionId, (e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Tiempo promedio de traslado", data: r});
+            }
+        });
+    }
+}
+
 module.exports = {
     // POST
     registerEmergency, registerEmergencyPatient, registerEmergencyNote,
@@ -687,11 +757,13 @@ module.exports = {
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
     // GET
     getAllActiveEmergencies, getAllClosedEmergencies, getEmergencyById,
-    getPatientsByEmergency, getNotesByEmergencyPatient, getAssignmentsByEmergency,
+    getPatientsByEmergency, getIncomingPatientsByInstitution, getNotesByEmergencyPatient, getAssignmentsByEmergency,
     getAssignmentsByAmbulance, getEmergenciesByPatient,
     getPendingInterInstitutionalRequests, getAllInterInstitutionalRequests,
     getAllEmergencyTypes, getAllEmergencyStatuses, getAllRequestStatuses, getAllTriageLevels,
     getAllEmergencyTypesAdmin, getAllEmergencyStatusesAdmin, getAllRequestStatusesAdmin, getAllTriageLevelsAdmin,
     //GETs de estadísticas
-    getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution
+    getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution,
+    //GETs de estadísticas filtradas por hospital
+    getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution
 }
