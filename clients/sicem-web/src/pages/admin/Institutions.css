@@ -191,6 +191,8 @@
 
 .status-active { background: #e2efda; color: #276221; }
 .status-inactive { background: #ffc7ce; color: #9c0006; }
+.status-crum { background: #e3f2fd; color: #1565C0; }
+.status-not-crum { background: #f0f2f5; color: #8888a0; }
 
 .institution-admin-beds {
     display: flex;

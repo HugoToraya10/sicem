@@ -26,6 +26,16 @@ const formatDateTime = (value) => {
     return new Date(value).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
 }
 
+// Igual que en sicem-desktop: "resuelta" (close_reason vacío, todos sus
+// pacientes se entregaron o nunca tuvo destino) vs "cerrada sin resolver"
+// (close_reason presente — el despachador la cerró a la fuerza). Mezclar las
+// dos en una sola lista es lo que hacía este historial un desastre.
+const RESOLUTION_FILTERS = [
+    { value: 'all', label: 'Todas' },
+    { value: 'resolved', label: 'Resueltas' },
+    { value: 'forced', label: 'Cerradas sin resolver' },
+]
+
 const History = () => {
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
@@ -35,12 +45,22 @@ const History = () => {
     const [loading, setLoading] = useState(true);
     const [accessDenied, setAccessDenied] = useState(false);
     const [search, setSearch] = useState('');
+    const [resolutionFilter, setResolutionFilter] = useState('all');
+    const [triageFilter, setTriageFilter] = useState('all');
+    const [triageCatalog, setTriageCatalog] = useState([]);
 
-    const visibleEmergencies = emergencies.filter((em) => {
-        if (!search.trim()) return true
-        const q = search.trim().toLowerCase()
-        return (em.type_name || '').toLowerCase().includes(q) || (em.description || '').toLowerCase().includes(q)
-    })
+    const visibleEmergencies = emergencies
+        .filter((em) => {
+            if (resolutionFilter === 'resolved') return !em.close_reason
+            if (resolutionFilter === 'forced') return Boolean(em.close_reason)
+            return true
+        })
+        .filter((em) => triageFilter === 'all' || em.triage_level === triageFilter)
+        .filter((em) => {
+            if (!search.trim()) return true
+            const q = search.trim().toLowerCase()
+            return (em.type_name || '').toLowerCase().includes(q) || (em.description || '').toLowerCase().includes(q)
+        })
 
     useEffect(() => {
         fetch('http://localhost:3000/emergencias/emergencias-cerradas', {
@@ -57,6 +77,16 @@ const History = () => {
             .catch(error => console.error('Error consultando historial de emergencias. ', error))
             .finally(() => setLoading(false))
     }, [token]);
+
+    // Catálogo real de niveles de triage, igual que en sicem-desktop — no se
+    // deriva de las emergencias ya cargadas, porque eso solo mostraría los
+    // niveles que ya aparecieron, no todos los que existen.
+    useEffect(() => {
+        fetch('http://localhost:3000/emergencias/niveles-triage', { headers: { "Content-Type": "application/json" } })
+            .then(res => res.json())
+            .then(({ data }) => setTriageCatalog((data || []).map(t => toLowerCaseKeys(t))))
+            .catch(error => console.error('Error recuperando catálogo de triage. ', error))
+    }, []);
 
     return (
         <div className="institutions-page">
@@ -78,6 +108,17 @@ const History = () => {
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
+                            <select className="status-filter-select" value={resolutionFilter} onChange={(e) => setResolutionFilter(e.target.value)}>
+                                {RESOLUTION_FILTERS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
+                            <select className="status-filter-select" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
+                                <option value="all">Todos los niveles de triage</option>
+                                {triageCatalog.map((t) => (
+                                    <option key={t.triage_level_id} value={t.level}>Triage {t.level}</option>
+                                ))}
+                            </select>
                             {search && <button type="button" className="history-clear-btn" onClick={() => setSearch('')}>Limpiar</button>}
                         </div>
 
@@ -86,10 +127,12 @@ const History = () => {
                                 <thead>
                                     <tr>
                                         <th>Tipo</th>
+                                        <th>Triage</th>
                                         <th>Descripción</th>
                                         <th>Fecha de registro</th>
                                         <th>Fecha de cierre</th>
                                         <th>Duración</th>
+                                        <th>Resolución</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
@@ -97,10 +140,24 @@ const History = () => {
                                     {visibleEmergencies.map((em) => (
                                         <tr key={em.emergency_id}>
                                             <td>{em.type_name || '—'}</td>
+                                            <td>
+                                                {em.triage_level ? (
+                                                    <span className="history-triage-pill" style={{ background: em.triage_hex_color || '#888' }}>
+                                                        {em.triage_level}
+                                                    </span>
+                                                ) : '—'}
+                                            </td>
                                             <td>{em.description || '—'}</td>
                                             <td>{formatDateTime(em.created_at)}</td>
                                             <td>{formatDateTime(em.closed_at)}</td>
                                             <td><span className="history-duration">{formatDuration(em.created_at, em.closed_at)}</span></td>
+                                            <td>
+                                                {em.close_reason ? (
+                                                    <span className="history-resolution-pill forced" title={em.close_reason}>Sin resolver</span>
+                                                ) : (
+                                                    <span className="history-resolution-pill resolved">Resuelta</span>
+                                                )}
+                                            </td>
                                             <td>
                                                 <button className="institutions-edit-btn" onClick={() => navigate(`/emergencias/${em.emergency_id}`)}>
                                                     Ver detalle
@@ -112,7 +169,7 @@ const History = () => {
                             </table>
                             {visibleEmergencies.length === 0 && (
                                 <p className="institutions-empty">
-                                    {emergencies.length === 0 ? 'No hay emergencias cerradas todavía.' : 'No hay emergencias que coincidan con la búsqueda.'}
+                                    {emergencies.length === 0 ? 'No hay emergencias cerradas todavía.' : 'No hay emergencias que coincidan con los filtros.'}
                                 </p>
                             )}
                         </div>

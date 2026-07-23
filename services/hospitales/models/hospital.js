@@ -1,5 +1,21 @@
 const db = require('../config/db');
 
+// Institución, rol y privilegio de administrador de institución del usuario que
+// llama — se deriva SIEMPRE server-side desde user_profiles, nunca se confía en
+// un institutionId mandado por el cliente para decisiones de permiso. Se
+// reutiliza tanto para el que llama como para resolver un usuario objetivo.
+const getUserInstitutionInfo = (userProfileId, callback) => {
+    const sql = `SELECT institution_id, role_id, is_institution_admin FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Institución dueña de una fila puntual de institutions_specialities — para
+// validar que un rol 4 solo administre especialidades de SU institución.
+const getInstitutionIdByInstitutionSpecialityId = (institutionSpecialityId, callback) => {
+    const sql = `SELECT institution_id FROM institutions_specialities WHERE institution_speciality_id = ?`;
+    db.query(sql, [institutionSpecialityId], callback);
+}
+
 const registerInstitution = (data, callback) => {
     const {
         cityId,
@@ -69,6 +85,16 @@ const identifyPatient = (data, callback) => {
 
 const toggleInstitution = (institutionId, callback) => {
     const sql = `UPDATE institutions SET is_active = NOT is_active WHERE institution_id = ?`;
+    db.query(sql, [institutionId], callback);
+}
+
+const toggleCrumInstitution = (institutionId, callback) => {
+    const sql = `UPDATE institutions SET is_crum_institution = NOT is_crum_institution WHERE institution_id = ?`;
+    db.query(sql, [institutionId], callback);
+}
+
+const getInstitutionCrumFlag = (institutionId, callback) => {
+    const sql = `SELECT is_crum_institution FROM institutions WHERE institution_id = ?`;
     db.query(sql, [institutionId], callback);
 }
 
@@ -158,6 +184,15 @@ const getInstitutionByName = (name, callback) => {
     db.query(sql, [`%${name}%`], callback);
 }
 
+// Lista explícita en minúsculas (no SELECT *) para poder leer los campos que
+// un rol 4 NO puede tocar (name, institution_type_id, longitude, latitude) y
+// reescribirlos sin cambio al actualizar solo dirección/CP/ciudad.
+const getInstitutionById = (institutionId, callback) => {
+    const sql = `SELECT institution_id, name, institution_type_id, city_id, street_address,
+                zip_code, longitude, latitude FROM institutions WHERE institution_id = ?`;
+    db.query(sql, [institutionId], callback);
+}
+
 //Se obtienen todas las notificaciones de las instituciones (activas o no), con nombre de
 //institución y datos de la emergencia relacionada ya resueltos (no solo los IDs crudos)
 const getInstitutionNotifications = (callback) => {
@@ -222,11 +257,12 @@ const getAllSpecialitiesAdmin = (callback) => {
 }
 
 module.exports = {
+    getUserInstitutionInfo, getInstitutionIdByInstitutionSpecialityId, getInstitutionCrumFlag,
     registerInstitution, createSpeciality, createInstitutionNotification, createInstitutionsSpecialities, createInstitutionType,
-    toggleInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
+    toggleInstitution, toggleCrumInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
     updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS, getInstitutionsForDestination,
     updateInstitutionType, updateSpeciality, updateInstitution,
     getAllInstitutionsAdmin, getAllInstitutionTypesAdmin, getAllSpecialitiesAdmin,
-    getAllInstitutions, getInstitutionByName, getInstitutionNotifications, getInstitutionNotificationByName,
+    getAllInstitutions, getInstitutionByName, getInstitutionById, getInstitutionNotifications, getInstitutionNotificationByName,
     getAllInstitutionSpecialities, getInstitutionSpecialityByName, getAllSpecialities, getSpecialityByName, getAllInstitutionTypes
 }

@@ -225,6 +225,27 @@
     border-top: 1px dashed #dcdce4;
 }
 
+.ne-distance-hint {
+    font-size: 10.5px;
+    color: #999;
+    font-style: italic;
+    margin: -4px 0 10px;
+}
+
+.unit-nearest-badge {
+    display: inline-block;
+    background: #2E7D32;
+    color: white;
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 .unit-type-group {
     border: 1px solid #e4e4ec;
     border-radius: 8px;
@@ -723,6 +744,76 @@
 .patient-id-card textarea {
     resize: vertical;
     min-height: 50px;
+}
+
+/* ── Paso 2: agregar unidades adicionales a una emergencia ya creada ── */
+.ne-add-units-box {
+    background: white;
+    border: 1px solid #e4e4ec;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.ne-add-units-toggle {
+    width: 100%;
+    background: #fafafb;
+    border: none;
+    padding: 12px 18px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #C0272D;
+    cursor: pointer;
+    text-align: left;
+}
+
+.ne-add-units-toggle:hover {
+    background: #f0f2f5;
+}
+
+.ne-add-units-panel {
+    padding: 16px 18px;
+    border-top: 1px solid #e4e4ec;
+}
+
+.ne-add-units-hint {
+    font-size: 11.5px;
+    color: #8888a0;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.ne-add-units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.unit-card-committed {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #f5f5f7;
+}
+
+.ne-add-units-confirm {
+    background: #C0272D;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ne-add-units-confirm:hover:not(:disabled) {
+    background: #a3181e;
+}
+
+.ne-add-units-confirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .ne-step2-actions-fixed {

@@ -1,0 +1,33 @@
+.map-area {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    min-height: 220px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.leaflet-container-full {
+    height: 100%;
+    width: 100%;
+    border-radius: 10px;
+    z-index: 1;
+}
+
+.ambulance-marker-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.emergency-marker-pin {
+    width: 22px;
+    height: 22px;
+    border-radius: 50% 50% 50% 0;
+    background: #C0272D;
+    border: 2px solid white;
+    transform: rotate(-45deg);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}

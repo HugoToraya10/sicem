@@ -1,27 +1,56 @@
 import './IncomingPatientCard.css'
 
-const IncomingPatientCard = ({ patient, onViewDetail }) => {
+const formatElapsed = (createdAt) => {
+    if (!createdAt) return null
+    const minutes = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000)
+    if (minutes < 60) return `${minutes} min`
+    return `${Math.floor(minutes / 60)}h ${minutes % 60}min`
+}
+
+const IncomingPatientCard = ({ patient, onViewDetail, onAccept, onReject }) => {
     const fullName = [patient.first_name, patient.first_surname, patient.second_surname]
         .filter(Boolean).join(' ') || 'Paciente no identificado'
 
     const allergyList = patient.allergies ? patient.allergies.split(', ') : []
     const conditionList = patient.conditions ? patient.conditions.split(', ') : []
 
-    const paramedicName = patient.paramedic_first_name
-        ? `${patient.paramedic_first_name} ${patient.paramedic_first_surname || ''}`.trim()
-        : 'Sin paramédico asignado'
-
     const unitLabel = patient.unit_number
-        ? `Unidad ${patient.unit_number} · ${patient.ambulance_institution_name || 'Institución desconocida'}`
+        ? `Unidad ${patient.unit_number} · ${patient.institution_name || 'Institución desconocida'}`
         : 'Unidad aún no asignada'
 
+    const isPending = parseInt(patient.reception_status_id) === 1
+    const hasMultiplePatients = parseInt(patient.num_patients) > 1
+
+    const elapsedMinutes = patient.created_at ? (Date.now() - new Date(patient.created_at).getTime()) / 60000 : null
+    // "Vencido" = ya lleva esperando más del tiempo máximo que su propio nivel
+    // de triage tolera — señal directa de que se está quedando atrás, no solo
+    // un cronómetro decorativo.
+    const isOverdue = patient.max_wait_minutes !== null && patient.max_wait_minutes !== undefined
+        && elapsedMinutes !== null && elapsedMinutes > Number(patient.max_wait_minutes)
+
     return (
-        <div className="patient-card" style={{ borderLeftColor: patient.triage_color || '#1565C0' }}>
+        <div className="patient-card" style={{ borderLeftColor: patient.triage_hex_color || '#1565C0' }}>
             <div className="pc-info">
-                <div className="pc-name">{fullName}</div>
-                <div className="pc-type">{patient.emergency_description || 'Sin descripción'}</div>
+                <div className="pc-name-row">
+                    <div className="pc-name">{fullName}</div>
+                    {patient.triage_level && (
+                        <span className="pc-triage-badge" style={{ background: patient.triage_hex_color || '#888' }}>
+                            {patient.triage_level} · {patient.triage_color_name}
+                        </span>
+                    )}
+                    {elapsedMinutes !== null && (
+                        <span className={`pc-wait-badge ${isOverdue ? 'overdue' : ''}`} title={isOverdue ? `Superó el tiempo máximo de espera de su triage (${patient.max_wait_minutes} min)` : 'Tiempo esperando desde que se registró'}>
+                            {isOverdue && '⚠ '}⏱ {formatElapsed(patient.created_at)}
+                        </span>
+                    )}
+                    {hasMultiplePatients && (
+                        <span className="pc-multi-badge" title="Esta emergencia tiene más pacientes registrados">
+                            +{parseInt(patient.num_patients) - 1} más
+                        </span>
+                    )}
+                </div>
+                <div className="pc-type">{patient.description || 'Sin descripción'}</div>
                 <div className="pc-detail">{unitLabel} · CURP: {patient.curp || 'Sin CURP'}</div>
-                <div className="pc-detail">Paramédico: {paramedicName}</div>
             </div>
 
             <div className="pc-tags">
@@ -32,9 +61,18 @@ const IncomingPatientCard = ({ patient, onViewDetail }) => {
                 {conditionList.map((c) => <span key={c} className="tag condition">{c}</span>)}
             </div>
 
-            <div className="pc-status">
-                <span className="pc-status-pill">En camino</span>
-            </div>
+            {isPending ? (
+                <div className="pc-actions">
+                    <button className="btn-accept" onClick={() => onAccept(patient.emergency_patient_id)}>Aceptar</button>
+                    <button className="btn-reject" onClick={() => onReject(patient.emergency_patient_id)}>Rechazar</button>
+                </div>
+            ) : (
+                <div className="pc-status">
+                    <span className={`pc-status-pill ${patient.delivered_at ? 'delivered' : 'confirmed'}`}>
+                        {patient.delivered_at ? 'Entregado' : 'Confirmado'}
+                    </span>
+                </div>
+            )}
 
             <button className="btn-detail" onClick={() => onViewDetail(patient)}>Ver detalle</button>
         </div>

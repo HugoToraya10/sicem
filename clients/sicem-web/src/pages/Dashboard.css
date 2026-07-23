@@ -13,15 +13,74 @@
 .dashboard-body {
     flex: 1;
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 300px 1fr 300px;
     overflow: hidden;
 }
 
 .dashboard-sidebar {
     background: #fafafb;
-    border-right: 1px solid #e4e4ec;
-    padding: 18px;
     overflow-y: auto;
+}
+
+.dashboard-sidebar-left {
+    border-right: 1px solid #e4e4ec;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+}
+
+.dashboard-sidebar-right {
+    border-left: 1px solid #e4e4ec;
+    padding: 18px;
+}
+
+/* Scroll propio para la lista de emergencias — así, sin importar cuántas
+   haya, no le quitan espacio a la sección de Unidades de abajo, que siempre
+   se queda con su alto fijo/colapsable. */
+.emergency-section {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 18px;
+}
+
+/* flex-shrink: 0 es lo que garantiza que Unidades nunca se vea aplastada por
+   el scroll de arriba — tiene su propio alto reservado siempre visible. */
+.units-section {
+    flex-shrink: 0;
+    border-top: 1px solid #e4e4ec;
+    background: #fafafb;
+}
+
+.units-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: none;
+    border: none;
+    padding: 14px 18px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #8888a0;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+}
+
+.units-toggle:hover { color: #1a1a2e; }
+
+.units-caret {
+    transition: transform 0.15s ease;
+    font-size: 10px;
+}
+.units-caret.open { transform: rotate(180deg); }
+
+.units-section .unit-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0 18px 14px;
 }
 
 .dashboard-status-filter {
@@ -31,6 +90,12 @@
     padding: 7px 8px;
     font-size: 12px;
     background: white;
+}
+
+.dashboard-filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 10px;
 }
 
@@ -41,6 +106,13 @@
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin-bottom: 12px;
+}
+
+.sidebar-hint {
+    font-size: 11px;
+    color: #999;
+    line-height: 1.4;
+    margin: -6px 0 14px;
 }
 
 .empty-state {

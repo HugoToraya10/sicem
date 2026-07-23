@@ -1,0 +1,44 @@
+/* Definido también aquí (no solo en PatientDetailModal.css) para que este
+   componente no dependa de que ese otro CSS ya se haya cargado antes. */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 20, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    padding: 24px;
+}
+
+.reject-reason-box {
+    background: white;
+    border-radius: 10px;
+    width: 420px;
+    max-width: 92vw;
+    padding: 22px;
+}
+.reject-reason-box h3 { font-size: 15px; color: #1a1a2e; margin-bottom: 8px; }
+.reject-reason-box p { font-size: 12.5px; color: #666; margin-bottom: 12px; line-height: 1.4; }
+.reject-reason-box textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dcdce4;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+}
+.reject-reason-box textarea:focus { outline: none; border-color: #C0272D; }
+
+.reject-reason-actions { display: flex; gap: 10px; margin-top: 14px; }
+.reject-reason-actions .btn-reject {
+    flex: 1; border: none; border-radius: 6px; padding: 10px;
+    font-size: 13px; font-weight: 700; cursor: pointer; color: white; background: #C0272D;
+}
+.btn-cancel-reject {
+    flex: 1; border: 1px solid #dcdce4; border-radius: 6px; padding: 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer; color: #666; background: white;
+}
+.btn-cancel-reject:hover { border-color: #999; color: #333; }

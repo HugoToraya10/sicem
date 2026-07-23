@@ -1,0 +1,24 @@
+.ambulance-card {
+    border: 1px solid #e4e4ec; border-radius: 10px; padding: 18px; background: white;
+    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04); transition: box-shadow 0.15s ease;
+}
+.ambulance-card:hover { box-shadow: 0 4px 12px rgba(20, 20, 40, 0.08); }
+.ambulance-card h5 {
+    font-size: 12px; font-weight: 700; color: #555;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+}
+.ambulance-detail { font-size: 12.5px; color: #666; margin-bottom: 4px; }
+.ambulance-current-status { font-weight: 700; color: #1565C0; }
+
+.ambulance-status-row { display: flex; gap: 6px; margin-top: 12px; }
+.ambulance-status-row select {
+    flex: 1; border: 1px solid #dcdce4; border-radius: 6px; padding: 8px; font-size: 12.5px;
+}
+
+.update-btn {
+    background: #1565C0; color: white; border: 1px solid #1565C0;
+    border-radius: 6px; padding: 8px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s ease;
+}
+.update-btn:hover:not(:disabled) { background: #104e96; }
+.update-btn:disabled { opacity: 0.6; cursor: not-allowed; }

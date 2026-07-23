@@ -47,20 +47,43 @@ const createInstitutionType = (req, res) => {
     }
 }
 
+// Asignar una especialidad YA EXISTENTE del catálogo a una institución no es
+// lo mismo que crear una especialidad nueva (eso sigue siendo exclusivo de
+// CRUM en createSpeciality) — un rol 4 con is_institution_admin puede unir un
+// catálogo existente a SU PROPIA institución únicamente.
 const createInstitutionsSpecialities = (req, res) => {
-    if (parseInt(req.decoded.roleId) !== 1) {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
-        hospitalModel.createInstitutionsSpecialities(req.body, (e, r) => {
-            if (e) {
-                if (e.code === 'ER_DUP_ENTRY') {
-                    return res.status(409).json({message: "Esta especialidad ya está asignada a esta institución."});
+        const proceed = () => {
+            hospitalModel.createInstitutionsSpecialities(req.body, (e, r) => {
+                if (e) {
+                    if (e.code === 'ER_DUP_ENTRY') {
+                        return res.status(409).json({message: "Esta especialidad ya está asignada a esta institución."});
+                    }
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    res.status(201).json({message: "Especialidad asignada a institución con éxito."});
                 }
-                return res.status(500).json({message: "Error del servidor."});
-            } else {
-                res.status(201).json({message: "Especialidad asignada a institución con éxito."});
-            }
-        });
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            hospitalModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else {
+                    // Se fuerza institutionId al propio sin importar qué venga en el
+                    // body — un hospital nunca asigna especialidades a otra institución.
+                    req.body.institutionId = r[0].institution_id;
+                    proceed();
+                }
+            });
+        }
     }
 }
 
@@ -111,18 +134,71 @@ const toggleInstitution = (req, res) => {
     }
 }
 
-const toggleInstitutionsSpecialities = (req, res) => {
+// Rol 1 únicamente — ni siquiera un rol 4 con is_institution_admin puede tocar
+// qué instituciones pertenecen a la red CRUM fusionada.
+const toggleCrumInstitution = (req, res) => {
     if (parseInt(req.decoded.roleId) !== 1) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
-        const { institutionSpecialityId } = req.body;
-        hospitalModel.toggleInstitutionsSpecialities(institutionSpecialityId, (e, r) => {
+        const { institutionId } = req.body;
+        hospitalModel.toggleCrumInstitution(institutionId, (e, r) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
-                res.status(200).json({message: "Estado de especialidad en institución actualizado."});
+                hospitalModel.getInstitutionCrumFlag(institutionId, (e2, r2) => {
+                    if (e2) {
+                        return res.status(500).json({message: "Error del servidor."});
+                    } else {
+                        res.status(200).json({
+                            message: "Estado de red CRUM actualizado.",
+                            data: { institutionId, isCrumInstitution: r2.length > 0 ? Boolean(r2[0].is_crum_institution) : null }
+                        });
+                    }
+                });
             }
         });
+    }
+}
+
+// Rol 1: bypass total. Rol 4: exige is_institution_admin=1 y que la especialidad
+// pertenezca a su propia institución (resuelta vía institutions_specialities,
+// nunca confiando en un institutionId que mande el cliente).
+const toggleInstitutionsSpecialities = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { institutionSpecialityId } = req.body;
+        const proceed = () => {
+            hospitalModel.toggleInstitutionsSpecialities(institutionSpecialityId, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    res.status(200).json({message: "Estado de especialidad en institución actualizado."});
+                }
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            hospitalModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else {
+                    hospitalModel.getInstitutionIdByInstitutionSpecialityId(institutionSpecialityId, (e2, r2) => {
+                        if (e2 || r2.length === 0) {
+                            return res.status(404).json({message: "Especialidad de institución no encontrada."});
+                        } else if (parseInt(r2[0].institution_id) !== parseInt(r[0].institution_id)) {
+                            return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
+                        } else {
+                            proceed();
+                        }
+                    });
+                }
+            });
+        }
     }
 }
 
@@ -156,6 +232,10 @@ const toggleInstitutionType = (req, res) => {
     }
 }
 
+// Rol 1: bypass total. Rol 4: exige is_institution_admin=1 y que el
+// institutionId del body sea el suyo propio (antes NO se validaba esto para
+// esta función en particular, a diferencia de su hermana updateBedCapacityI —
+// bug corregido: un rol 4 podía actualizar camas de OTRA institución).
 const updateAvailableBedsI = (req, res) => {
     const io = getIo();
     const allowedRoles = [1, 4];
@@ -163,29 +243,66 @@ const updateAvailableBedsI = (req, res) => {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
         const { institutionId, availableBeds } = req.body;
-        hospitalModel.updateAvailableBedsI(institutionId, availableBeds, (e, r) => {
-            if (e) {
-                return res.status(500).json({message: "Error del servidor."});
-            } else {
-                io.to('dispatcher').to('admin').emit('eventBedsUpdated', { institutionId, availableBeds });
-                res.status(200).json({message: "Camas disponibles actualizadas."});
-            }
-        });
+        const proceed = () => {
+            hospitalModel.updateAvailableBedsI(institutionId, availableBeds, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    io.to('dispatcher').to('admin').emit('eventBedsUpdated', { institutionId, availableBeds });
+                    res.status(200).json({message: "Camas disponibles actualizadas."});
+                }
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            hospitalModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else if (parseInt(institutionId) !== parseInt(r[0].institution_id)) {
+                    return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
+                } else {
+                    proceed();
+                }
+            });
+        }
     }
 }
 
+// Rol 1: bypass total. Rol 4: exige is_institution_admin=1 y que el
+// institutionId del body sea el suyo propio.
 const updateBedCapacityI = (req, res) => {
-    if (parseInt(req.decoded.roleId) !== 1) {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
         const { institutionId, bedCapacity } = req.body;
-        hospitalModel.updateBedCapacityI(institutionId, bedCapacity, (e, r) => {
-            if (e) {
-                return res.status(500).json({message: "Error del servidor."});
-            } else {
-                res.status(200).json({message: "Capacidad de camas actualizada."});
-            }
-        });
+        const proceed = () => {
+            hospitalModel.updateBedCapacityI(institutionId, bedCapacity, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    res.status(200).json({message: "Capacidad de camas actualizada."});
+                }
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            hospitalModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else if (parseInt(institutionId) !== parseInt(r[0].institution_id)) {
+                    return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
+                } else {
+                    proceed();
+                }
+            });
+        }
     }
 }
 
@@ -207,18 +324,44 @@ const updateAvailableBedsIS = (req, res) => {
     }
 }
 
+// Rol 1: bypass total. Rol 4: exige is_institution_admin=1 y que la especialidad
+// pertenezca a su propia institución (resuelta vía institutions_specialities).
 const updateBedCapacityIS = (req, res) => {
-    if (parseInt(req.decoded.roleId) !== 1) {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
         const { institutionSpecialityId, totalBeds } = req.body;
-        hospitalModel.updateBedCapacityIS(institutionSpecialityId, totalBeds, (e, r) => {
-            if (e) {
-                return res.status(500).json({message: "Error del servidor."});
-            } else {
-                res.status(200).json({message: "Capacidad de camas de especialidad actualizada."});
-            }
-        });
+        const proceed = () => {
+            hospitalModel.updateBedCapacityIS(institutionSpecialityId, totalBeds, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    res.status(200).json({message: "Capacidad de camas de especialidad actualizada."});
+                }
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            hospitalModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else {
+                    hospitalModel.getInstitutionIdByInstitutionSpecialityId(institutionSpecialityId, (e2, r2) => {
+                        if (e2 || r2.length === 0) {
+                            return res.status(404).json({message: "Especialidad de institución no encontrada."});
+                        } else if (parseInt(r2[0].institution_id) !== parseInt(r[0].institution_id)) {
+                            return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
+                        } else {
+                            proceed();
+                        }
+                    });
+                }
+            });
+        }
     }
 }
 
@@ -252,15 +395,55 @@ const updateSpeciality = (req, res) => {
     }
 }
 
+// Rol 1 puede editar cualquier campo de cualquier institución. Rol 4 con
+// is_institution_admin solo puede editar streetAddress/zipCode/cityId de SU
+// PROPIA institución — name e institutionTypeId siguen siendo decisión
+// exclusiva de CRUM, así que para rol 4 se preservan tal cual están en BD sin
+// importar qué venga en el body (se ignoran, no se aplican).
 const updateInstitution = (req, res) => {
-    if (parseInt(req.decoded.roleId) !== 1) {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
-    } else {
+    } else if (parseInt(req.decoded.roleId) === 1) {
         hospitalModel.updateInstitution(req.body, (e, r) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
                 res.status(200).json({message: "Institución actualizada."});
+            }
+        });
+    } else {
+        hospitalModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+            if (e || r.length === 0) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else if (!r[0].is_institution_admin) {
+                return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+            } else {
+                const institutionId = r[0].institution_id;
+                hospitalModel.getInstitutionById(institutionId, (e2, r2) => {
+                    if (e2 || r2.length === 0) {
+                        return res.status(404).json({message: "Institución no encontrada."});
+                    } else {
+                        const current = r2[0];
+                        const restrictedData = {
+                            institutionId,
+                            name: current.name,
+                            institutionTypeId: current.institution_type_id,
+                            cityId: req.body.cityId,
+                            streetAddress: req.body.streetAddress,
+                            zipCode: req.body.zipCode,
+                            longitude: current.longitude,
+                            latitude: current.latitude,
+                        };
+                        hospitalModel.updateInstitution(restrictedData, (e3, r3) => {
+                            if (e3) {
+                                return res.status(500).json({message: "Error del servidor."});
+                            } else {
+                                res.status(200).json({message: "Institución actualizada."});
+                            }
+                        });
+                    }
+                });
             }
         });
     }
@@ -432,7 +615,7 @@ const getAllSpecialitiesAdmin = (req, res) => {
 
 module.exports = {
     registerInstitution, createSpeciality, createInstitutionType, createInstitutionsSpecialities, createInstitutionNotification,
-    toggleInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
+    toggleInstitution, toggleCrumInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
     updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS,
     updateInstitutionType, updateSpeciality, updateInstitution, getInstitutionsForDestination,
     getAllInstitutionsAdmin, getAllInstitutionTypesAdmin, getAllSpecialitiesAdmin,

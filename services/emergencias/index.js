@@ -32,11 +32,14 @@ io.on('connection', (socket) => {
     const key = process.env.JWT_SECRET;
     jwt.verify(token, key, (e, d) => {
         if(e){
+            // Un token vencido (dura 8h) o inválido cae aquí — se desconecta sin
+            // unirse a ninguna sala, así que ese cliente deja de recibir eventos
+            // hasta que vuelva a iniciar sesión.
             socket.disconnect(true)
         } else {
             let roleString = '';
             socket.roleString = roleString;
-            
+
             const { userProfileId, userCredentialId, roleId } = d;
             switch(roleId) {
                 case 1: {

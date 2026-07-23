@@ -7,6 +7,7 @@ import './Capacity.css'
 const Capacity = () => {
     const { user, token } = useAuth()
     const [specialties, setSpecialties] = useState([])
+    const [generalBeds, setGeneralBeds] = useState(null)
 
     useEffect(() => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
@@ -30,6 +31,22 @@ const Capacity = () => {
                 setSpecialties(merged)
             })
             .catch(error => console.error('Error recuperando capacidad por especialidad. ', error))
+    }, [user, token])
+
+    // Camas generales del hospital (capacidad total, independiente de la
+    // capacidad por especialidad de abajo) — de solo lectura aquí, cualquier
+    // rol 4 puede verla; la edición sigue siendo exclusiva de
+    // is_institution_admin desde Administración de mi Hospital.
+    useEffect(() => {
+        fetch('http://localhost:3000/hospitales/instituciones', {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(({ data }) => {
+                const mine = (data || []).map(i => toLowerCaseKeys(i)).find(i => parseInt(i.institution_id) === parseInt(user.institutionId))
+                setGeneralBeds(mine || null)
+            })
+            .catch(error => console.error('Error recuperando camas generales del hospital. ', error))
     }, [user, token])
 
     const handleUpdate = (institutionSpecialityId, availableBeds) => {
@@ -57,6 +74,16 @@ const Capacity = () => {
 
     return (
         <div className="capacity-layout">
+            {generalBeds && (
+                <div className="general-beds-card">
+                    <span className="general-beds-label">Camas generales del hospital</span>
+                    <span className="general-beds-numbers">
+                        <strong>{generalBeds.available_beds}</strong> / {generalBeds.bed_capacity} disponibles
+                    </span>
+                    <span className="general-beds-hint">Solo un administrador de tu institución puede editar esto, desde Administración.</span>
+                </div>
+            )}
+
             <div className="section-title">Capacidad por Especialidad</div>
             <div className="capacity-grid">
                 {specialties.map((s) => (

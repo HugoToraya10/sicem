@@ -16,6 +16,7 @@ router.patch('/alternar-estado-ambulancia', middleware.verifyToken, unitControll
 router.patch('/actualizar-tipo-ambulancia', middleware.verifyToken, unitController.updateAmbulanceType);
 router.patch('/actualizar-estado-ambulancia-catalogo', middleware.verifyToken, unitController.updateAmbulanceStatusCatalog);
 router.patch('/actualizar-ambulancia', middleware.verifyToken, unitController.updateAmbulance);
+router.patch('/actualizar-estado-ambulancia', middleware.verifyToken, unitController.updateAmbulanceStatus);
 
 // GET
 router.get('/ambulancias', middleware.verifyToken, unitController.getAllAmbulances); // ✅ Dashboard.jsx

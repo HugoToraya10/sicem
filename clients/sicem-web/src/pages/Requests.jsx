@@ -5,6 +5,7 @@ import Navbar from '../components/layout/Navbar';
 import './Requests.css';
 import { getNavLinks } from '../utils/Navlinks';
 import { parseResponse } from '../utils/apiRequest';
+import { connectEmergencySocket } from '../sockets/emergencySocket';
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -32,6 +33,20 @@ const Requests = () => {
             .catch(error => console.error('Error consultando solicitudes. ', error))
     }
     useEffect(() => { fetchRequests() }, []);
+
+    // Esta pantalla nunca se actualizaba sola — ni cuando alguien respondía una
+    // solicitud, ni cuando un cierre forzado cancelaba varias de golpe. En vez
+    // de tratar de parchear cada campo a mano (status, responded_at,
+    // rejection_reason), simplemente se vuelve a pedir todo: es la misma
+    // cantidad de datos que ya se carga al entrar, y evita quedarse
+    // desincronizado si el backend cambia algo que el cliente no anticipó.
+    useEffect(() => {
+        const emergencySocket = connectEmergencySocket(token)
+        emergencySocket.on('eventInterInstitutionalRequest', () => fetchRequests())
+        emergencySocket.on('eventInterInstitutionalRequestResponded', () => fetchRequests())
+        emergencySocket.on('eventEmergencyClosed', () => fetchRequests())
+        return () => emergencySocket.disconnect()
+    }, [token]);
 
     const visibleRequests = statusFilter === 'all'
         ? requests

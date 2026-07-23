@@ -13,6 +13,7 @@ router.post('/crear-notificacion', middleware.verifyToken, hospitalController.cr
 //patches
 router.patch('/identificar-paciente', middleware.verifyToken, hospitalController.identifyPatient);
 router.patch('/alternar-institucion', middleware.verifyToken, hospitalController.toggleInstitution); // TODO
+router.patch('/alternar-crum-institucion', middleware.verifyToken, hospitalController.toggleCrumInstitution);
 router.patch('/alternar-especialidad-institucion', middleware.verifyToken, hospitalController.toggleInstitutionsSpecialities); // TODO
 router.patch('/alternar-especialidad', middleware.verifyToken, hospitalController.toggleSpecialities); // TODO
 router.patch('/alternar-tipo-institucion', middleware.verifyToken, hospitalController.toggleInstitutionType); // TODO

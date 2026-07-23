@@ -8,6 +8,32 @@ import { getNavLinks } from "../utils/Navlinks";
 import { parseResponse } from '../utils/apiRequest';
 import './NewEmergency.css';
 
+// Ruta real por calle (no línea recta) vía OSRM — mismo ecosistema OpenStreetMap
+// que ya usa esta pantalla para geocodificar direcciones (Nominatim) y pintar
+// el mapa (Leaflet + tiles de OSM), así que no se suma ningún proveedor nuevo
+// ni llave de API. OJO: este es el servidor demo PÚBLICO de OSRM
+// (router.project-osrm.org) — es gratuito pero limitado, pensado para pruebas
+// y bajo volumen, no para producción con muchas unidades/consultas por
+// segundo. Si esto crece en uso real, lo correcto es self-hostear OSRM (es
+// software libre) con el mapa de México, en vez de seguir pegándole al
+// servidor demo compartido.
+const fetchRouteDistance = (originLat, originLon, destLat, destLon) => {
+    const url = `https://router.project-osrm.org/route/v1/driving/${originLon},${originLat};${destLon},${destLat}?overview=false`
+    return fetch(url)
+        .then(res => res.json())
+        .then((data) => {
+            if (data.code !== 'Ok' || !data.routes?.[0]) return null
+            return {
+                distanceKm: data.routes[0].distance / 1000,
+                durationMin: data.routes[0].duration / 60,
+            }
+        })
+        .catch((error) => {
+            console.error('Error consultando ruta en OSRM. ', error)
+            return null
+        })
+}
+
 const NewEmergency = () => {
     const [emergencyTypeId, setEmergencyTypeId] = useState('');
     const [longitude, setLongitude] = useState('');
@@ -28,6 +54,11 @@ const NewEmergency = () => {
     const [selectedUnits, setSelectedUnits] = useState([]);
     const [notes, setNotes] = useState('');
     const [unitTypes, setUnitTypes] = useState([]);
+    const [unitLocations, setUnitLocations] = useState({});
+    const [unitRoutes, setUnitRoutes] = useState({});
+    const [routesLoading, setRoutesLoading] = useState(false);
+    const [externalUnitLocations, setExternalUnitLocations] = useState({});
+    const [nearestRouteGeometry, setNearestRouteGeometry] = useState(null);
 
     const [externalUnits, setExternalUnits] = useState([]);
     const [groupedExternalUnits, setGroupedExternalUnits] = useState({});
@@ -37,12 +68,25 @@ const NewEmergency = () => {
     const [searchingAddress, setSearchingAddress] = useState(false);
 
     const [destinationInstitutions, setDestinationInstitutions] = useState([]);
+    const [institutionSpecialities, setInstitutionSpecialities] = useState([]);
+    const [specialitiesCatalog, setSpecialitiesCatalog] = useState([]);
 
     // ── Paso 2: identificación de pacientes (opcional, no bloqueante) ──
     const [step, setStep] = useState(1); // 1 = registro de emergencia, 2 = identificación de pacientes
     const [registeredEmergencyId, setRegisteredEmergencyId] = useState(null);
     const [patientForms, setPatientForms] = useState([]);
     const [searchingCurpIndex, setSearchingCurpIndex] = useState(null);
+
+    // Unidades que ya quedaron registradas en el backend al enviar el Paso 1 —
+    // la emergencia ya existe para cuando se llega al Paso 2, así que no se
+    // puede simplemente "regresar" y reenviar el formulario (duplicaría la
+    // emergencia). En vez de eso, esto distingue "ya asignada" de "seleccionada
+    // pero todavía no confirmada", para poder agregar más unidades sin tocar
+    // las que ya se mandaron.
+    const [committedOwnUnitIds, setCommittedOwnUnitIds] = useState([]);
+    const [committedExternalUnitIds, setCommittedExternalUnitIds] = useState([]);
+    const [addUnitsOpen, setAddUnitsOpen] = useState(false);
+    const [addingUnits, setAddingUnits] = useState(false);
 
     //---------------------------------consultar, gets--------------------------------------------------
 
@@ -70,6 +114,39 @@ const NewEmergency = () => {
             .catch(error => console.error('Error recuperando las unidades disponibles. ', error))
     }, [])
 
+    // Última ubicación conocida de cada unidad propia disponible — para poder
+    // recomendar la más cercana en cuanto se marque dónde está la emergencia.
+    // Mismo patrón de fetch-por-unidad que ya usa Dashboard.jsx.
+    useEffect(() => {
+        if (availableUnits.length === 0) { setUnitLocations({}); return }
+        Promise.all(availableUnits.map((u) =>
+            fetch(`http://localhost:3000/unidades/ubicacion/${u.ambulance_id}`, {
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+            })
+                .then((res) => res.ok ? res.json() : { data: null })
+                .then(({ data }) => [u.ambulance_id, data ? toLowerCaseKeys(data) : null])
+                .catch(() => [u.ambulance_id, null])
+        )).then((entries) => setUnitLocations(Object.fromEntries(entries)))
+    }, [availableUnits, token])
+
+    // En cuanto se sabe dónde está la emergencia Y dónde está cada unidad, se le
+    // pide a OSRM la ruta real de cada una hacia ese punto — se recalcula si
+    // cambia la ubicación marcada o la lista de ubicaciones de las unidades.
+    useEffect(() => {
+        if (!latitude || !longitude) { setUnitRoutes({}); return }
+        const unitsWithLocation = availableUnits.filter((u) => unitLocations[u.ambulance_id]?.latitude && unitLocations[u.ambulance_id]?.longitude)
+        if (unitsWithLocation.length === 0) { setUnitRoutes({}); return }
+
+        setRoutesLoading(true)
+        Promise.all(unitsWithLocation.map((u) => {
+            const loc = unitLocations[u.ambulance_id]
+            return fetchRouteDistance(parseFloat(loc.latitude), parseFloat(loc.longitude), parseFloat(latitude), parseFloat(longitude))
+                .then((route) => [u.ambulance_id, route])
+        }))
+            .then((entries) => setUnitRoutes(Object.fromEntries(entries)))
+            .finally(() => setRoutesLoading(false))
+    }, [latitude, longitude, availableUnits, unitLocations])
+
     useEffect(()=>{
         fetch(`http://localhost:3000/unidades/ambulancias-externas/${user.institutionId}`,
             { headers: { "Content-Type": "application/json", "Authorization":`Bearer ${token}` } })
@@ -77,6 +154,20 @@ const NewEmergency = () => {
             .then(({data}) => setExternalUnits(data.map((u) => toLowerCaseKeys(u))))
             .catch(error => console.error('Error recuperando las unidades externas. ', error))
     }, [])
+
+    // Misma idea que unitLocations pero para las externas — así también se ven
+    // en el mapa, no solo las propias.
+    useEffect(() => {
+        if (externalUnits.length === 0) { setExternalUnitLocations({}); return }
+        Promise.all(externalUnits.map((u) =>
+            fetch(`http://localhost:3000/unidades/ubicacion/${u.ambulance_id}`, {
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+            })
+                .then((res) => res.ok ? res.json() : { data: null })
+                .then(({ data }) => [u.ambulance_id, data ? toLowerCaseKeys(data) : null])
+                .catch(() => [u.ambulance_id, null])
+        )).then((entries) => setExternalUnitLocations(Object.fromEntries(entries)))
+    }, [externalUnits, token])
 
     useEffect(() =>{
         fetch('http://localhost:3000/unidades/tipos-ambulancia', {
@@ -94,6 +185,21 @@ const NewEmergency = () => {
             .then(res => res.json())
             .then(({data}) => setDestinationInstitutions(data.map(inst => toLowerCaseKeys(inst))))
             .catch(error => console.error('Error recuperando instituciones de destino. ', error))
+    }, []);
+
+    // Mismo patrón que ya usa Capacity.jsx en sicem-desktop: trae ambas listas una
+    // sola vez al montar, y se filtra en el cliente por institución al renderizar
+    // el select de especialidad de cada paciente.
+    useEffect(() => {
+        Promise.all([
+            fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
+            fetch('http://localhost:3000/hospitales/especialidades', { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
+        ])
+            .then(([institutionSpecialtiesRes, catalogRes]) => {
+                setInstitutionSpecialities((institutionSpecialtiesRes.data || []).map(row => toLowerCaseKeys(row)))
+                setSpecialitiesCatalog((catalogRes.data || []).map(s => toLowerCaseKeys(s)))
+            })
+            .catch(error => console.error('Error recuperando especialidades por institución. ', error))
     }, []);
 
     //---------------------------------registrar, posts--------------------------------------------------
@@ -167,13 +273,15 @@ const NewEmergency = () => {
                 .then((emergencyData) => {
                     // La ambulancia ya está en camino — ahora pasamos al paso 2 (opcional)
                     setRegisteredEmergencyId(emergencyData.emergencyId)
+                    setCommittedOwnUnitIds(selectedUnits)
+                    setCommittedExternalUnitIds(selectedExternalUnits)
                     const count = parseInt(numPatients) || 1
                     setPatientForms(
                         Array.from({ length: count }, () => ({
                             curp: '', found: null, userProfileId: null,
                             firstName: '', firstSurname: '', secondSurname: '',
                             phone: '', birthDate: '', notes: '',
-                            destinationInstitutionId: '', ambulanceId: ''
+                            destinationInstitutionId: '', ambulanceId: '', destinationSpecialityId: ''
                         }))
                     )
                     setStep(2)
@@ -209,6 +317,29 @@ const NewEmergency = () => {
             copy[index] = { ...copy[index], [field]: value }
             return copy
         })
+    }
+
+    // Cambiar de hospital destino invalida la especialidad ya elegida (podría no
+    // existir en el hospital nuevo) — se resetea junto con el cambio de institución.
+    const handlePatientDestinationChange = (index, value) => {
+        setPatientForms((prev) => {
+            const copy = [...prev]
+            copy[index] = { ...copy[index], destinationInstitutionId: value, destinationSpecialityId: '' }
+            return copy
+        })
+    }
+
+    // Especialidades activas de una institución específica, con su nombre ya
+    // resuelto contra el catálogo — mismo patrón de filtrado que Capacity.jsx.
+    const getSpecialitiesForInstitution = (institutionId) => {
+        if (!institutionId) return []
+        return institutionSpecialities
+            .filter((row) => String(row.institution_id) === String(institutionId) && row.is_active)
+            .map((row) => ({
+                institution_speciality_id: row.institution_speciality_id,
+                speciality_id: row.speciality_id,
+                name: specialitiesCatalog.find((s) => s.speciality_id === row.speciality_id)?.name || 'Especialidad',
+            }))
     }
 
     const handleCurpSearch = (index) => {
@@ -314,6 +445,31 @@ const proceedWithConfirmation = (forms) => {
         return
     }
 
+    // Todo paciente con datos capturados debe tener un hospital destino asignado —
+    // la ambulancia necesita saber a dónde va, no es opcional como la unidad.
+    const missingDestinationIndex = forms.findIndex((p) => !p.destinationInstitutionId)
+    if (missingDestinationIndex !== -1) {
+        alert(`El Paciente ${missingDestinationIndex + 1} no tiene hospital destino asignado. Selecciona uno antes de continuar.`)
+        return
+    }
+
+    // Una misma ambulancia no puede llevar pacientes a dos hospitales destino
+    // distintos — solo puede estar en un lugar. Se revisa aquí, antes de
+    // enviar nada, para no descubrirlo a medias (el backend también lo
+    // valida, pero avisar antes es mejor experiencia y evita una carrera
+    // entre envíos en paralelo).
+    const destinationByAmbulance = {}
+    for (let i = 0; i < forms.length; i++) {
+        const p = forms[i]
+        if (!p.ambulanceId) continue
+        const previousDestination = destinationByAmbulance[p.ambulanceId]
+        if (previousDestination && previousDestination.destinationInstitutionId !== p.destinationInstitutionId) {
+            alert(`El Paciente ${previousDestination.index + 1} y el Paciente ${i + 1} tienen la misma unidad asignada pero hospitales destino distintos. Una ambulancia no puede ir a dos hospitales a la vez — corrígelo antes de continuar.`)
+            return
+        }
+        destinationByAmbulance[p.ambulanceId] = { destinationInstitutionId: p.destinationInstitutionId, index: i }
+    }
+
     // el resto es idéntico a lo que ya tenías, solo cambia patientForms por forms:
     const promises = forms.map((patient) => {
         if (patient.userProfileId) {
@@ -326,6 +482,7 @@ const proceedWithConfirmation = (forms) => {
                     notes: patient.notes,
                     destinationInstitutionId: patient.destinationInstitutionId || null,
                     ambulanceId: patient.ambulanceId || null,
+                    destinationSpecialityId: patient.destinationSpecialityId || null,
                 })
             }).then(parseResponse)
         }
@@ -355,6 +512,7 @@ const proceedWithConfirmation = (forms) => {
                         notes: patient.notes,
                         destinationInstitutionId: patient.destinationInstitutionId || null,
                         ambulanceId: patient.ambulanceId || null,
+                        destinationSpecialityId: patient.destinationSpecialityId || null,
                     })
                 }).then(parseResponse)
             })
@@ -371,6 +529,63 @@ const proceedWithConfirmation = (forms) => {
 
     const handleSkipPatients = () => {
         navigate('/dashboard')
+    }
+
+    // Agrega más unidades a la emergencia YA registrada — es aditivo (INSERT),
+    // no reemplaza las anteriores, así que es seguro llamarlo varias veces.
+    // Las propias van directo por registrar-asignacion; las externas necesitan
+    // el mismo flujo de solicitud que en el Paso 1 (no se asignan directo).
+    const handleAddMoreUnits = () => {
+        const newOwnIds = selectedUnits.filter((id) => !committedOwnUnitIds.includes(id))
+        const newExternalIds = selectedExternalUnits.filter((id) => !committedExternalUnitIds.includes(id))
+
+        if (newOwnIds.length === 0 && newExternalIds.length === 0) {
+            alert('Selecciona al menos una unidad nueva antes de confirmar.')
+            return
+        }
+
+        setAddingUnits(true)
+
+        const ownPromise = newOwnIds.length > 0
+            ? fetch('http://localhost:3000/emergencias/registrar-asignacion', {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({
+                    emergencyId: registeredEmergencyId,
+                    ambulanceIds: newOwnIds,
+                    userProfileId: user.profileId,
+                    notes: notes,
+                })
+            }).then(parseResponse)
+            : Promise.resolve(null)
+
+        const externalPromises = newExternalIds.map((ambulanceId) => {
+            const externalUnit = externalUnits.find(u => u.ambulance_id === ambulanceId)
+            return fetch('http://localhost:3000/emergencias/registrar-solicitud', {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({
+                    emergencyId: registeredEmergencyId,
+                    ambulanceId: ambulanceId,
+                    userProfileId: user.profileId,
+                    requestStatusId: 1,
+                    requestingInstitutionId: user.institutionId,
+                    receivingInstitutionId: externalUnit.institution_id,
+                })
+            }).then(parseResponse)
+        })
+
+        Promise.all([ownPromise, ...externalPromises])
+            .then(() => {
+                setCommittedOwnUnitIds((prev) => [...prev, ...newOwnIds])
+                setCommittedExternalUnitIds((prev) => [...prev, ...newExternalIds])
+                setAddUnitsOpen(false)
+            })
+            .catch((error) => {
+                console.error('Error agregando unidades adicionales. ', error)
+                alert(`No se pudieron agregar las unidades nuevas: ${error.message}`)
+            })
+            .finally(() => setAddingUnits(false))
     }
 
     //---------------------------------registrar, posts--------------------------------------------------
@@ -426,7 +641,57 @@ const proceedWithConfirmation = (forms) => {
         setLongitude(lng.toFixed(8))
     }
 
-    const allUnitsForMap = [...availableUnits, ...externalUnits]
+    // Antes esto mandaba las unidades sin ubicación (el catálogo de
+    // disponibles/externas no la trae) — MapArea las descarta en silencio si
+    // no tienen latitude/longitude, así que nunca se veía ninguna en el mapa.
+    const allUnitsForMap = [
+        ...availableUnits.map(u => ({ ...u, ...(unitLocations[u.ambulance_id] || {}) })),
+        ...externalUnits.map(u => ({ ...u, ...(externalUnitLocations[u.ambulance_id] || {}) })),
+    ]
+
+    // Le pega la ruta real (ya calculada por OSRM en el useEffect de arriba) a
+    // cada unidad y ordena por tiempo de traslado — no por distancia en línea
+    // recta, dos unidades a la misma distancia recta pueden tardar muy
+    // distinto según por dónde entra la carretera. Sin ruta todavía (o si
+    // OSRM no encontró camino), se queda al final.
+    const sortUnitsByDistance = (units) => {
+        const withRoute = units.map((u) => ({ ...u, route: unitRoutes[u.ambulance_id] || null }))
+        return withRoute.sort((a, b) => {
+            if (!a.route && !b.route) return 0
+            if (!a.route) return 1
+            if (!b.route) return -1
+            return a.route.durationMin - b.route.durationMin
+        })
+    }
+
+    // La más cercana (en tiempo real de traslado) de TODAS las unidades propias
+    // disponibles, sin importar tipo — es la recomendación principal; cada
+    // tarjeta ya muestra su propia ruta, esto solo marca cuál es la ganadora.
+    const nearestUnitId = (() => {
+        if (!latitude || !longitude) return null
+        const withRoute = sortUnitsByDistance(availableUnits).filter(u => u.route !== null)
+        return withRoute.length > 0 ? withRoute[0].ambulance_id : null
+    })()
+
+    // Traza completa (punto A: la unidad más cercana → punto B: la emergencia)
+    // para dibujarla en el mapa — a diferencia del cálculo de arriba (que solo
+    // pide distancia/duración con overview=false, más liviano), aquí sí se
+    // pide la geometría completa (overview=full), pero solo para la unidad
+    // ganadora — pedirla para las 5-10 unidades sería tirar la mayoría.
+    useEffect(() => {
+        if (!nearestUnitId || !latitude || !longitude) { setNearestRouteGeometry(null); return }
+        const loc = unitLocations[nearestUnitId]
+        if (!loc?.latitude || !loc?.longitude) { setNearestRouteGeometry(null); return }
+        const url = `https://router.project-osrm.org/route/v1/driving/${loc.longitude},${loc.latitude};${longitude},${latitude}?overview=full&geometries=geojson`
+        fetch(url)
+            .then(res => res.json())
+            .then((data) => {
+                if (data.code !== 'Ok' || !data.routes?.[0]) { setNearestRouteGeometry(null); return }
+                // GeoJSON trae [lon, lat] — Leaflet quiere [lat, lon].
+                setNearestRouteGeometry(data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]))
+            })
+            .catch((error) => { console.error('Error trazando la ruta más cercana. ', error); setNearestRouteGeometry(null) })
+    }, [nearestUnitId, latitude, longitude, unitLocations])
 
     //---------------------------------PASO 2: JSX de identificación de pacientes--------------------------------------------------
 
@@ -454,6 +719,61 @@ const proceedWithConfirmation = (forms) => {
                 </div>
 
                 <div className="ne-step2-body">
+                    <div className="ne-add-units-box">
+                        <button type="button" className="ne-add-units-toggle" onClick={() => setAddUnitsOpen((v) => !v)}>
+                            {addUnitsOpen ? 'Ocultar' : '+ Agregar otra unidad a esta emergencia'}
+                        </button>
+                        {addUnitsOpen && (
+                            <div className="ne-add-units-panel">
+                                <p className="ne-add-units-hint">
+                                    Marca las unidades adicionales que necesitas. Las que ya están asignadas o solicitadas aparecen bloqueadas.
+                                </p>
+                                <div className="ne-add-units-grid">
+                                    {availableUnits.map((unit) => {
+                                        const committed = committedOwnUnitIds.includes(unit.ambulance_id)
+                                        return (
+                                            <label key={unit.ambulance_id} className={`unit-card ${selectedUnits.includes(unit.ambulance_id) ? 'selected' : ''} ${committed ? 'unit-card-committed' : ''}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedUnits.includes(unit.ambulance_id)}
+                                                    disabled={committed}
+                                                    onChange={() => toggleUnitSelection(unit.ambulance_id)}
+                                                />
+                                                <div className="unit-card-info">
+                                                    <span className="unit-card-number">{unit.unit_number}</span>
+                                                    <span className="unit-card-plate">{committed ? 'Ya asignada' : unit.license_plate}</span>
+                                                </div>
+                                            </label>
+                                        )
+                                    })}
+                                    {externalUnits.map((unit) => {
+                                        const committed = committedExternalUnitIds.includes(unit.ambulance_id)
+                                        return (
+                                            <label key={`ext-${unit.ambulance_id}`} className={`unit-card unit-card-external ${selectedExternalUnits.includes(unit.ambulance_id) ? 'selected' : ''} ${committed ? 'unit-card-committed' : ''}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedExternalUnits.includes(unit.ambulance_id)}
+                                                    disabled={committed}
+                                                    onChange={() => toggleExternalUnitSelection(unit.ambulance_id)}
+                                                />
+                                                <div className="unit-card-info">
+                                                    <span className="unit-card-number">{unit.unit_number}</span>
+                                                    <span className="unit-card-institution">{committed ? 'Ya solicitada' : unit.institution_name}</span>
+                                                </div>
+                                            </label>
+                                        )
+                                    })}
+                                    {availableUnits.length === 0 && externalUnits.length === 0 && (
+                                        <p className="unit-empty">No hay unidades disponibles.</p>
+                                    )}
+                                </div>
+                                <button type="button" className="ne-add-units-confirm" onClick={handleAddMoreUnits} disabled={addingUnits}>
+                                    {addingUnits ? 'Agregando...' : 'Confirmar unidades nuevas'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="ne-step2-grid">
                         {patientForms.map((patient, index) => (
                             <div key={index} className="patient-id-card">
@@ -534,12 +854,26 @@ const proceedWithConfirmation = (forms) => {
                                 <div className="patient-id-row">
                                     <select
                                         value={patient.destinationInstitutionId}
-                                        onChange={(e) => updatePatientField(index, 'destinationInstitutionId', e.target.value)}
+                                        onChange={(e) => handlePatientDestinationChange(index, e.target.value)}
                                     >
                                         <option value="">Hospital destino — sin definir</option>
                                         {destinationInstitutions.map((inst) => (
                                             <option key={inst.institution_id} value={inst.institution_id}>
                                                 {inst.name} — {inst.available_beds} camas
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={patient.destinationSpecialityId}
+                                        onChange={(e) => updatePatientField(index, 'destinationSpecialityId', e.target.value)}
+                                        disabled={!patient.destinationInstitutionId}
+                                    >
+                                        <option value="">
+                                            {patient.destinationInstitutionId ? 'Especialidad destino — sin definir' : 'Elige hospital primero'}
+                                        </option>
+                                        {getSpecialitiesForInstitution(patient.destinationInstitutionId).map((spec) => (
+                                            <option key={spec.institution_speciality_id} value={spec.speciality_id}>
+                                                {spec.name}
                                             </option>
                                         ))}
                                     </select>
@@ -609,6 +943,7 @@ const proceedWithConfirmation = (forms) => {
                             emergencyLocation={latitude && longitude ? { latitude, longitude } : null}
                             onMapClick={handleMapClick}
                             flyToLocation={latitude && longitude ? [parseFloat(latitude), parseFloat(longitude)] : null}
+                            routes={nearestRouteGeometry ? [{ coordinates: nearestRouteGeometry }] : []}
                         />
                     </div>
 
@@ -701,9 +1036,14 @@ const proceedWithConfirmation = (forms) => {
 
                 <div className="ne-units-column">
                     <label className="ne-units-title">Tus Unidades (asignación directa)</label>
+                    {latitude && longitude && (
+                        <p className="ne-distance-hint">
+                            {routesLoading ? 'Calculando rutas...' : 'Ordenadas por tiempo de traslado real a la ubicación marcada.'}
+                        </p>
+                    )}
 
                     {unitTypes.map((type) => {
-                        const unitsOfThisType = groupedUnits[type.ambulance_type_id] || []
+                        const unitsOfThisType = sortUnitsByDistance(groupedUnits[type.ambulance_type_id] || [])
                         return (
                             <div key={type.ambulance_type_id} className="unit-type-group">
                                 <div className="unit-type-header">
@@ -722,8 +1062,14 @@ const proceedWithConfirmation = (forms) => {
                                             <label key={unit.ambulance_id} className={`unit-card ${selectedUnits.includes(unit.ambulance_id) ? 'selected' : ''}`}>
                                                 <input type="checkbox" checked={selectedUnits.includes(unit.ambulance_id)} onChange={() => toggleUnitSelection(unit.ambulance_id)} />
                                                 <div className="unit-card-info">
-                                                    <span className="unit-card-number">{unit.unit_number}</span>
-                                                    <span className="unit-card-plate">{unit.license_plate}</span>
+                                                    <span className="unit-card-number">
+                                                        {unit.unit_number}
+                                                        {unit.ambulance_id === nearestUnitId && <span className="unit-nearest-badge">Más cercana</span>}
+                                                    </span>
+                                                    <span className="unit-card-plate">
+                                                        {unit.license_plate}
+                                                        {unit.route && ` · ${unit.route.distanceKm.toFixed(1)} km · ${Math.round(unit.route.durationMin)} min`}
+                                                    </span>
                                                 </div>
                                             </label>
                                         ))}

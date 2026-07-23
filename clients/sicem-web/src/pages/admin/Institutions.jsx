@@ -251,6 +251,19 @@ const Institutions = () => {
             .catch(error => { console.error('Error cambiando estado de la institución. ', error); alert(error.message) })
     }
 
+    const handleToggleCrum = (inst) => {
+        const action = inst.is_crum_institution ? 'quitar de la red CRUM' : 'marcar como institución CRUM'
+        if (!window.confirm(`¿Seguro que quieres ${action} a "${inst.name}"?`)) return
+        fetch('http://localhost:3000/hospitales/alternar-crum-institucion', {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ institutionId: inst.institution_id })
+        })
+            .then(parseResponse)
+            .then(() => fetchInstitutions())
+            .catch(error => { console.error('Error cambiando estado CRUM de la institución. ', error); alert(error.message) })
+    }
+
     const openBedsForm = (inst) => {
         setShowBedsForm(inst.institution_id)
         setBedsValue(inst.available_beds ?? '')
@@ -629,6 +642,9 @@ const Institutions = () => {
                                         <span className={`institutions-status ${inst.is_active ? 'status-active' : 'status-inactive'}`}>
                                             {inst.is_active ? 'Activa' : 'Inactiva'}
                                         </span>
+                                        <span className={`institutions-status ${inst.is_crum_institution ? 'status-crum' : 'status-not-crum'}`}>
+                                            {inst.is_crum_institution ? 'CRUM' : 'No CRUM'}
+                                        </span>
                                     </div>
 
                                     <div className="institution-admin-beds">
@@ -742,6 +758,9 @@ const Institutions = () => {
                                         <div className="institution-admin-actions">
                                             <button className="institutions-edit-btn" onClick={() => openBedsForm(inst)}>Editar camas</button>
                                             <button className="institutions-edit-btn" onClick={() => openEditInstitution(inst)}>Editar institución</button>
+                                            <button className="institutions-toggle-btn" onClick={() => handleToggleCrum(inst)}>
+                                                {inst.is_crum_institution ? 'Quitar de CRUM' : 'Marcar como CRUM'}
+                                            </button>
                                             <button className="institutions-toggle-btn" onClick={() => handleToggleActive(inst)}>
                                                 {inst.is_active ? 'Desactivar' : 'Activar'}
                                             </button>

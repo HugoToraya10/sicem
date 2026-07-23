@@ -33,16 +33,36 @@ const registerEmergencyPatient = (req, res) => {
     if (parseInt(req.decoded.roleId) !== 1 && !allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
-        emergencyModel.registerEmergencyPatient(req.body, (e, r) => {
-            if (e) {
-                return res.status(500).json({message: "Error del servidor."});
-            } else {
-                //se muestra la info del paciente al frontend inmediatamente se registra
-                const { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId } = req.body;
-                io.to('hospital').emit('eventPatientRegistered', { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId })
-                res.status(201).json({message: "Paciente registrado en la emergencia.", emergencyPatientId: r.insertId});
-            }
-        });
+        const { destinationInstitutionId, emergencyId, ambulanceId, userProfileId, notes } = req.body;
+        if (destinationInstitutionId === undefined || destinationInstitutionId === null || destinationInstitutionId === '') {
+            return res.status(400).json({message: "Debes asignar un hospital destino para este paciente."});
+        }
+
+        const insertPatient = () => {
+            emergencyModel.registerEmergencyPatient(req.body, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    //se muestra la info del paciente al frontend inmediatamente se registra
+                    io.to('hospital').emit('eventPatientRegistered', { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId })
+                    res.status(201).json({message: "Paciente registrado en la emergencia.", emergencyPatientId: r.insertId});
+                }
+            });
+        }
+
+        if (ambulanceId) {
+            emergencyModel.getConflictingAmbulanceDestination(emergencyId, ambulanceId, destinationInstitutionId, (eC, rC) => {
+                if (eC) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (rC.length > 0) {
+                    return res.status(400).json({message: "Esa unidad ya tiene asignado otro hospital destino distinto en esta emergencia. Una ambulancia no puede llevar pacientes a dos hospitales a la vez — asígnales la misma unidad o unidades distintas."});
+                } else {
+                    insertPatient();
+                }
+            });
+        } else {
+            insertPatient();
+        }
     }
 }
 
@@ -94,7 +114,8 @@ const registerAssignment = (req, res) => {
                     if (e2) console.error('Error actualizando estado ambulancia:', e2);
                 });
                 const { emergencyId, ambulanceIds, userProfileId, notes } = req.body;
-                io.to('paramedic').to('admin').to("dispatcher").emit('eventAmbulanceAssigned', { emergencyId, ambulanceIds, userProfileId, notes });
+                // Faltaba 'hospital' aquí también — misma razón que en eventAmbulanceUnassigned.
+                io.to('paramedic').to('admin').to("dispatcher").to('hospital').emit('eventAmbulanceAssigned', { emergencyId, ambulanceIds, userProfileId, notes });
                 res.status(201).json({message: "Ambulancia asignada con éxito."});
             }
         });
@@ -112,7 +133,9 @@ const registerInterInstitutionalRequest = (req, res) => {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
                 const { emergencyId, requestingInstitutionId, receivingInstitutionId } = req.body;
-                io.to('paramedic').to('admin').emit('eventInterInstitutionalRequest', { emergencyId, requestingInstitutionId, receivingInstitutionId });
+                // También a 'hospital' — es la institución dueña de la unidad quien
+                // tiene que enterarse ya, para poder aceptar/rechazar desde sicem-desktop.
+                io.to('paramedic').to('admin').to('hospital').emit('eventInterInstitutionalRequest', { emergencyId, requestingInstitutionId, receivingInstitutionId, requestId: r.insertId });
                 res.status(201).json({message: "Solicitud interinstitucional enviada.", requestId: r.insertId});
             }
         });
@@ -209,10 +232,58 @@ const closeEmergency = (req, res) => {
         emergencyModel.closeEmergency(emergencyId, (e, r) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
+            } else if (r.blocked) {
+                return res.status(409).json({message: `No se puede cerrar: hay ${r.pendingCount} paciente(s) con destino asignado que aún no han sido recibidos (pendientes o rechazados). Reasigna o confirma su recepción antes de cerrar la emergencia.`});
             } else {
                 io.to('paramedic').to('hospital').to('admin').emit('eventEmergencyClosed', { emergencyId });
                 res.status(200).json({message: "Emergencia cerrada con éxito."});
             }
+        });
+    }
+}
+
+// Válvula de escape exclusiva de rol 1 — cierra sin importar si hay pacientes
+// pendientes de recepción/entrega (ambulancia cancelada, paciente rechazado y
+// nunca reasignado, etc.). Exige un motivo, a diferencia del cierre normal.
+const forceCloseEmergency = (req, res) => {
+    const io = configSocket.getIo();
+    if (parseInt(req.decoded.roleId) !== 1) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { emergencyId, reason } = req.body;
+        if (!reason || !reason.trim()) {
+            return res.status(400).json({message: "Debes indicar un motivo para el cierre forzado."});
+        }
+
+        const proceedToClose = () => {
+            emergencyModel.forceCloseEmergency(emergencyId, reason, (e) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    io.to('paramedic').to('hospital').to('admin').to('dispatcher').emit('eventEmergencyClosed', { emergencyId, forced: true, reason });
+                    res.status(200).json({message: "Emergencia cerrada de forma forzada."});
+                }
+            });
+        }
+
+        // Antes de cerrar, libera las camas de quien ya había reservado una
+        // (Aceptada) pero nunca se confirmó entregado — este cierre significa
+        // justamente que ese traslado no va a completarse.
+        emergencyModel.getAcceptedUndeliveredPatients(emergencyId, (eList, patientsToRelease) => {
+            if (eList || patientsToRelease.length === 0) {
+                return proceedToClose();
+            }
+            let remaining = patientsToRelease.length;
+            const onOneReleased = () => { remaining -= 1; if (remaining === 0) proceedToClose(); };
+            patientsToRelease.forEach((p) => {
+                emergencyModel.incrementInstitutionBeds(p.destination_institution_id, () => {
+                    if (p.destination_speciality_id) {
+                        emergencyModel.incrementSpecialityBeds(p.destination_institution_id, p.destination_speciality_id, onOneReleased);
+                    } else {
+                        onOneReleased();
+                    }
+                });
+            });
         });
     }
 }
@@ -231,7 +302,9 @@ const unassignAmbulance = (req, res) => {
                 emergencyModel.updateAmbulanceStatus(req.body.ambulanceIds, 1, (e2, r2) => {
                     if (e2) console.error('Error actualizando estado ambulancia:', e2);
                 });
-                io.to('admin').to('dispatcher').emit('eventAmbulanceUnassigned', { assignmentId });
+                // Faltaba 'hospital' — MyAmbulances.jsx (sicem-desktop) nunca se
+                // enteraba de que su propia unidad volvió a estar disponible.
+                io.to('admin').to('dispatcher').to('hospital').emit('eventAmbulanceUnassigned', { assignmentId, ambulanceIds: req.body.ambulanceIds });
                 res.status(200).json({message: "Ambulancia desasignada."});
             }
         });
@@ -242,6 +315,7 @@ const unassignAmbulance = (req, res) => {
 // (restringido a roles 1/3), esto lo hace exclusivamente quien la creó — la comparación usa
 // req.decoded.userProfileId (del JWT), nunca un valor mandado por el cliente.
 const cancelInterInstitutionalRequest = (req, res) => {
+    const io = configSocket.getIo();
     const { interInstitutionalRequestId } = req.body;
     const userProfileId = req.decoded.userProfileId;
     const isAdmin = parseInt(req.decoded.roleId) === 1;
@@ -251,25 +325,371 @@ const cancelInterInstitutionalRequest = (req, res) => {
         } else if (r.affectedRows === 0) {
             return res.status(403).json({message: "No puedes cancelar esta solicitud."});
         } else {
-            res.status(200).json({message: "Solicitud cancelada."});
+            // Una unidad cancelada ya no va a llegar — si algún paciente de esa
+            // emergencia la tenía asignada de antemano (EmergencyDetail ahora deja
+            // asignar unidades todavía no aceptadas), hay que soltarla.
+            emergencyModel.getInterInstitutionalRequestById(interInstitutionalRequestId, (e2, r2) => {
+                const ambulanceId = (!e2 && r2.length > 0) ? r2[0].ambulance_id : null;
+                const emergencyId = (!e2 && r2.length > 0) ? r2[0].emergency_id : null;
+                const receivingInstitutionId = (!e2 && r2.length > 0) ? r2[0].receiving_institution_id : null;
+                const afterCleanup = () => {
+                    // Faltaba esto — el hospital dueño de la unidad (sicem-desktop) nunca se
+                    // enteraba en vivo de que ya no hacía falta responder, y se quedaba
+                    // mostrando la solicitud como si siguiera pendiente hasta recargar. Ahora
+                    // también incluye receivingInstitutionId — hace falta para poder avisar
+                    // con sonido/notificación cuando se cancela una que YA se había aceptado
+                    // (el hospital había comprometido la unidad, merece enterarse ya).
+                    io.to('dispatcher').to('admin').to('hospital').emit('eventInterInstitutionalRequestResponded', { interInstitutionalRequestId, requestStatusId: 4, rejectionReason: null, ambulanceId, emergencyId, receivingInstitutionId });
+                    res.status(200).json({message: "Solicitud cancelada."});
+                }
+                if (ambulanceId && emergencyId) {
+                    emergencyModel.clearAmbulanceFromEmergencyPatients(emergencyId, ambulanceId, afterCleanup);
+                } else {
+                    afterCleanup();
+                }
+            });
         }
     });
 }
 
-// Responder solicitud interinstitucional. Notifica al dispatcher que la solicitó
+// Responder solicitud interinstitucional. Antes solo dejaba a rol 3 (paramédico,
+// vía sicem-mobile, que todavía no existe) o rol 1 (admin) — el hospital dueño
+// de la unidad (rol 4) no podía aceptar/rechazar nada desde sicem-desktop, así
+// que la ambulancia nunca salía de "Pendiente". También faltaba comprobar que
+// quien responde de verdad pertenece a la institución receptora — sin eso,
+// cualquier hospital podía aceptar la solicitud de otro.
 const respondInterInstitutionalRequest = (req, res) => {
     const io = configSocket.getIo();
-    const allowedRoles = [1, 3];
+    const allowedRoles = [1, 3, 4];
     if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
-        emergencyModel.respondInterInstitutionalRequest(req.body, (e, r) => {
+        const { interInstitutionalRequestId, requestStatusId, rejectionReason } = req.body;
+
+        const proceed = () => {
+            emergencyModel.respondInterInstitutionalRequest(req.body, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    // Rechazada (3) = esa unidad ya no va a llegar. Si algún paciente de
+                    // esa emergencia la tenía asignada de antemano, hay que soltarla —
+                    // "déjame asignarla ya, si la rechazan se le pone otra" es justo lo
+                    // que se pidió, y esto es la mitad de "se le pone otra": primero hay
+                    // que soltar la que ya no sirve.
+                    emergencyModel.getInterInstitutionalRequestById(interInstitutionalRequestId, (e2, r2) => {
+                        const ambulanceId = (!e2 && r2.length > 0) ? r2[0].ambulance_id : null;
+                        const emergencyId = (!e2 && r2.length > 0) ? r2[0].emergency_id : null;
+                        const receivingInstitutionId = (!e2 && r2.length > 0) ? r2[0].receiving_institution_id : null;
+                        const afterCleanup = () => {
+                            io.to('dispatcher').to('admin').to('hospital').emit('eventInterInstitutionalRequestResponded', { interInstitutionalRequestId, requestStatusId, rejectionReason, ambulanceId, emergencyId, receivingInstitutionId });
+                            res.status(200).json({message: "Solicitud respondida."});
+                        }
+                        if (parseInt(requestStatusId) === 3 && ambulanceId && emergencyId) {
+                            emergencyModel.clearAmbulanceFromEmergencyPatients(emergencyId, ambulanceId, afterCleanup);
+                        } else {
+                            afterCleanup();
+                        }
+                    });
+                }
+            });
+        }
+
+        if (parseInt(req.decoded.roleId) === 1) {
+            return proceed();
+        }
+
+        emergencyModel.getInterInstitutionalRequestById(interInstitutionalRequestId, (e1, r1) => {
+            if (e1) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else if (r1.length === 0) {
+                return res.status(404).json({message: "Solicitud no encontrada."});
+            } else if (r1[0].request_status_id !== 1) {
+                return res.status(400).json({message: "Esta solicitud ya fue respondida."});
+            }
+            emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e2, r2) => {
+                if (e2 || r2.length === 0 || parseInt(r2[0].institution_id) !== parseInt(r1[0].receiving_institution_id)) {
+                    return res.status(403).json({message: "Solo la institución dueña de la unidad puede responder esta solicitud."});
+                } else {
+                    proceed();
+                }
+            });
+        });
+    }
+}
+
+// El hospital destino confirma o rechaza la recepción de un paciente. La ambulancia
+// sigue su curso de todos modos — esto solo afecta reception_status_id (confirmación
+// administrativa), reutilizando el catálogo request_statuses. El institution_id de
+// quien confirma se deriva del JWT (userProfileId -> user_profiles), nunca de un
+// institutionId que mande el cliente.
+// Aceptar un paciente RESERVA cama de inmediato (no hasta que llegue
+// físicamente) — es la única forma de evitar que un hospital siga aceptando
+// pacientes de más y se entere del sobrecupo hasta que ya llegaron todos.
+// Rechazar nunca toca camas (nunca se habían reservado). El único caso que
+// libera una cama ya reservada es si alguien pasa de Aceptada a Rechazada
+// (defensivo — la UI actual no ofrece esa transición, pero por API sí sería
+// posible) o un cierre forzado (ver forceCloseEmergency).
+const confirmPatientReception = (req, res) => {
+    const io = configSocket.getIo();
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { emergencyPatientId, accepted, rejectionReason } = req.body;
+        emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e, r) => {
+            if (e || r.length === 0) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                const callerInstitutionId = r[0].institution_id;
+                emergencyModel.getEmergencyPatientById(emergencyPatientId, (e2, r2) => {
+                    if (e2) {
+                        return res.status(500).json({message: "Error del servidor."});
+                    } else if (r2.length === 0 || parseInt(r2[0].destination_institution_id) !== parseInt(callerInstitutionId)) {
+                        return res.status(403).json({message: "Este paciente no está asignado a tu institución."});
+                    } else if (r2[0].closed_at) {
+                        return res.status(400).json({message: "Esta emergencia ya está cerrada, no se puede aceptar ni rechazar al paciente."});
+                    } else {
+                        const emergencyId = r2[0].emergency_id;
+                        const specialityId = r2[0].destination_speciality_id;
+                        const wasAlreadyAccepted = r2[0].reception_status_name === 'Aceptada';
+
+                        if (accepted && wasAlreadyAccepted) {
+                            return res.status(400).json({message: "Este paciente ya había sido aceptado."});
+                        }
+
+                        const applyStatusChange = () => {
+                            const statusName = accepted ? 'Aceptada' : 'Rechazada';
+                            emergencyModel.getRequestStatusIdByName(statusName, (e3, r3) => {
+                                if (e3 || r3.length === 0) {
+                                    return res.status(500).json({message: "Error del servidor."});
+                                } else {
+                                    const receptionStatusId = r3[0].request_status_id;
+                                    emergencyModel.updatePatientReceptionStatus(emergencyPatientId, receptionStatusId, callerInstitutionId, accepted ? null : rejectionReason, (e4, r4) => {
+                                        if (e4) {
+                                            return res.status(500).json({message: "Error del servidor."});
+                                        } else {
+                                            // Admin también recibe este evento en vivo, igual que el resto de emits
+                                            // dirigidos al despachador en este archivo (eventEmergencyRegistered,
+                                            // eventAmbulanceAssigned, eventAmbulanceUnassigned, etc.) — el admin
+                                            // entra a la sala 'admin', no a 'dispatcher', así que emitir solo a
+                                            // 'dispatcher' lo deja fuera aunque esté viendo la misma pantalla.
+                                            // También al hospital que acaba de aceptar/rechazar: si tiene más de
+                                            // una pantalla abierta (p. ej. Seguimiento en otra pestaña), necesita
+                                            // enterarse sin tener que salir y volver a entrar.
+                                            io.to('dispatcher').to('admin').to('hospital').emit('eventPatientReceptionUpdated', { emergencyPatientId, emergencyId, receptionStatusId, accepted, rejectionReason: accepted ? null : rejectionReason });
+                                            res.status(200).json({
+                                                message: accepted ? "Recepción confirmada." : "Recepción rechazada.",
+                                                data: { emergencyPatientId, receptionStatusId }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+
+                        if (accepted) {
+                            emergencyModel.decrementInstitutionBeds(callerInstitutionId, (eBed, rBed) => {
+                                if (eBed) {
+                                    return res.status(500).json({message: "Error del servidor."});
+                                } else if (rBed.affectedRows === 0) {
+                                    return res.status(409).json({message: "Sin camas disponibles en tu institución — no puedes aceptar a este paciente. Recházalo para que el despachador lo reasigne."});
+                                } else if (specialityId) {
+                                    emergencyModel.decrementSpecialityBeds(callerInstitutionId, specialityId, (eSpecBed, rSpecBed) => {
+                                        if (eSpecBed) {
+                                            return res.status(500).json({message: "Error del servidor."});
+                                        } else if (rSpecBed.affectedRows === 0) {
+                                            // Se reservó la cama general pero no había de la especialidad
+                                            // — se revierte la general antes de bloquear, para no dejar
+                                            // una cama fantasma reservada sin un paciente real detrás.
+                                            emergencyModel.incrementInstitutionBeds(callerInstitutionId, () => {
+                                                res.status(409).json({message: "Sin camas disponibles para esa especialidad en tu institución — no puedes aceptar a este paciente. Recházalo para que el despachador lo reasigne."});
+                                            });
+                                        } else {
+                                            applyStatusChange();
+                                        }
+                                    });
+                                } else {
+                                    applyStatusChange();
+                                }
+                            });
+                        } else if (wasAlreadyAccepted) {
+                            emergencyModel.incrementInstitutionBeds(callerInstitutionId, () => {
+                                if (specialityId) {
+                                    emergencyModel.incrementSpecialityBeds(callerInstitutionId, specialityId, () => applyStatusChange());
+                                } else {
+                                    applyStatusChange();
+                                }
+                            });
+                        } else {
+                            applyStatusChange();
+                        }
+                    }
+                });
+            }
+        });
+    }
+}
+
+// Confirmación de llegada FÍSICA del paciente (distinta de confirmPatientReception,
+// que es la decisión administrativa de aceptarlo ANTES de que llegue). Hoy solo la
+// dispara el hospital mismo (sin sicem-mobile todavía no hay forma de que el
+// paramédico lo confirme desde el terreno) — cuando exista, rol 3 podría sumarse
+// aquí con su propia validación de que la ambulancia es la asignada a este paciente.
+// Si tras esto ya no queda nadie pendiente de entrega en la emergencia, se cierra
+// sola sin esperar a que el despachador la cierre a mano.
+const confirmPatientDelivery = (req, res) => {
+    const io = configSocket.getIo();
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { emergencyPatientId } = req.body;
+        emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e, r) => {
+            if (e || r.length === 0) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                const callerInstitutionId = r[0].institution_id;
+                emergencyModel.getEmergencyPatientById(emergencyPatientId, (e2, r2) => {
+                    if (e2) {
+                        return res.status(500).json({message: "Error del servidor."});
+                    } else if (r2.length === 0 || parseInt(r2[0].destination_institution_id) !== parseInt(callerInstitutionId)) {
+                        return res.status(403).json({message: "Este paciente no está asignado a tu institución."});
+                    } else if (r2[0].delivered_at) {
+                        return res.status(400).json({message: "La llegada de este paciente ya había sido confirmada."});
+                    } else if (r2[0].closed_at) {
+                        return res.status(400).json({message: "Esta emergencia ya está cerrada."});
+                    } else if (r2[0].reception_status_name !== 'Aceptada') {
+                        // Sin esto, se podía confirmar la llegada de un paciente que seguía
+                        // "Pendiente" (nunca pasó por Aceptar) — nunca se le reservó cama al
+                        // aceptarlo, así que hubiera terminado "entregado" sin que el stock de
+                        // camas se hubiera descontado nunca.
+                        return res.status(400).json({message: "Este paciente todavía no ha sido aceptado por tu institución."});
+                    } else {
+                        const emergencyId = r2[0].emergency_id;
+                        emergencyModel.confirmPatientDelivery(emergencyPatientId, callerInstitutionId, (e3) => {
+                            if (e3) {
+                                return res.status(500).json({message: "Error del servidor."});
+                            } else {
+                                io.to('dispatcher').to('admin').to('hospital').emit('eventPatientDelivered', { emergencyPatientId, emergencyId });
+                                emergencyModel.getUndeliveredPendingCount(emergencyId, (e4, r4) => {
+                                    const stillPending = (!e4 && r4.length > 0) ? r4[0].pending_count : 1;
+                                    const willClose = !e4 && stillPending === 0;
+                                    if (willClose) {
+                                        emergencyModel.closeEmergencyRaw(emergencyId, null, () => {
+                                            io.to('paramedic').to('hospital').to('admin').to('dispatcher').emit('eventEmergencyClosed', { emergencyId });
+                                        });
+                                    }
+                                    res.status(200).json({
+                                        message: "Llegada confirmada.",
+                                        data: { emergencyPatientId, emergencyClosed: willClose }
+                                    });
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+}
+
+// Alta médica — libera de vuelta la cama que "Aceptar" había reservado. Solo
+// tiene sentido sobre un paciente que ya se confirmó entregado (si nunca
+// llegó, no está ocupando nada que dar de alta — para ese caso está el
+// cierre forzado, que libera por cancelación en vez de por alta). No
+// depende de que la emergencia siga abierta o cerrada: el alta es del
+// paciente, no de la emergencia que lo trajo.
+const dischargePatient = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { emergencyPatientId } = req.body;
+        emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e, r) => {
+            if (e || r.length === 0) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                const callerInstitutionId = r[0].institution_id;
+                emergencyModel.getEmergencyPatientById(emergencyPatientId, (e2, r2) => {
+                    if (e2) {
+                        return res.status(500).json({message: "Error del servidor."});
+                    } else if (r2.length === 0 || parseInt(r2[0].destination_institution_id) !== parseInt(callerInstitutionId)) {
+                        return res.status(403).json({message: "Este paciente no está asignado a tu institución."});
+                    } else if (!r2[0].delivered_at) {
+                        return res.status(400).json({message: "Este paciente todavía no ha sido confirmado como entregado — no ocupa una cama que dar de alta."});
+                    } else if (r2[0].discharged_at) {
+                        return res.status(400).json({message: "Este paciente ya había sido dado de alta."});
+                    } else {
+                        const specialityId = r2[0].destination_speciality_id;
+                        emergencyModel.dischargePatient(emergencyPatientId, callerInstitutionId, (e3) => {
+                            if (e3) {
+                                return res.status(500).json({message: "Error del servidor."});
+                            } else {
+                                emergencyModel.incrementInstitutionBeds(callerInstitutionId, () => {
+                                    const finish = () => res.status(200).json({message: "Paciente dado de alta. Cama liberada."});
+                                    if (specialityId) {
+                                        emergencyModel.incrementSpecialityBeds(callerInstitutionId, specialityId, finish);
+                                    } else {
+                                        finish();
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+}
+
+// Despachador/admin reasigna el hospital destino (y opcionalmente la ambulancia) de
+// un paciente ya registrado. Resetea reception_status_id a "Pendiente" y avisa por
+// socket al hospital NUEVO reutilizando eventPatientRegistered — el mismo evento que
+// IncomingPatients.jsx (sicem-desktop) ya escucha y ya compara contra su institución.
+const reassignPatientDestination = (req, res) => {
+    const io = configSocket.getIo();
+    const allowedRoles = [1, 2];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { emergencyPatientId, newDestinationInstitutionId, newAmbulanceId } = req.body;
+        emergencyModel.reassignPatientDestination(req.body, (e, r) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
-                const { interInstitutionalRequestId, requestStatusId, rejectionReason } = req.body;
-                io.to('dispatcher').to('admin').emit('eventInterInstitutionalRequestResponded', { interInstitutionalRequestId, requestStatusId, rejectionReason });
-                res.status(200).json({message: "Solicitud respondida."});
+                emergencyModel.getEmergencyPatientById(emergencyPatientId, (e2, r2) => {
+                    const emergencyId = (!e2 && r2.length > 0) ? r2[0].emergency_id : null;
+                    io.to('hospital').emit('eventPatientRegistered', {
+                        emergencyId, emergencyPatientId,
+                        destinationInstitutionId: newDestinationInstitutionId,
+                        ambulanceId: newAmbulanceId
+                    });
+                    res.status(200).json({message: "Destino reasignado con éxito."});
+                });
+            }
+        });
+    }
+}
+
+// Liga una unidad ya disponible en la emergencia (propia asignada o externa ya
+// aceptada) a un paciente concreto — "Agregar ambulancia" solo la mete al
+// pool, esto es lo que de verdad dice "esta unidad lleva a este paciente".
+const assignAmbulanceToPatient = (req, res) => {
+    const io = configSocket.getIo();
+    const allowedRoles = [1, 2];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { emergencyPatientId, ambulanceId } = req.body;
+        emergencyModel.assignAmbulanceToPatient(emergencyPatientId, ambulanceId, (e) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                emergencyModel.getEmergencyPatientById(emergencyPatientId, (e2, r2) => {
+                    const emergencyId = (!e2 && r2.length > 0) ? r2[0].emergency_id : null;
+                    io.to('hospital').emit('eventPatientRegistered', { emergencyId, emergencyPatientId, ambulanceId });
+                    res.status(200).json({message: "Unidad asignada al paciente."});
+                });
             }
         });
     }
@@ -459,19 +879,68 @@ const getPatientsByEmergency = (req, res) => {
 // de endpoints existentes (p.ej. getInstitutionNotifications), se confía en el :institutionId
 // que manda el frontend sin cruzarlo contra el token — inconsistencia ya existente en el
 // proyecto, no se corrige aquí.
+// Rol 1: bypass total. Rol 4: solo puede consultar la propia institución — se
+// valida contra la institución real derivada de su perfil, no contra el
+// institutionId del path (antes no se validaba esto en absoluto: cualquier
+// rol 4 podía pedir los pacientes en camino de OTRA institución con solo
+// cambiar el ID en la URL).
 const getIncomingPatientsByInstitution = (req, res) => {
     const allowedRoles = [1, 4];
     if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
         const {institutionId} = req.params;
-        emergencyModel.getIncomingPatientsByInstitution(institutionId, (e, r) => {
-            if (e) {
-                return res.status(500).json({message: "Error del servidor."});
-            } else {
-                res.status(200).json({message: "Pacientes en camino", data: r});
-            }
-        });
+        const proceed = () => {
+            emergencyModel.getIncomingPatientsByInstitution(institutionId, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    res.status(200).json({message: "Pacientes en camino", data: r});
+                }
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0 || parseInt(r[0].institution_id) !== parseInt(institutionId)) {
+                    return res.status(403).json({message: "Solo puedes consultar pacientes de tu propia institución."});
+                } else {
+                    proceed();
+                }
+            });
+        }
+    }
+}
+
+// Mismo criterio de ownership que getIncomingPatientsByInstitution, aplicado
+// al historial completo (abiertas+cerradas).
+const getPatientHistoryByInstitution = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const {institutionId} = req.params;
+        const proceed = () => {
+            emergencyModel.getPatientHistoryByInstitution(institutionId, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    res.status(200).json({message: "Historial de pacientes", data: r});
+                }
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0 || parseInt(r[0].institution_id) !== parseInt(institutionId)) {
+                    return res.status(403).json({message: "Solo puedes consultar el historial de tu propia institución."});
+                } else {
+                    proceed();
+                }
+            });
+        }
     }
 }
 
@@ -571,6 +1040,39 @@ const getAllInterInstitutionalRequests = (req, res) => {
                 res.status(200).json({message: "Todas las solicitudes interinstitucionales", data: r});
             }
         });
+    }
+}
+
+// Solicitudes pendientes dirigidas a la institución del hospital que consulta
+// — ✅ pantalla nueva de sicem-desktop. Mismo criterio de ownership que
+// getIncomingPatientsByInstitution: el admin puede consultar cualquiera, el
+// hospital solo la suya.
+const getPendingRequestsByReceivingInstitution = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const { institutionId } = req.params;
+        const proceed = () => {
+            emergencyModel.getPendingRequestsByReceivingInstitution(institutionId, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    res.status(200).json({message: "Solicitudes pendientes de tu institución", data: r});
+                }
+            });
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0 || parseInt(r[0].institution_id) !== parseInt(institutionId)) {
+                    return res.status(403).json({message: "Solo puedes consultar solicitudes de tu propia institución."});
+                } else {
+                    proceed();
+                }
+            });
+        }
     }
 }
 
@@ -751,15 +1253,16 @@ module.exports = {
     registerAssignment, registerInterInstitutionalRequest,
     createEmergencyType, createEmergencyStatus, createRequestStatus, createTriageLevel,
     // PATCH
-    updateEmergencyStatus, closeEmergency,
+    updateEmergencyStatus, closeEmergency, forceCloseEmergency,
     unassignAmbulance, respondInterInstitutionalRequest, cancelInterInstitutionalRequest,
     toggleEmergencyType, toggleEmergencyStatus, toggleRequestStatus, toggleTriageLevel,
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
+    confirmPatientReception, confirmPatientDelivery, dischargePatient, reassignPatientDestination, assignAmbulanceToPatient,
     // GET
     getAllActiveEmergencies, getAllClosedEmergencies, getEmergencyById,
-    getPatientsByEmergency, getIncomingPatientsByInstitution, getNotesByEmergencyPatient, getAssignmentsByEmergency,
+    getPatientsByEmergency, getIncomingPatientsByInstitution, getPatientHistoryByInstitution, getNotesByEmergencyPatient, getAssignmentsByEmergency,
     getAssignmentsByAmbulance, getEmergenciesByPatient,
-    getPendingInterInstitutionalRequests, getAllInterInstitutionalRequests,
+    getPendingInterInstitutionalRequests, getAllInterInstitutionalRequests, getPendingRequestsByReceivingInstitution,
     getAllEmergencyTypes, getAllEmergencyStatuses, getAllRequestStatuses, getAllTriageLevels,
     getAllEmergencyTypesAdmin, getAllEmergencyStatusesAdmin, getAllRequestStatusesAdmin, getAllTriageLevelsAdmin,
     //GETs de estadísticas

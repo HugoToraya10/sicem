@@ -21,20 +21,41 @@ const registerLocations = (req, res) => {
     }
 }
 
+// Rol 1: bypass total. Rol 4: exige is_institution_admin=1 y que el
+// institutionId del body sea el suyo propio.
 const registerAmbulance = (req, res) => {
-    if(!(parseInt(req.decoded.roleId) === 1)) {
+    const allowedRoles = [1, 4];
+    if(!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message:"Acceso denegado."})
     } else {
-        unitModel.registerAmbulance(req.body, (e, r) => {
-            if(e) {
-                if(e.code === 'ER_DUP_ENTRY') {
-                    return res.status(409).json({message:"Ya existe una ambulancia con ese número de unidad o placa."})
+        const { institutionId } = req.body;
+        const proceed = () => {
+            unitModel.registerAmbulance(req.body, (e, r) => {
+                if(e) {
+                    if(e.code === 'ER_DUP_ENTRY') {
+                        return res.status(409).json({message:"Ya existe una ambulancia con ese número de unidad o placa."})
+                    }
+                    return res.status(500).json({message:"Error del servidor."})
+                } else {
+                    res.status(201).json({message:"Unidad registrada con éxito"})
                 }
-                return res.status(500).json({message:"Error del servidor."})
-            } else {
-                res.status(201).json({message:"Unidad registrada con éxito"})
-            }
-        })
+            })
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            unitModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else if (parseInt(institutionId) !== parseInt(r[0].institution_id)) {
+                    return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
+                } else {
+                    proceed();
+                }
+            });
+        }
     }
 }
 
@@ -69,18 +90,44 @@ const registerAmbulanceStatus = (req, res) => {
 }
 
 //--- patches -----------------------
+// Rol 1: bypass total. Rol 4: exige is_institution_admin=1 y que la ambulancia
+// pertenezca a su propia institución (resuelta vía ambulanceId).
 const toggleAmbulance = (req, res) => {
-    if(!(parseInt(req.decoded.roleId) === 1)) {
+    const allowedRoles = [1, 4];
+    if(!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message:"Acceso denegado."})
     } else {
         const {ambulanceId} = req.body;
-        unitModel.toggleAmbulance(ambulanceId, (e, r) => {
-            if(e) {
-                return res.status(500).json({message:"Error del servidor."})
-            } else {
-                res.status(200).json({message:"Estado de ambulancia actualizado."})
-            }
-        })
+        const proceed = () => {
+            unitModel.toggleAmbulance(ambulanceId, (e, r) => {
+                if(e) {
+                    return res.status(500).json({message:"Error del servidor."})
+                } else {
+                    res.status(200).json({message:"Estado de ambulancia actualizado."})
+                }
+            })
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            unitModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else {
+                    unitModel.getInstitutionIdByAmbulanceId(ambulanceId, (e2, r2) => {
+                        if (e2 || r2.length === 0) {
+                            return res.status(404).json({message: "Ambulancia no encontrada."});
+                        } else if (parseInt(r2[0].institution_id) !== parseInt(r[0].institution_id)) {
+                            return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
+                        } else {
+                            proceed();
+                        }
+                    });
+                }
+            });
+        }
     }
 }
 
@@ -144,20 +191,94 @@ const updateAmbulanceStatusCatalog = (req, res) => {
     }
 }
 
+// Rol 1: bypass total, incluyendo reasignar la ambulancia a otra institución.
+// Rol 4: exige is_institution_admin=1, que la ambulancia ya sea de su propia
+// institución, Y que el institutionId nuevo del body siga siendo el suyo — ni
+// siquiera un admin de institución puede "robar" una ambulancia reasignándola
+// a otro dueño, eso es exclusivo de rol 1.
 const updateAmbulance = (req, res) => {
-    if(!(parseInt(req.decoded.roleId) === 1)) {
+    const allowedRoles = [1, 4];
+    if(!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message:"Acceso denegado."})
     } else {
-        unitModel.updateAmbulance(req.body, (e, r) => {
-            if(e) {
-                if(e.code === 'ER_DUP_ENTRY') {
-                    return res.status(409).json({message:"Ya existe una ambulancia con ese número de unidad o placa."})
+        const { ambulanceId, institutionId } = req.body;
+        const proceed = () => {
+            unitModel.updateAmbulance(req.body, (e, r) => {
+                if(e) {
+                    if(e.code === 'ER_DUP_ENTRY') {
+                        return res.status(409).json({message:"Ya existe una ambulancia con ese número de unidad o placa."})
+                    }
+                    return res.status(500).json({message:"Error del servidor."})
+                } else {
+                    res.status(200).json({message:"Ambulancia actualizada con éxito."})
                 }
-                return res.status(500).json({message:"Error del servidor."})
-            } else {
-                res.status(200).json({message:"Ambulancia actualizada con éxito."})
-            }
-        })
+            })
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            unitModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else if (!r[0].is_institution_admin) {
+                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+                } else {
+                    const callerInstitutionId = r[0].institution_id;
+                    unitModel.getInstitutionIdByAmbulanceId(ambulanceId, (e2, r2) => {
+                        if (e2 || r2.length === 0) {
+                            return res.status(404).json({message: "Ambulancia no encontrada."});
+                        } else if (parseInt(r2[0].institution_id) !== parseInt(callerInstitutionId)) {
+                            return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
+                        } else if (parseInt(institutionId) !== parseInt(callerInstitutionId)) {
+                            return res.status(403).json({message: "No puedes reasignar una ambulancia a otra institución."});
+                        } else {
+                            proceed();
+                        }
+                    });
+                }
+            });
+        }
+    }
+}
+
+// Estado del día a día de una ambulancia propia (Disponible/En camino/etc.) —
+// operación normal para CUALQUIER rol 4, no exige is_institution_admin (a
+// diferencia de las funciones de arriba). Solo exige que la ambulancia
+// pertenezca a la institución del que llama.
+const updateAmbulanceStatus = (req, res) => {
+    const allowedRoles = [1, 4];
+    if(!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message:"Acceso denegado."})
+    } else {
+        const { ambulanceId, ambulanceStatusId } = req.body;
+        const proceed = () => {
+            unitModel.updateAmbulanceStatus(ambulanceId, ambulanceStatusId, (e, r) => {
+                if (e) {
+                    return res.status(500).json({message:"Error del servidor."})
+                } else {
+                    res.status(200).json({message:"Estado de la ambulancia actualizado.", data: { ambulanceId, ambulanceStatusId }})
+                }
+            })
+        }
+        if (parseInt(req.decoded.roleId) === 1) {
+            proceed();
+        } else {
+            unitModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+                if (e || r.length === 0) {
+                    return res.status(500).json({message: "Error del servidor."});
+                } else {
+                    unitModel.getInstitutionIdByAmbulanceId(ambulanceId, (e2, r2) => {
+                        if (e2 || r2.length === 0) {
+                            return res.status(404).json({message: "Ambulancia no encontrada."});
+                        } else if (parseInt(r2[0].institution_id) !== parseInt(r[0].institution_id)) {
+                            return res.status(403).json({message: "Esta ambulancia no pertenece a tu institución."});
+                        } else {
+                            proceed();
+                        }
+                    });
+                }
+            });
+        }
     }
 }
 
@@ -310,7 +431,7 @@ const getAllAmbulanceStatusesAdmin = (req, res) => {
 module.exports = {
     registerLocations, registerAmbulance, createAmbulanceType, registerAmbulanceStatus,
     toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus, getExternalAvailableAmbulances,
-    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance,
+    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance

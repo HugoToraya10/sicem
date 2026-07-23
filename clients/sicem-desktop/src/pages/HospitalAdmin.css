@@ -1,0 +1,124 @@
+.hospital-admin-layout { padding: 24px 32px 48px; max-width: 1200px; margin: 0 auto; }
+
+.hospital-admin-title {
+    font-size: 20px; font-weight: 700; color: #1a1a2e; margin-bottom: 18px; letter-spacing: -0.2px;
+}
+
+.hospital-admin-tabs {
+    display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid #e4e4ec;
+}
+.hospital-admin-tab {
+    background: none; border: none; padding: 11px 18px; font-size: 13px; font-weight: 600;
+    color: #8888a0; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color 0.15s ease;
+}
+.hospital-admin-tab:hover { color: #1a1a2e; }
+.hospital-admin-tab.active { color: #1565C0; border-bottom-color: #1565C0; }
+
+.hospital-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+
+.empty-state {
+    grid-column: 1 / -1;
+    color: #999; font-size: 13px; text-align: center;
+    padding: 36px 20px; background: white; border: 1px dashed #dcdce4; border-radius: 10px;
+}
+
+.hospital-admin-section-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px;
+}
+.hospital-admin-section-title { font-size: 13px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.hospital-admin-add-btn {
+    background: #1565C0; color: white; border: none; border-radius: 6px;
+    padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: background 0.15s ease;
+}
+.hospital-admin-add-btn:hover { background: #104e96; }
+
+.hospital-admin-edit-btn {
+    background: white; color: #1565C0; border: 1px solid #1565C0; border-radius: 6px;
+    padding: 8px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.hospital-admin-edit-btn:hover { background: #1565C0; color: white; }
+
+.hospital-admin-general-beds {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: white; border: 1px solid #e4e4ec; border-radius: 10px;
+    padding: 18px 22px; margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
+}
+.hospital-admin-general-beds-info { display: flex; flex-direction: column; gap: 4px; }
+.hospital-admin-general-beds-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+.hospital-admin-general-beds-numbers { font-size: 22px; color: #1a1a2e; }
+.hospital-admin-general-beds-numbers strong { color: #1565C0; font-size: 26px; }
+
+.hospital-admin-form {
+    background: white; border: 1px solid #e4e4ec; border-radius: 10px; padding: 22px;
+    margin-bottom: 22px; display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
+}
+.hospital-admin-form h3 { font-size: 14.5px; color: #1a1a2e; font-weight: 700; }
+.hospital-admin-form-hint { font-size: 11.5px; color: #888; margin: -6px 0 0; line-height: 1.4; }
+
+.hospital-admin-inline-form {
+    display: flex; flex-direction: column; gap: 12px; padding: 14px 4px;
+}
+
+.hospital-admin-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.hospital-admin-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.hospital-admin-field label {
+    font-size: 10.5px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.hospital-admin-field input, .hospital-admin-field select {
+    border: 1px solid #dcdce4; border-radius: 6px; padding: 9px 10px; font-size: 13px; width: 100%; box-sizing: border-box;
+    transition: border-color 0.15s ease;
+}
+.hospital-admin-field input:focus, .hospital-admin-field select:focus { outline: none; border-color: #1565C0; }
+.hospital-admin-field select:disabled { background: #f5f5f7; color: #aaa; cursor: not-allowed; }
+
+.hospital-admin-form-actions { display: flex; gap: 10px; }
+.hospital-admin-form-submit {
+    background: #1565C0; color: white; border: none; border-radius: 6px;
+    padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: background 0.15s ease;
+}
+.hospital-admin-form-submit:hover { background: #104e96; }
+.hospital-admin-form-cancel {
+    background: white; color: #666; border: 1px solid #dcdce4; border-radius: 6px;
+    padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.hospital-admin-form-cancel:hover { border-color: #999; color: #333; }
+
+.hospital-admin-table-wrapper {
+    background: white; border: 1px solid #e4e4ec; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
+}
+.hospital-admin-table { width: 100%; border-collapse: collapse; }
+.hospital-admin-table thead { background: #12121f; }
+.hospital-admin-table th {
+    color: white; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; text-align: left; padding: 13px 16px;
+}
+.hospital-admin-table td { padding: 12px 16px; font-size: 13px; color: #333; border-bottom: 1px solid #eee; vertical-align: middle; }
+.hospital-admin-table tbody tr:last-child td { border-bottom: none; }
+.hospital-admin-table tbody tr:hover { background: #fafafb; }
+
+.hospital-admin-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.hospital-admin-detail-row td { background: #fafafb; padding: 4px 16px 16px; }
+
+.hospital-admin-status {
+    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 4px 10px;
+    border-radius: 10px; text-transform: uppercase;
+}
+.hospital-admin-status.status-active { background: #e2efda; color: #276221; }
+.hospital-admin-status.status-inactive { background: #f0f2f5; color: #8888a0; }
+
+.hospital-admin-toggle-btn {
+    background: white; border: 1px solid #dcdce4; border-radius: 5px; padding: 5px 10px;
+    font-size: 11px; font-weight: 600; color: #333; cursor: pointer; white-space: nowrap;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+.hospital-admin-toggle-btn:hover:not(:disabled) { border-color: #1565C0; color: #1565C0; }
+.hospital-admin-toggle-btn:disabled { opacity: 0.4; cursor: not-allowed; }

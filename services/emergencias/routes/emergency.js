@@ -17,6 +17,7 @@ router.post('/crear-nivel-triage', middleware.verifyToken, emergencyController.c
 // -------------------patches--------------------
 router.patch('/actualizar-estado-emergencia', middleware.verifyToken, emergencyController.updateEmergencyStatus); // TODO
 router.patch('/cerrar-emergencia', middleware.verifyToken, emergencyController.closeEmergency); // ✅ EmergencyDetail.jsx
+router.patch('/forzar-cierre-emergencia', middleware.verifyToken, emergencyController.forceCloseEmergency); // rol 1, cierre con motivo
 router.patch('/desasignar-ambulancia', middleware.verifyToken, emergencyController.unassignAmbulance); // TODO
 router.patch('/responder-solicitud', middleware.verifyToken, emergencyController.respondInterInstitutionalRequest); // TODO
 router.patch('/cancelar-solicitud', middleware.verifyToken, emergencyController.cancelInterInstitutionalRequest);
@@ -28,6 +29,11 @@ router.patch('/actualizar-tipo-emergencia', middleware.verifyToken, emergencyCon
 router.patch('/actualizar-estado-emergencia-catalogo', middleware.verifyToken, emergencyController.updateEmergencyStatusCatalog);
 router.patch('/actualizar-estado-solicitud', middleware.verifyToken, emergencyController.updateRequestStatus);
 router.patch('/actualizar-nivel-triage', middleware.verifyToken, emergencyController.updateTriageLevel);
+router.patch('/confirmar-recepcion-paciente', middleware.verifyToken, emergencyController.confirmPatientReception);
+router.patch('/confirmar-llegada-paciente', middleware.verifyToken, emergencyController.confirmPatientDelivery); // ✅ PatientDetailModal.jsx (sicem-desktop)
+router.patch('/dar-alta-paciente', middleware.verifyToken, emergencyController.dischargePatient); // ✅ PatientDetailModal.jsx (sicem-desktop) — libera la cama reservada
+router.patch('/reasignar-destino-paciente', middleware.verifyToken, emergencyController.reassignPatientDestination);
+router.patch('/asignar-ambulancia-paciente', middleware.verifyToken, emergencyController.assignAmbulanceToPatient); // ✅ EmergencyDetail.jsx
 
 // -------------- gets ---------------------------------
 router.get('/emergencias-activas', middleware.verifyToken, emergencyController.getAllActiveEmergencies); // ✅ Dashboard.jsx
@@ -35,11 +41,13 @@ router.get('/emergencias-cerradas', middleware.verifyToken, emergencyController.
 router.get('/emergencia/:emergencyId', middleware.verifyToken, emergencyController.getEmergencyById); // ✅ EmergencyDetail.jsx
 router.get('/pacientes/:emergencyId', middleware.verifyToken, emergencyController.getPatientsByEmergency); // ✅ EmergencyDetail.jsx
 router.get('/pacientes-en-camino/:institutionId', middleware.verifyToken, emergencyController.getIncomingPatientsByInstitution);
+router.get('/historial-institucion/:institutionId', middleware.verifyToken, emergencyController.getPatientHistoryByInstitution); // ✅ History.jsx (sicem-desktop)
 router.get('/notas/:emergencyPatientId', middleware.verifyToken, emergencyController.getNotesByEmergencyPatient); // ✅ EmergencyDetail.jsx
 router.get('/asignaciones/:emergencyId', middleware.verifyToken, emergencyController.getAssignmentsByEmergency); // ✅ EmergencyDetail.jsx
 router.get('/asignaciones-ambulancia/:ambulanceId', middleware.verifyToken, emergencyController.getAssignmentsByAmbulance);
 router.get('/emergencias-paciente/:userProfileId', middleware.verifyToken, emergencyController.getEmergenciesByPatient);
 router.get('/solicitudes-pendientes', middleware.verifyToken, emergencyController.getPendingInterInstitutionalRequests); // TODO
+router.get('/solicitudes-pendientes-institucion/:institutionId', middleware.verifyToken, emergencyController.getPendingRequestsByReceivingInstitution); // ✅ IncomingUnitRequests.jsx (sicem-desktop)
 router.get('/solicitudes', middleware.verifyToken, emergencyController.getAllInterInstitutionalRequests); // ✅ Requests.jsx
 router.get('/tipos-emergencia', emergencyController.getAllEmergencyTypes); // ✅ NewEmergency.jsx
 router.get('/estados-emergencia', emergencyController.getAllEmergencyStatuses); // TODO

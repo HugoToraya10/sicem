@@ -1,5 +1,20 @@
 const db = require('../config/db');
 
+// Institución, rol y privilegio de administrador de institución del usuario que
+// llama — se deriva SIEMPRE server-side desde user_profiles, nunca se confía en
+// un institutionId mandado por el cliente para decisiones de permiso.
+const getUserInstitutionInfo = (userProfileId, callback) => {
+    const sql = `SELECT institution_id, role_id, is_institution_admin FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Institución dueña de una ambulancia puntual — para validar que un rol 4 solo
+// administre ambulancias de SU institución.
+const getInstitutionIdByAmbulanceId = (ambulanceId, callback) => {
+    const sql = `SELECT institution_id FROM ambulances WHERE ambulance_id = ?`;
+    db.query(sql, [ambulanceId], callback);
+}
+
 //----creates---------
 const registerLocations = (data, callback) => {
     const {
@@ -69,6 +84,14 @@ const updateAmbulance = (data, callback) => {
     db.query(sql, [unitNumber, licensePlate, ambulanceTypeId, institutionId, ambulanceId], callback);
 }
 
+// Estado del día a día de una ambulancia puntual (Disponible/En camino/etc.) —
+// distinto de updateAmbulance, que edita datos administrativos (número, placa,
+// tipo, institución dueña).
+const updateAmbulanceStatus = (ambulanceId, ambulanceStatusId, callback) => {
+    const sql = `UPDATE ambulances SET ambulance_status_id = ?, updated_at = NOW() WHERE ambulance_id = ?`;
+    db.query(sql, [ambulanceStatusId, ambulanceId], callback);
+}
+
 
 //---- GETs ------------------------
 const getAllAmbulances = (callback) => {
@@ -76,19 +99,56 @@ const getAllAmbulances = (callback) => {
     db.query(sql, callback);
 }
 
-// Ambulancias disponibles de la misma institución del despachador (asignación directa)
+// Ambulancias propias disponibles de la institución del despachador (asignación
+// directa). Si esa institución es parte de la red CRUM fusionada
+// (is_crum_institution = 1), "propias" se extiende a CUALQUIER institución que
+// también sea CRUM — no solo el institution_id exacto (esa misma condición ya
+// incluye a la institución que pidió, así que no hace falta un OR aparte). Si
+// no es CRUM, el comportamiento es EXACTAMENTE el de siempre (comparación
+// exacta de institution_id) — es el caso más común, no se toca.
 const getAvailableAmbulances = (institutionId, callback) => {
-    const sql = `SELECT * FROM ambulances WHERE is_active = 1 AND ambulance_status_id = 1 AND institution_id = ?`;
-    db.query(sql, [institutionId], callback);
+    const crumCheckSql = `SELECT is_crum_institution FROM institutions WHERE institution_id = ?`;
+    db.query(crumCheckSql, [institutionId], (e, r) => {
+        if (e) return callback(e, r);
+        const isCrum = r.length > 0 && Boolean(r[0].is_crum_institution);
+        if (isCrum) {
+            const sql = `SELECT a.* FROM ambulances a
+                        JOIN institutions i ON a.institution_id = i.institution_id
+                        WHERE a.is_active = 1 AND a.ambulance_status_id = 1 AND i.is_crum_institution = 1`;
+            db.query(sql, [], callback);
+        } else {
+            const sql = `SELECT * FROM ambulances WHERE is_active = 1 AND ambulance_status_id = 1 AND institution_id = ?`;
+            db.query(sql, [institutionId], callback);
+        }
+    });
 }
 
-// Ambulancias disponibles de otras instituciones (requieren solicitud interinstitucional)
+// Ambulancias disponibles de otras instituciones (requieren solicitud
+// interinstitucional). Si la institución que pide es parte de la red CRUM
+// fusionada, excluye TODAS las ambulancias de instituciones también CRUM —
+// entre instituciones CRUM nunca son "externas" unas de otras, ya son
+// "propias" vía getAvailableAmbulances. Si no es CRUM, comportamiento
+// EXACTAMENTE el de siempre.
 const getExternalAvailableAmbulances = (institutionId, callback) => {
-    const sql = `SELECT a.*, i.name AS institution_name 
-                FROM ambulances a
-                LEFT JOIN institutions i ON a.institution_id = i.institution_id
-                WHERE a.is_active = 1 AND a.ambulance_status_id = 1 AND a.institution_id != ?`;
-    db.query(sql, [institutionId], callback);
+    const crumCheckSql = `SELECT is_crum_institution FROM institutions WHERE institution_id = ?`;
+    db.query(crumCheckSql, [institutionId], (e, r) => {
+        if (e) return callback(e, r);
+        const isCrum = r.length > 0 && Boolean(r[0].is_crum_institution);
+        if (isCrum) {
+            const sql = `SELECT a.*, i.name AS institution_name
+                        FROM ambulances a
+                        LEFT JOIN institutions i ON a.institution_id = i.institution_id
+                        WHERE a.is_active = 1 AND a.ambulance_status_id = 1
+                            AND (i.is_crum_institution = 0 OR i.is_crum_institution IS NULL)`;
+            db.query(sql, [], callback);
+        } else {
+            const sql = `SELECT a.*, i.name AS institution_name
+                        FROM ambulances a
+                        LEFT JOIN institutions i ON a.institution_id = i.institution_id
+                        WHERE a.is_active = 1 AND a.ambulance_status_id = 1 AND a.institution_id != ?`;
+            db.query(sql, [institutionId], callback);
+        }
+    });
 }
 
 const getAmbulanceByUnitNumber = (unitNumber, callback) => {
@@ -136,9 +196,10 @@ const getAllAmbulanceStatusesAdmin = (callback) => {
 
 
 module.exports = {
+    getUserInstitutionInfo, getInstitutionIdByAmbulanceId,
     registerLocations, registerAmbulance, createAmbulanceType, registerAmbulanceStatus,
     toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus, getExternalAvailableAmbulances,
-    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance,
+    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance

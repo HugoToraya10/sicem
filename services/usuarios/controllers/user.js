@@ -22,48 +22,83 @@ const createUserWithCredentials = (req, res) => {
     emergencyPhone,
   } = req.body;
 
-  bcrypt.hash(password, 10, (error, hash) => {
-    if (error) return res.status(500).json({ message: "Error encriptando" });
-    else {
-      userModel.createCredential(email, hash, (error, result) => {
-        if (error) {
-          return res
-            .status(500)
-            .json({ message: "Error creando credenciales" });
-        }
-        let userId = result.insertId;
-        userModel.createProfile(
-          userId,
-          institutionId,
-          roleId,
-          firstName,
-          firstSurname,
-          secondSurname,
-          phone,
-          birthDate,
-          cveUnicaRegistroPob,
-          emergencyContact,
-          emergencyPhone,
-          (error, result) => {
-            if (error) {
-              console.log(error);
-              return res.status(500).json({ message: "Error creando perfil" });
-            } else {
-              return res
-                .status(201)
-                .json({ message: "Usuario creado con éxito", userProfileId: result.insertId });
-            }
-          },
-        );
-      });
-    }
-  });
+  const proceed = () => {
+    bcrypt.hash(password, 10, (error, hash) => {
+      if (error) return res.status(500).json({ message: "Error encriptando" });
+      else {
+        userModel.createCredential(email, hash, (error, result) => {
+          if (error) {
+            return res
+              .status(500)
+              .json({ message: "Error creando credenciales" });
+          }
+          let userId = result.insertId;
+          userModel.createProfile(
+            userId,
+            institutionId,
+            roleId,
+            firstName,
+            firstSurname,
+            secondSurname,
+            phone,
+            birthDate,
+            cveUnicaRegistroPob,
+            emergencyContact,
+            emergencyPhone,
+            (error, result) => {
+              if (error) {
+                console.log(error);
+                return res.status(500).json({ message: "Error creando perfil" });
+              } else {
+                return res
+                  .status(201)
+                  .json({ message: "Usuario creado con éxito", userProfileId: result.insertId });
+              }
+            },
+          );
+        });
+      }
+    });
+  }
+
+  // El rol 2 (Despachador) es exclusivo de la institución CRUM (Cruz Roja
+  // Tabasco) por diseño del proyecto — se hace cumplir aquí antes de crear
+  // ninguna credencial, no solo confiando en disciplina operativa.
+  if (parseInt(roleId) === 2) {
+    userModel.getInstitutionCrumFlag(institutionId, (e, r) => {
+      if (e || r.length === 0) {
+        return res.status(400).json({ message: "Institución no encontrada." });
+      } else if (!r[0].is_crum_institution) {
+        return res.status(400).json({ message: "El rol de Despachador solo puede asignarse a personal de la institución CRUM." });
+      } else {
+        proceed();
+      }
+    });
+  } else {
+    proceed();
+  }
 }
 
 //este controller es para registrar un usuario no paciente, en el caso de poder hashear la contraseña, se crea su perfil
 const register = (req, res) => {
   if(req.decoded.roleId === 1) { //si el usuario es administrador, puede usar este controller
   createUserWithCredentials(req, res);
+} else if (parseInt(req.decoded.roleId) === 4) {
+  // Un admin de hospital (is_institution_admin) solo puede dar de alta
+  // personal rol 4 de SU PROPIA institución — jamás otro rol ni otra
+  // institución, sin importar qué venga en el body. Se fuerzan ambos valores
+  // server-side.
+  userModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+    if (e || r.length === 0) {
+      return res.status(500).json({message: "Error del servidor."});
+    } else if (!r[0].is_institution_admin) {
+      return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
+    } else {
+      req.body.roleId = 4;
+      req.body.institutionId = r[0].institution_id;
+      createUserWithCredentials(req, res);
+    }
+  });
 } else {
   res.status(403).json({message:"Acceso denegado, no puedes registrar"})
 }
@@ -144,7 +179,8 @@ const login = (req, res) => {
               let isActive = result[0].is_active
               if(isActive === 0){
                 return res.status(401).json({message: "Este usuario está desactivado"});
-              } else {
+              }
+              const issueToken = () => {
                 let payload = {
                   userProfileId: userProfileId,
                   userCredentialId: result[0].user_credential_id,
@@ -159,8 +195,22 @@ const login = (req, res) => {
                   .status(200)
                   .json({ message: "Ingreso exitoso", jwtToken: token,
                     user : {
-                      profileId:userProfileId, roleId:roleId, firstName:userFirstName, firstSurname:userFirstSurname, 
-                      institutionId: institutionId}});
+                      profileId:userProfileId, roleId:roleId, firstName:userFirstName, firstSurname:userFirstSurname,
+                      institutionId: institutionId, isInstitutionAdmin: Boolean(result[0].is_institution_admin)}});
+              }
+              // Defensa adicional: si ya existiera una cuenta rol 2 mal asignada de
+              // antes de esta regla (institución no-CRUM), se bloquea aquí también,
+              // no solo al momento de crearla.
+              if (parseInt(roleId) === 2) {
+                userModel.getInstitutionCrumFlag(institutionId, (eCrum, rCrum) => {
+                  if (eCrum || rCrum.length === 0 || !rCrum[0].is_crum_institution) {
+                    return res.status(401).json({message: "Esta cuenta no tiene permiso de despachador — contacta al administrador."});
+                  } else {
+                    issueToken();
+                  }
+                });
+              } else {
+                issueToken();
               }
             } else {
               return res.status(401).json({ message: "Las credenciales son incorrectas" });
@@ -172,48 +222,139 @@ const login = (req, res) => {
   });
 };
 
-// Controller para desactivar usuario
+// Controller para desactivar usuario. Rol 1: bypass total. Rol 4 con
+// is_institution_admin: solo sobre personal rol 4 de SU MISMA institución
+// (típicamente para dar de baja a un ex-empleado sin escalar a CRUM).
 const toggleActiveUser = (req, res) => {
-  if(req.decoded.roleId === 1){
+  const allowedRoles = [1, 4];
+  if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+    return res.status(403).json({message: "Acceso denegado, no puedes desactivar un usuario"})
+  }
   // Nadie puede desactivar su propia cuenta, ni siquiera el admin — evita quedar
   // bloqueado del sistema por accidente.
   if (req.decoded.userCredentialId === parseInt(req.body.userCredentialId)) {
     return res.status(403).json({message: "No puedes desactivar tu propia cuenta."})
   }
   const userId = req.body.userCredentialId;
-  userModel.toggleActiveUser(userId, (e, r)=>{
-    if (e){
-      return res.status(500).json({message: "Error invirtiendo el estado activo del usuario."})
-    } else {
-      userModel.requestUserStatus(userId, (error, result)=> {
-        if (error){
-          return res.status(500).json({message:"Usuario no encontrado"})
-        } else {
-          let currentUserStatus = (result[0].is_active === 1)? 'ACTIVO': 'INACTIVO';
-          return res.status(200).json({message: "Estado activo invertido exitosamente.", status:currentUserStatus})
-        }
-      })
+
+  const proceed = () => {
+    userModel.toggleActiveUser(userId, (e, r)=>{
+      if (e){
+        return res.status(500).json({message: "Error invirtiendo el estado activo del usuario."})
+      } else {
+        userModel.requestUserStatus(userId, (error, result)=> {
+          if (error){
+            return res.status(500).json({message:"Usuario no encontrado"})
+          } else {
+            let currentUserStatus = (result[0].is_active === 1)? 'ACTIVO': 'INACTIVO';
+            return res.status(200).json({message: "Estado activo invertido exitosamente.", status:currentUserStatus})
+          }
+        })
+      }
+    })
+  }
+
+  if (parseInt(req.decoded.roleId) === 1) {
+    return proceed();
+  }
+
+  userModel.getUserInstitutionInfo(req.decoded.userProfileId, (eCaller, rCaller) => {
+    if (eCaller || rCaller.length === 0) {
+      return res.status(500).json({message: "Error del servidor."})
     }
-  })
-} else {
-  return res.status(403).json({message: "Acceso denegado, no puedes desactivar un usuario"})
+    const caller = rCaller[0];
+    if (!caller.is_institution_admin) {
+      return res.status(403).json({message: "No tienes privilegios de administrador de tu institución."})
+    }
+    userModel.getUserInstitutionInfoByCredentialId(userId, (eTarget, rTarget) => {
+      if (eTarget || rTarget.length === 0) {
+        return res.status(404).json({message: "Usuario no encontrado."})
+      }
+      const target = rTarget[0];
+      if (parseInt(target.role_id) !== 4 || parseInt(target.institution_id) !== parseInt(caller.institution_id)) {
+        return res.status(403).json({message: "Solo puedes administrar personal de tu propia institución."})
+      }
+      proceed();
+    });
+  });
 }
+
+// Designa o revoca is_institution_admin sobre un usuario rol 4. Rol 1 (CRUM)
+// tiene bypass total. Rol 4 solo puede usarlo si él mismo ya es admin de su
+// institución, sobre usuarios de esa MISMA institución, y nunca sobre sí mismo
+// para revocarse — mismo patrón defensivo que toggleActiveUser usa para evitar
+// que un admin se bloquee a sí mismo por accidente.
+const toggleInstitutionAdmin = (req, res) => {
+  const allowedRoles = [1, 4];
+  if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+    return res.status(403).json({message: "Acceso denegado."});
+  }
+  const { userProfileId, isInstitutionAdmin } = req.body;
+  const callerRoleId = parseInt(req.decoded.roleId);
+
+  // El objetivo siempre debe ser rol 4, sin importar quién llame — se valida
+  // consultando el perfil real, nunca confiando en el body.
+  userModel.getUserInstitutionInfo(userProfileId, (eTarget, rTarget) => {
+    if (eTarget) {
+      return res.status(500).json({message: "Error del servidor."});
+    } else if (rTarget.length === 0) {
+      return res.status(404).json({message: "Usuario no encontrado."});
+    }
+    const target = rTarget[0];
+    if (parseInt(target.role_id) !== 4) {
+      return res.status(400).json({message: "Este privilegio solo aplica a personal hospitalario."});
+    }
+
+    const proceed = () => {
+      userModel.toggleInstitutionAdmin(userProfileId, isInstitutionAdmin, (e, r) => {
+        if (e) {
+          return res.status(500).json({message: "Error del servidor."});
+        } else {
+          res.status(200).json({message: "Privilegio de administrador de institución actualizado.", data: { userProfileId, isInstitutionAdmin: Boolean(isInstitutionAdmin) }});
+        }
+      });
+    }
+
+    if (callerRoleId === 1) {
+      return proceed();
+    }
+
+    // Rol 4: exige privilegio propio + misma institución + no auto-revocarse
+    userModel.getUserInstitutionInfo(req.decoded.userProfileId, (eCaller, rCaller) => {
+      if (eCaller || rCaller.length === 0) {
+        return res.status(500).json({message: "Error del servidor."});
+      }
+      const caller = rCaller[0];
+      if (!caller.is_institution_admin) {
+        return res.status(403).json({message: "No tienes privilegios de administrador de tu institución."});
+      } else if (parseInt(target.institution_id) !== parseInt(caller.institution_id)) {
+        return res.status(403).json({message: "Solo puedes administrar usuarios de tu propia institución."});
+      } else if (parseInt(userProfileId) === parseInt(req.decoded.userProfileId) && isInstitutionAdmin === false) {
+        return res.status(403).json({message: "No puedes revocar tu propio privilegio de administrador."});
+      } else {
+        proceed();
+      }
+    });
+  });
 }
 
 
 //Controller para editar datos del perfil del usuario
 const editUserProfile = (req, res) => {
-  const editProfile = (req, res) =>{
-    const {userProfileId,
-          institutionId, 
-          roleId, 
-          firstName, 
-          firstSurname, 
-          secondSurname,             
-          phone, 
-          birthDate, 
-          cveUnicaRegistroPob, 
-          emergencyContact, 
+  // institutionId/roleId SIEMPRE se derivan server-side aquí dentro (nunca del
+  // body) salvo para rol 1 — antes de esta corrección, cualquier usuario
+  // "editando su propio perfil" podía mandar roleId/institutionId distintos en
+  // el body y el modelo los aplicaba sin validar nada (auto-ascenso de
+  // privilegios). Se corrige preservando siempre los valores reales de BD.
+  const editProfile = (userProfileId, institutionId, roleId) => {
+    const {
+          firstName,
+          firstSurname,
+          secondSurname,
+          phone,
+          birthDate,
+          cveUnicaRegistroPob,
+          emergencyContact,
           emergencyPhone } = req.body
 
     userModel.editUserProfile(userProfileId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
@@ -227,16 +368,53 @@ const editUserProfile = (req, res) => {
     })
   }
 
-    if(req.decoded.roleId === 1){
-      editProfile(req, res)
-    } else {
-    // Cualquier rol autenticado puede editar su propio perfil (antes limitado solo al rol 5)
-    if (req.decoded.userProfileId === parseInt(req.body.userProfileId)){
-      editProfile(req, res)
-      } else {
-        return res.status(403).json({ message: "Acceso denegado" })
+  const targetUserProfileId = parseInt(req.body.userProfileId);
+  const callerRoleId = parseInt(req.decoded.roleId);
+
+  if (callerRoleId === 1) {
+    // Rol 1: bypass total, incluyendo institutionId y roleId del body.
+    editProfile(targetUserProfileId, req.body.institutionId, req.body.roleId);
+    return;
+  }
+
+  if (req.decoded.userProfileId === targetUserProfileId) {
+    // Auto-edición: cualquier rol autenticado puede editar sus propios datos de
+    // contacto, pero nunca su propio institutionId ni roleId.
+    userModel.getUserInstitutionInfo(targetUserProfileId, (e, r) => {
+      if (e || r.length === 0) {
+        return res.status(500).json({message: "Error del servidor."});
       }
-    }
+      editProfile(targetUserProfileId, r[0].institution_id, r[0].role_id);
+    });
+    return;
+  }
+
+  if (callerRoleId === 4) {
+    // Admin de institución: puede editar datos de contacto de OTRO empleado
+    // rol 4 de SU MISMA institución únicamente — nunca institutionId ni roleId.
+    userModel.getUserInstitutionInfo(req.decoded.userProfileId, (eCaller, rCaller) => {
+      if (eCaller || rCaller.length === 0) {
+        return res.status(500).json({message: "Error del servidor."});
+      }
+      const caller = rCaller[0];
+      if (!caller.is_institution_admin) {
+        return res.status(403).json({message: "No tienes privilegios de administrador de tu institución."});
+      }
+      userModel.getUserInstitutionInfo(targetUserProfileId, (eTarget, rTarget) => {
+        if (eTarget || rTarget.length === 0) {
+          return res.status(404).json({message: "Usuario no encontrado."});
+        }
+        const target = rTarget[0];
+        if (parseInt(target.role_id) !== 4 || parseInt(target.institution_id) !== parseInt(caller.institution_id)) {
+          return res.status(403).json({message: "Solo puedes editar personal de tu propia institución."});
+        }
+        editProfile(targetUserProfileId, target.institution_id, target.role_id);
+      });
+    });
+    return;
+  }
+
+  return res.status(403).json({ message: "Acceso denegado" });
 }
 
 // Controller creado para actualizar las credenciales de cada usuario
@@ -267,12 +445,33 @@ const editUserCredentials = (req, res) => {
   // si se es usuario admin
   if(req.decoded.roleId === 1){
     editCredentials(userCredentialId, email, password);
-  } else { // cualquier rol autenticado puede editar sus propias credenciales (antes limitado solo al rol 5)
-    if (req.decoded.userCredentialId === parseInt(req.body.userCredentialId)){
-      editCredentials(userCredentialId, email, password);
-    } else {
-      return res.status(403).json({message: "Fuera de mi territorio. REGRESA POR DONDE VINISTE PUTA"})
-    }
+  } else if (req.decoded.userCredentialId === parseInt(userCredentialId)) {
+    // cualquier rol autenticado puede editar sus propias credenciales (antes limitado solo al rol 5)
+    editCredentials(userCredentialId, email, password);
+  } else if (parseInt(req.decoded.roleId) === 4) {
+    // Admin de institución: puede resetear credenciales de OTRO empleado rol 4
+    // de SU MISMA institución únicamente.
+    userModel.getUserInstitutionInfo(req.decoded.userProfileId, (eCaller, rCaller) => {
+      if (eCaller || rCaller.length === 0) {
+        return res.status(500).json({message: "Error del servidor."});
+      }
+      const caller = rCaller[0];
+      if (!caller.is_institution_admin) {
+        return res.status(403).json({message: "No tienes privilegios de administrador de tu institución."});
+      }
+      userModel.getUserInstitutionInfoByCredentialId(userCredentialId, (eTarget, rTarget) => {
+        if (eTarget || rTarget.length === 0) {
+          return res.status(404).json({message: "Usuario no encontrado."});
+        }
+        const target = rTarget[0];
+        if (parseInt(target.role_id) !== 4 || parseInt(target.institution_id) !== parseInt(caller.institution_id)) {
+          return res.status(403).json({message: "Solo puedes administrar credenciales de tu propia institución."});
+        }
+        editCredentials(userCredentialId, email, password);
+      });
+    });
+  } else {
+    return res.status(403).json({message: "Fuera de mi territorio. REGRESA POR DONDE VINISTE PUTA"})
   }
 }
 
@@ -389,6 +588,17 @@ const getCitiesByState = (req, res) => {
     });
 }
 
+const getCityById = (req, res) => {
+    const {cityId} = req.params;
+    userModel.getCityById(cityId, (e, r) => {
+        if (e) {
+            return res.status(500).json({message: "Error del servidor."});
+        } else {
+            res.status(200).json({message: "Ciudad", data: r});
+        }
+    });
+}
+
 const getUserByCURP = (req, res) => {
     const { curp } = req.params;
     userModel.getUserByCURP(curp, (e, r) => {
@@ -401,5 +611,5 @@ const getUserByCURP = (req, res) => {
 }
 
 
-module.exports = { register, login, registerPatient, toggleActiveUser, editUserProfile, editUserCredentials, getUserByCURP,
-                  getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState};
+module.exports = { register, login, registerPatient, toggleActiveUser, toggleInstitutionAdmin, editUserProfile, editUserCredentials, getUserByCURP,
+                  getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById};

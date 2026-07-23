@@ -1,4 +1,4 @@
-import { useMap, MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
+import { useMap, MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet'
 import { useEffect } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -59,7 +59,10 @@ const MapCenterController = ({ center }) => {
 // ambulances: array de objetos con latitude, longitude, ambulance_status_id, unit_number
 // emergencyLocation: opcional, { latitude, longitude } para marcar una emergencia específica
 // onMapClick: opcional, (lat, lng) => {} — se llama cuando el usuario hace clic en el mapa
-const MapArea = ({ ambulances = [], emergencyLocation = null, onMapClick = null, flyToLocation = null }) => {
+// routes: opcional, array de { coordinates: [[lat,lng], ...], color? } — una o varias trazas
+// completas (p. ej. de cada unidad asignada hasta la emergencia), ya resueltas contra un
+// servicio de ruteo
+const MapArea = ({ ambulances = [], emergencyLocation = null, onMapClick = null, flyToLocation = null, routes = [] }) => {
     return (
         <div className="map-area">
             <MapContainer
@@ -88,6 +91,16 @@ const MapArea = ({ ambulances = [], emergencyLocation = null, onMapClick = null,
                             </Popup>
                         </Marker>
                     ) : null
+                ))}
+
+                {routes.map((route, index) => (
+                    route.coordinates?.length > 0 && (
+                        <Polyline
+                            key={index}
+                            positions={route.coordinates}
+                            pathOptions={{ color: route.color || '#1565C0', weight: 4, opacity: 0.8 }}
+                        />
+                    )
                 ))}
 
                 {emergencyLocation && emergencyLocation.latitude && emergencyLocation.longitude && (

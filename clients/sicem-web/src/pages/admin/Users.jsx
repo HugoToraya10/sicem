@@ -229,6 +229,20 @@ const Users = () => {
             .catch(error => { console.error('Error cambiando estado del usuario. ', error); alert(error.message) })
     }
 
+    const handleToggleInstitutionAdmin = (u) => {
+        const nextValue = !u.is_institution_admin
+        const action = nextValue ? 'otorgar' : 'quitar'
+        if (!window.confirm(`¿Seguro que quieres ${action} el privilegio de administrador de institución a ${u.first_name} ${u.first_surname || ''}?`)) return
+        fetch('http://localhost:3000/usuarios/alternar-admin-institucion', {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ userProfileId: u.user_profile_id, isInstitutionAdmin: nextValue })
+        })
+            .then(parseResponse)
+            .then(() => fetchUsers())
+            .catch(error => { console.error('Error cambiando privilegio de administrador de institución. ', error); alert(error.message) })
+    }
+
     //---------------------------------registrar paciente--------------------------------------------------
 
     const openPatientForm = () => {
@@ -579,6 +593,17 @@ const Users = () => {
                                                     <span><strong>Contacto de emergencia:</strong> {userDetail.emergency_contact || '—'}</span>
                                                     <span><strong>Teléfono de emergencia:</strong> {userDetail.emergency_phone || '—'}</span>
                                                     <span><strong>Institución ID:</strong> {userDetail.institution_id || '—'}</span>
+                                                    {parseInt(u.role_id) === 4 && (
+                                                        <span>
+                                                            <strong>Admin de su institución:</strong>{' '}
+                                                            <span className={`users-status ${u.is_institution_admin ? 'status-active' : 'status-inactive'}`}>
+                                                                {u.is_institution_admin ? 'Sí' : 'No'}
+                                                            </span>{' '}
+                                                            <button className="users-toggle-btn" onClick={() => handleToggleInstitutionAdmin(u)}>
+                                                                {u.is_institution_admin ? 'Quitar privilegio' : 'Dar privilegio'}
+                                                            </button>
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

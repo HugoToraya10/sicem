@@ -13,6 +13,7 @@ router.patch('/actualizar-perfil', middleware.verifyToken, userController.editUs
 
 //patches
 router.patch('/invertir-estado-usuario', middleware.verifyToken, userController.toggleActiveUser); // TODO
+router.patch('/alternar-admin-institucion', middleware.verifyToken, userController.toggleInstitutionAdmin);
 
 //login
 router.post('/login', userController.login); // ✅ Login.jsx
@@ -26,6 +27,7 @@ router.get('/obtener-tipos-institucion', userController.getAllInstitutionTypes);
 
 router.get('/estados', userController.getAllStates); // TODO
 router.get('/ciudades/:stateId', userController.getCitiesByState); // TODO
+router.get('/ciudad/:cityId', userController.getCityById); // ✅ HospitalAdmin.jsx (pre-seleccionar estado/ciudad de una dirección ya guardada)
 router.get('/obtener-usuario-curp/:curp', userController.getUserByCURP);
 router.get('/historial-cuenta/:userCredentialId', middleware.verifyToken, userController.getCredentialHistory);
 

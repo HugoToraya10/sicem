@@ -15,6 +15,8 @@ const verifyToken = (req, res, next) => {
                 db.query(sql, [userCredentialId], (error, result)=>{
                     if(error) {
                         return res.status(500).json({message: "Error en el servidor."})
+                    } else if (!result || result.length === 0) {
+                        return res.status(401).json({message: "Sesión inválida."})
                     } else {
                         if(parseInt(result[0].is_active) === 1){
                         next()

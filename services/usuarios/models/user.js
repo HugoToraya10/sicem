@@ -1,5 +1,34 @@
 const db = require('../config/db');
 
+// Institución, rol y privilegio de administrador de institución de un usuario
+// puntual — se deriva SIEMPRE server-side, nunca se confía en lo que mande el
+// cliente. Se reutiliza tanto para el que llama como para un usuario objetivo.
+const getUserInstitutionInfo = (userProfileId, callback) => {
+    const sql = `SELECT institution_id, role_id, is_institution_admin FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Igual que getUserInstitutionInfo pero resuelto desde user_credential_id —
+// necesario en endpoints que reciben ese ID en vez de user_profile_id
+// (editUserCredentials, toggleActiveUser) para validar propiedad de
+// institución antes de aplicar el cambio.
+const getUserInstitutionInfoByCredentialId = (userCredentialId, callback) => {
+    const sql = `SELECT institution_id, role_id, is_institution_admin FROM user_profiles WHERE user_credential_id = ?`;
+    db.query(sql, [userCredentialId], callback);
+}
+
+const toggleInstitutionAdmin = (userProfileId, isInstitutionAdmin, callback) => {
+    const sql = `UPDATE user_profiles SET is_institution_admin = ?, updated_at = NOW() WHERE user_profile_id = ?`;
+    db.query(sql, [isInstitutionAdmin ? 1 : 0, userProfileId], callback);
+}
+
+// Si una institución es CRUM (Cruz Roja Tabasco) — el rol 2 (Despachador) solo
+// puede asignarse/usarse dentro de una institución con esta bandera en 1.
+const getInstitutionCrumFlag = (institutionId, callback) => {
+    const sql = `SELECT is_crum_institution FROM institutions WHERE institution_id = ?`;
+    db.query(sql, [institutionId], callback);
+}
+
 const createCredential = (email, passwordHash, callback) => {
     const sql = `INSERT INTO user_credentials (email, password_hash, created_at, updated_at, is_active) VALUES (?, ?, NOW(), NOW(), 1)`;
 
@@ -19,7 +48,7 @@ const createProfile = (userCredentialId, institutionId, roleId, firstName, first
 }
 
 const login = (email, callback) => {
-    const sql = `SELECT t1.user_profile_id, t1.institution_id, t1.first_name, t1.first_surname, t1.role_id, t2.user_credential_id, 
+    const sql = `SELECT t1.user_profile_id, t1.institution_id, t1.first_name, t1.first_surname, t1.role_id, t1.is_institution_admin, t2.user_credential_id,
     t2.email, t2.password_hash, t2.is_active FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
 	t1.USER_CREDENTIAL_ID = t2.USER_CREDENTIAL_ID WHERE t2.EMAIL = ?`;
     db.query(sql, [email], callback);
@@ -70,10 +99,10 @@ const editUserCredentials = (userCredentialId, email, password, callback) => {
 
 
 const getAllUsers = (callback) => {
-    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname, 
+    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
                 t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
                 t2.email, t2.is_active, t2.user_credential_id,
-                t1.institution_id, t1.role_id
+                t1.institution_id, t1.role_id, t1.is_institution_admin
                 FROM user_profiles t1
                 LEFT JOIN user_credentials t2 ON t1.user_credential_id = t2.user_credential_id`;
     db.query(sql, callback);
@@ -83,7 +112,7 @@ const getUserById = (userProfileId, callback) => {
     const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
                 t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
                 t2.email, t2.is_active, t2.user_credential_id,
-                t1.institution_id, t1.role_id
+                t1.institution_id, t1.role_id, t1.is_institution_admin
                 FROM user_profiles t1
                 LEFT JOIN user_credentials t2 ON t1.user_credential_id = t2.user_credential_id
                 WHERE t1.user_profile_id = ?`;
@@ -115,6 +144,14 @@ const getCitiesByState = (stateId, callback) => {
     db.query(sql, [stateId], callback);
 }
 
+// Resuelve el state_id de una ciudad ya guardada — necesario para poder
+// pre-seleccionar el combo de Estado (y con eso el de Ciudad) en formularios
+// que cargan una dirección ya existente, en vez de partir de cero.
+const getCityById = (cityId, callback) => {
+    const sql = `SELECT * FROM cities WHERE city_id = ?`;
+    db.query(sql, [cityId], callback);
+}
+
 const getUserByCURP = (curp, callback) => {
     const sql = `SELECT user_profile_id, first_name, first_surname, second_surname, 
                 phone_number, birth_date, curp
@@ -122,6 +159,7 @@ const getUserByCURP = (curp, callback) => {
     db.query(sql, [curp], callback);
 }
 
-module.exports = { createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
+module.exports = { getUserInstitutionInfo, getUserInstitutionInfoByCredentialId, toggleInstitutionAdmin, getInstitutionCrumFlag,
+                createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
                 editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP,
-                getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState }
+                getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById }

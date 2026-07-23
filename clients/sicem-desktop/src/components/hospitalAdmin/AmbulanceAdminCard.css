@@ -1,0 +1,37 @@
+.ambulance-admin-card {
+    border: 1px solid #e4e4ec; border-radius: 10px; padding: 18px; background: white;
+    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04); transition: box-shadow 0.15s ease;
+}
+.ambulance-admin-card:hover { box-shadow: 0 4px 12px rgba(20, 20, 40, 0.08); }
+.ambulance-admin-card-inactive { opacity: 0.6; }
+
+.ambulance-admin-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.ambulance-admin-header h5 {
+    font-size: 12px; font-weight: 700; color: #555;
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.ambulance-admin-status {
+    font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 10px;
+    text-transform: uppercase; white-space: nowrap;
+}
+.ambulance-admin-status.status-active { background: #e2efda; color: #276221; }
+.ambulance-admin-status.status-inactive { background: #ffc7ce; color: #9c0006; }
+
+.ambulance-admin-detail { font-size: 12px; color: #666; margin-bottom: 4px; }
+
+.ambulance-admin-actions { display: flex; gap: 6px; margin-top: 10px; }
+.aa-btn {
+    flex: 1; background: white; border: 1px solid #1565C0; color: #1565C0;
+    border-radius: 4px; padding: 6px; font-size: 11px; cursor: pointer;
+}
+.aa-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.aa-btn.save { background: #1565C0; color: white; }
+.aa-btn.cancel { border-color: #ccc; color: #666; }
+
+.ambulance-admin-edit-form { display: flex; flex-direction: column; gap: 4px; }
+.ambulance-admin-edit-form label { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; margin-top: 4px; }
+.ambulance-admin-edit-form input, .ambulance-admin-edit-form select {
+    border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 12px;
+}
+.ambulance-admin-edit-actions { display: flex; gap: 6px; margin-top: 8px; }
