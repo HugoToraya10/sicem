@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import SpecialtyCapacityCard from '../components/capacity/SpecialtyCapacityCard'
+import BedMatrixModal from '../components/capacity/BedMatrixModal'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import './Capacity.css'
@@ -8,6 +9,8 @@ const Capacity = () => {
     const { user, token } = useAuth()
     const [specialties, setSpecialties] = useState([])
     const [generalBeds, setGeneralBeds] = useState(null)
+    const [generalBedsModalOpen, setGeneralBedsModalOpen] = useState(false)
+    const [savingGeneralBeds, setSavingGeneralBeds] = useState(false)
 
     useEffect(() => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
@@ -34,9 +37,10 @@ const Capacity = () => {
     }, [user, token])
 
     // Camas generales del hospital (capacidad total, independiente de la
-    // capacidad por especialidad de abajo) — de solo lectura aquí, cualquier
-    // rol 4 puede verla; la edición sigue siendo exclusiva de
-    // is_institution_admin desde Administración de mi Hospital.
+    // capacidad por especialidad de abajo) — cualquier rol 4 puede verlas y
+    // ajustar las DISPONIBLES desde aquí (ver handleSaveGeneralBeds). La
+    // capacidad TOTAL sigue siendo exclusiva de is_institution_admin, desde
+    // Administración de mi Hospital.
     useEffect(() => {
         fetch('http://localhost:3000/hospitales/instituciones', {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
@@ -48,6 +52,32 @@ const Capacity = () => {
             })
             .catch(error => console.error('Error recuperando camas generales del hospital. ', error))
     }, [user, token])
+
+    // Camas generales disponibles — cualquier rol 4 puede ajustarlas (ver
+    // controllers/hospital.js updateAvailableBedsI), pensado para cuando llega
+    // un paciente que no pasó por el flujo normal del CRUM (no hay emergencia
+    // registrada en SICEM que descuente la cama sola) y hay que reflejarlo a mano.
+    const handleConfirmGeneralBeds = (newAvailable) => {
+        setSavingGeneralBeds(true)
+        fetch('http://localhost:3000/hospitales/actualizar-camas-institucion', {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ institutionId: user.institutionId, availableBeds: newAvailable })
+        })
+            .then(res => {
+                if (!res.ok) throw new Error('No se pudo actualizar')
+                return res.json()
+            })
+            .then(() => {
+                setGeneralBeds((current) => ({ ...current, available_beds: newAvailable }))
+                setGeneralBedsModalOpen(false)
+            })
+            .catch(error => {
+                console.error('Error actualizando camas generales disponibles. ', error)
+                alert('No se pudo actualizar. Intenta de nuevo.')
+            })
+            .finally(() => setSavingGeneralBeds(false))
+    }
 
     const handleUpdate = (institutionSpecialityId, availableBeds) => {
         return fetch('http://localhost:3000/hospitales/actualizar-camas-especialidad', {
@@ -80,7 +110,21 @@ const Capacity = () => {
                     <span className="general-beds-numbers">
                         <strong>{generalBeds.available_beds}</strong> / {generalBeds.bed_capacity} disponibles
                     </span>
-                    <span className="general-beds-hint">Solo un administrador de tu institución puede editar esto, desde Administración.</span>
+                    <button className="update-btn general-beds-update-btn" onClick={() => setGeneralBedsModalOpen(true)}>
+                        Gestionar camas
+                    </button>
+                    <span className="general-beds-hint">Ajusta esto si llega un paciente que no pasó por una emergencia registrada en SICEM (p. ej. no enviado por el CRUM) — la capacidad TOTAL solo la edita un administrador, desde Administración.</span>
+
+                    {generalBedsModalOpen && (
+                        <BedMatrixModal
+                            title="Camas Generales del Hospital"
+                            totalBeds={generalBeds.bed_capacity}
+                            availableBeds={generalBeds.available_beds}
+                            saving={savingGeneralBeds}
+                            onConfirm={handleConfirmGeneralBeds}
+                            onClose={() => setGeneralBedsModalOpen(false)}
+                        />
+                    )}
                 </div>
             )}
 

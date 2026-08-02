@@ -1,0 +1,112 @@
+JUSTIFICACION LEGAL — REGLAS DE TRASLADO DE PACIENTES POR AMBULANCIA EN SICEM
+================================================================================
+
+Sistema: SICEM (sicem-web / sicem-desktop)
+Norma de referencia: NOM-034-SSA3-2013, "Regulacion de los servicios de salud.
+Atencion medica prehospitalaria." Diario Oficial de la Federacion, 23 de
+septiembre de 2014.
+Fuente oficial: https://www.gob.mx/cms/uploads/attachment/file/512076/NOM-034-SSA3-2013.pdf
+
+Este documento explica, punto por punto, por que SICEM esta diseñado para que
+(1) una ambulancia no pueda llevar pacientes a dos hospitales destino distintos
+en el mismo traslado, y (2) exista un tope de pacientes por ambulancia. Cada
+guion cita el punto exacto de la norma en el que se basa esa parte de la
+explicacion.
+
+--------------------------------------------------------------------------------
+DECISION 1: Una ambulancia NO puede llevar pacientes a dos hospitales destino
+distintos en la misma emergencia.
+(Implementado en clients/sicem-web/src/pages/NewEmergency.jsx, validacion
+"destinationByAmbulance" antes de registrar pacientes.)
+--------------------------------------------------------------------------------
+
+- La norma NO prohibe esto de forma literal/explicita en ningun punto — hay
+  que decirlo con honestidad. La justificacion no es una prohibicion directa,
+  es que TODO el diseño documental y de responsabilidad de la norma asume un
+  destino unico por traslado, y permitir dos generaria una laguna real en el
+  registro obligatorio.
+
+- Punto 7.1.9 — el formato obligatorio de registro de atencion medica
+  prehospitalaria exige, como minimo, los campos listados en 7.1.9.1 a
+  7.1.9.15, y estan diseñados para UN paciente y UN destino por formato:
+
+    - 7.1.9.9 "Datos del paciente: nombre, edad y sexo o en su caso, media
+      filiacion" (singular, un solo paciente por formato).
+
+    - 7.1.9.15 "Derivacion del paciente: al establecimiento para la atencion
+      medica, el hogar o alta en el sitio; cuando aplique, datos y firmas de
+      los responsables que entregan y reciben." (un solo destino — "al
+      establecimiento", no "a los establecimientos").
+
+  No existe en la norma un campo para registrar un segundo paciente o un
+  segundo destino en el mismo formato de traslado.
+
+- Punto 7.2.5 — "El personal medico o el TAMP de la ambulancia que lleve a
+  cabo el traslado, es responsable del paciente durante el mismo, toda vez
+  que es considerada un establecimiento para la atencion medica." La norma
+  trata cada ambulancia, durante un traslado, como UN establecimiento de
+  atencion medica — no como dos atenciones simultaneas con dos destinos.
+
+- Punto 7.1.6 — "El CRUM enviara al sitio de la urgencia la ambulancia
+  adecuada y disponible que se encuentre mas cercana... coordinara el
+  traslado al servicio de urgencias del establecimiento para la atencion
+  medica que resulte mas conveniente." (en singular: "el establecimiento",
+  no "los establecimientos").
+
+- Punto 5.2.3 — el compartimento de atencion del paciente debe tener espacio
+  libre "que de cabida al menos a un paciente en carro camilla y al personal
+  responsable de la atencion del mismo, que pueda estar sentado". Es un
+  minimo de diseño pensado para UN paciente en camilla + personal medico, no
+  para gestionar dos pacientes con destinos distintos.
+
+CONCLUSION: no hay una prohibicion literal en la NOM-034-SSA3-2013, pero
+permitir dos destinos por ambulancia rompe el formato de registro obligatorio
+(7.1.9), contradice como la norma define la responsabilidad del personal
+durante el traslado (7.2.5) y el criterio de asignacion del CRUM (7.1.6). Es
+un argumento legal defendible para NO implementarlo, sin necesitar una
+prohibicion explicita que la norma no tiene.
+
+--------------------------------------------------------------------------------
+DECISION 2: Limite de 2 pacientes por ambulancia (MAX_PATIENTS_PER_AMBULANCE).
+(Implementado en clients/sicem-web/src/pages/NewEmergency.jsx.)
+--------------------------------------------------------------------------------
+
+- IMPORTANTE: el numero "2" NO esta escrito en ninguna parte de la NOM. Esto
+  es una decision operativa de SICEM, no un mandato legal explicito — se
+  presenta aqui como una interpretacion razonable del espacio minimo que la
+  norma si exige, no como una cita textual de un limite.
+
+- Punto 5.2.3 (la misma cita de arriba) exige que el compartimento tenga
+  espacio para "al menos a un paciente en carro camilla y al personal
+  responsable de la atencion del mismo, que pueda estar sentado". Es un
+  minimo, no un maximo — la norma no dice cuantos pacientes caben como
+  tope.
+
+- Tampoco existe en la base de datos de SICEM (tabla ambulance_types) ni en
+  ninguna otra parte de la norma un numero oficial de capacidad de pacientes
+  por tipo de unidad (traslado, urgencias basicas/avanzadas, cuidados
+  intensivos).
+
+- Con esos dos vacios (la norma no fija maximo, la BD no fija capacidad por
+  tipo), SICEM adopto 2 como tope operativo: 1 paciente en camilla (el
+  minimo que la norma si exige, punto 5.2.3) + 1 paciente ambulatorio
+  sentado (el espacio para "personal... que pueda estar sentado" que la
+  norma tambien exige, reutilizado como espacio disponible cuando ese asiento
+  no lo ocupa personal adicional). Mas de 2 se considera fisicamente poco
+  realista para la mayoria de las unidades descritas en la norma (5.2.3,
+  6.1.2.1, 6.2.2.1, 6.3.2.1 — todas dan dimensiones minimas de compartimento,
+  ninguna para mas de 1 camilla).
+
+- El limite es intencionalmente flexible (permite 1 o 2, bloquea 3+) para no
+  quitarle al despachador la libertad de decision en casos razonables, como
+  se pidio explicitamente.
+
+--------------------------------------------------------------------------------
+NOTA FINAL
+--------------------------------------------------------------------------------
+Este documento cubre solo las dos decisiones de traslado por ambulancia que
+ya se investigaron a fondo contra el texto completo de la NOM-034-SSA3-2013.
+Si se necesita fundamento legal para otras decisiones de sicem-web o
+sicem-desktop (manejo de camas, catalogos de triage, etc.), hay que
+investigarlas por separado antes de documentarlas aqui — no se debe asumir
+que la misma norma las cubre sin revisar el texto primero.

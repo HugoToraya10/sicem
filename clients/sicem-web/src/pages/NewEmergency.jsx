@@ -34,6 +34,14 @@ const fetchRouteDistance = (originLat, originLon, destLat, destLon) => {
         })
 }
 
+// Tope de pacientes por ambulancia en una misma emergencia. No hay un número
+// oficial en ambulance_types (la BD no trae capacidad de pacientes por tipo),
+// y la NOM-034-SSA3-2013 solo exige que el compartimento dé cabida "al menos
+// a un paciente en camilla" — no fija un máximo. 2 es lo que de verdad cabe
+// en la práctica (1 en camilla + 1 ambulatorio sentado), sin ser tan rígido
+// que le quite al despachador la libertad de decidir en casos razonables.
+const MAX_PATIENTS_PER_AMBULANCE = 5
+
 const NewEmergency = () => {
     const [emergencyTypeId, setEmergencyTypeId] = useState('');
     const [longitude, setLongitude] = useState('');
@@ -276,12 +284,18 @@ const NewEmergency = () => {
                     setCommittedOwnUnitIds(selectedUnits)
                     setCommittedExternalUnitIds(selectedExternalUnits)
                     const count = parseInt(numPatients) || 1
+                    // Si solo se eligió UNA unidad para toda la emergencia, no tiene caso
+                    // preguntar por paciente cuál le toca — se precarga sola (el selector
+                    // se oculta en el JSX de abajo cuando hay una sola unidad).
+                    const onlyUnitId = (selectedUnits.length + selectedExternalUnits.length) === 1
+                        ? (selectedUnits[0] ?? selectedExternalUnits[0])
+                        : ''
                     setPatientForms(
                         Array.from({ length: count }, () => ({
                             curp: '', found: null, userProfileId: null,
                             firstName: '', firstSurname: '', secondSurname: '',
                             phone: '', birthDate: '', notes: '',
-                            destinationInstitutionId: '', ambulanceId: '', destinationSpecialityId: ''
+                            destinationInstitutionId: '', ambulanceId: onlyUnitId, destinationSpecialityId: ''
                         }))
                     )
                     setStep(2)
@@ -468,6 +482,25 @@ const proceedWithConfirmation = (forms) => {
             return
         }
         destinationByAmbulance[p.ambulanceId] = { destinationInstitutionId: p.destinationInstitutionId, index: i }
+    }
+
+    // Tope de pacientes por ambulancia (MAX_PATIENTS_PER_AMBULANCE) — evita el
+    // caso obvio de amontonar pacientes que no caben físicamente, sin bloquear
+    // casos razonables (2 está permitido). No es configurable por tipo de
+    // unidad porque la BD no trae esa capacidad — ver constante arriba.
+    const patientsByAmbulance = {}
+    for (let i = 0; i < forms.length; i++) {
+        const p = forms[i]
+        if (!p.ambulanceId) continue
+        patientsByAmbulance[p.ambulanceId] = (patientsByAmbulance[p.ambulanceId] || []).concat(i)
+    }
+    for (const [ambulanceId, indices] of Object.entries(patientsByAmbulance)) {
+        if (indices.length > MAX_PATIENTS_PER_AMBULANCE) {
+            const unit = assignedUnitsForPatients.find(u => String(u.ambulance_id) === String(ambulanceId))
+            const pacientesTexto = indices.map(i => i + 1).join(', ')
+            alert(`La unidad ${unit?.unit_number || ambulanceId} tiene ${indices.length} pacientes asignados (Paciente ${pacientesTexto}) — el máximo es ${MAX_PATIENTS_PER_AMBULANCE} por ambulancia. Reparte los pacientes entre más unidades antes de continuar.`)
+            return
+        }
     }
 
     // el resto es idéntico a lo que ya tenías, solo cambia patientForms por forms:
@@ -877,17 +910,29 @@ const proceedWithConfirmation = (forms) => {
                                             </option>
                                         ))}
                                     </select>
-                                    <select
-                                        value={patient.ambulanceId}
-                                        onChange={(e) => updatePatientField(index, 'ambulanceId', e.target.value)}
-                                    >
-                                        <option value="">Unidad asignada — sin definir</option>
-                                        {assignedUnitsForPatients.map((unit) => (
-                                            <option key={unit.ambulance_id} value={unit.ambulance_id}>
-                                                {unit.unit_number}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {assignedUnitsForPatients.length > 1 ? (
+                                        <select
+                                            value={patient.ambulanceId}
+                                            onChange={(e) => updatePatientField(index, 'ambulanceId', e.target.value)}
+                                        >
+                                            <option value="">Unidad asignada — sin definir</option>
+                                            {assignedUnitsForPatients.map((unit) => (
+                                                <option key={unit.ambulance_id} value={unit.ambulance_id}>
+                                                    {unit.unit_number}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        // Solo hay una unidad para esta emergencia — no tiene caso
+                                        // preguntar cuál, ya se sabe. ambulanceId ya viene precargado
+                                        // con esa unidad desde que se crea patientForms (ver
+                                        // handleSubmit), esto solo oculta el selector.
+                                        <span className="patient-id-single-unit">
+                                            {assignedUnitsForPatients.length === 1
+                                                ? `Unidad asignada: ${assignedUnitsForPatients[0].unit_number}`
+                                                : 'Sin unidades asignadas'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         ))}

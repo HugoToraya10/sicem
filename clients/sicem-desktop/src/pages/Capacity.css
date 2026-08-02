@@ -9,7 +9,8 @@
 .general-beds-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
 .general-beds-numbers { font-size: 20px; color: #1a1a2e; }
 .general-beds-numbers strong { color: #1565C0; font-size: 24px; }
-.general-beds-hint { font-size: 10.5px; color: #999; font-style: italic; margin-left: auto; }
+.general-beds-hint { font-size: 10.5px; color: #999; font-style: italic; flex-basis: 100%; }
+.general-beds-update-btn { display: inline-block; width: auto; margin-top: 0; margin-left: auto; }
 
 .section-title {
     font-size: 16px; font-weight: 700; margin-bottom: 16px;

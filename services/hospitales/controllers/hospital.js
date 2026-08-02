@@ -232,10 +232,14 @@ const toggleInstitutionType = (req, res) => {
     }
 }
 
-// Rol 1: bypass total. Rol 4: exige is_institution_admin=1 y que el
-// institutionId del body sea el suyo propio (antes NO se validaba esto para
-// esta función en particular, a diferencia de su hermana updateBedCapacityI —
-// bug corregido: un rol 4 podía actualizar camas de OTRA institución).
+// Rol 1: bypass total. Rol 4: cualquiera de la institución (ya no exige
+// is_institution_admin) — mismo criterio que ya usa updateAvailableBedsIS para
+// camas por especialidad: "disponibles" cambia todo el tiempo con cada
+// paciente que entra o sale (incluyendo pacientes que llegan por su cuenta,
+// no enviados por el CRUM), no tiene sentido que solo el admin pueda
+// ajustarlo. La capacidad TOTAL (updateBedCapacityI) sigue siendo admin-only,
+// esa sí es estructural. Se conserva la validación de que institutionId sea
+// la propia — esa protección es real, la de is_institution_admin no lo era.
 const updateAvailableBedsI = (req, res) => {
     const io = getIo();
     const allowedRoles = [1, 4];
@@ -259,8 +263,6 @@ const updateAvailableBedsI = (req, res) => {
             hospitalModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
                 if (e || r.length === 0) {
                     return res.status(500).json({message: "Error del servidor."});
-                } else if (!r[0].is_institution_admin) {
-                    return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
                 } else if (parseInt(institutionId) !== parseInt(r[0].institution_id)) {
                     return res.status(403).json({message: "Solo puedes administrar tu propia institución."});
                 } else {
