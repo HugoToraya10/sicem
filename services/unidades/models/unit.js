@@ -1,5 +1,22 @@
 const db = require('../config/db');
 
+// ============================================================================
+// AJUSTABLE — minutos de gracia DESPUÉS de que termina el horario laboral
+// del paramédico antes de que su turno se considere abandonado y se libere
+// solo (unidad marcada sin tripulación + sesión cerrada en su celular). Es
+// para darle tiempo de terminar "cositas más" (papeleo, dejar la unidad,
+// etc.) antes de que el sistema lo cierre por él.
+// Bájalo a 1 para probar rápido que el auto-cierre funciona.
+// ============================================================================
+const STALE_GRACE_MINUTES = 1;
+
+// Turnos iniciados por rol 1 (admin) no tienen horario asociado (bypass de
+// prueba/soporte — ver startShift en el controller), así que no tienen
+// scheduled_end. Para que ESOS no se queden abiertos para siempre si alguien
+// se olvida de cerrarlos, se les aplica este límite plano de respaldo en vez
+// del horario del paramédico.
+const ADMIN_BYPASS_FALLBACK_HOURS = 12;
+
 // Institución, rol y privilegio de administrador de institución del usuario que
 // llama — se deriva SIEMPRE server-side desde user_profiles, nunca se confía en
 // un institutionId mandado por el cliente para decisiones de permiso.
@@ -13,6 +30,22 @@ const getUserInstitutionInfo = (userProfileId, callback) => {
 const getInstitutionIdByAmbulanceId = (ambulanceId, callback) => {
     const sql = `SELECT institution_id FROM ambulances WHERE ambulance_id = ?`;
     db.query(sql, [ambulanceId], callback);
+}
+
+// "user_profiles" no es de este servicio, pero se consulta directo — mismo
+// patrón ya usado para institutions/ambulances desde otros servicios. Sirve
+// para bloquear iniciar-turno si el paramédico intenta entrar fuera de su
+// horario asignado (shift_windows — un rango de hora por día).
+const getUserSchedule = (userProfileId, callback) => {
+    const sql = `SELECT shift_windows FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Nombre básico de un paramédico — para poder decir "esta unidad ya tiene
+// turno con Fulano" en el mensaje de error de conflicto de turnos.
+const getUserBasicName = (userProfileId, callback) => {
+    const sql = `SELECT first_name, first_surname FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
 }
 
 //----creates---------
@@ -123,6 +156,18 @@ const getAvailableAmbulances = (institutionId, callback) => {
     });
 }
 
+// Todas las ambulancias activas de instituciones CRUM, sin filtrar por
+// estado — a diferencia de getAvailableAmbulances (que solo trae las
+// "Disponibles" para asignar a una emergencia), esto es para elegir a qué
+// unidad se liga PERMANENTEMENTE un paramédico nuevo desde sicem-web, sin
+// importar si esa unidad está ocupada en este momento.
+const getCrumAmbulances = (callback) => {
+    const sql = `SELECT a.* FROM ambulances a
+                JOIN institutions i ON a.institution_id = i.institution_id
+                WHERE a.is_active = 1 AND i.is_crum_institution = 1`;
+    db.query(sql, callback);
+}
+
 // Ambulancias disponibles de otras instituciones (requieren solicitud
 // interinstitucional). Si la institución que pide es parte de la red CRUM
 // fusionada, excluye TODAS las ambulancias de instituciones también CRUM —
@@ -193,7 +238,87 @@ const getAllAmbulanceStatusesAdmin = (callback) => {
     db.query(sql, callback);
 }
 
+//---- turnos (ambulance_shifts) -------------------
+// No hay concepto de "conductor permanente" de una ambulancia — un paramédico
+// inicia turno en una unidad, y al terminar ese turno se cierra. shift_end IS
+// NULL = turno activo ahora mismo. Se usa para saber a quién dirigir la
+// notificación cuando se le asigna una emergencia a la unidad (ver
+// eventAmbulanceAssigned en emergencias), en vez de avisarle a todos los
+// paramédicos conectados.
+//
+// scheduled_end (columna nueva en ambulance_shifts) es el momento exacto
+// (fecha+hora) en el que termina la ventana de horario del paramédico para
+// el día en que inició turno — se calcula UNA vez, al iniciar turno (ver
+// startShift en el controller), a partir de isWithinSchedule. Un turno cuyo
+// "ahora" ya pasó scheduled_end + STALE_GRACE_MINUTES se trata como
+// abandonado en TODA consulta de "turno activo": ni bloquea que alguien más
+// tome la unidad, ni recibe notificaciones, ni cuenta para el chequeo de
+// turnos simultáneos — y un barrido periódico (ver startShiftExpirySweep en
+// el controller) lo cierra solo y libera la unidad. Turnos de rol 1 (bypass
+// de prueba, sin horario real) no tienen scheduled_end — a esos se les aplica
+// ADMIN_BYPASS_FALLBACK_HOURS en su lugar, para que tampoco se queden
+// abiertos para siempre.
+const NOT_STALE_CONDITION = `(
+    (scheduled_end IS NOT NULL AND NOW() <= DATE_ADD(scheduled_end, INTERVAL ${STALE_GRACE_MINUTES} MINUTE))
+    OR (scheduled_end IS NULL AND shift_start > DATE_SUB(NOW(), INTERVAL ${ADMIN_BYPASS_FALLBACK_HOURS} HOUR))
+)`;
+const IS_EXPIRED_CONDITION = `(
+    (scheduled_end IS NOT NULL AND NOW() > DATE_ADD(scheduled_end, INTERVAL ${STALE_GRACE_MINUTES} MINUTE))
+    OR (scheduled_end IS NULL AND shift_start <= DATE_SUB(NOW(), INTERVAL ${ADMIN_BYPASS_FALLBACK_HOURS} HOUR))
+)`;
 
+// scheduledEnd (Date o null) viene ya calculado del controller — null para el
+// bypass de rol 1 (sin horario real que respetar).
+const startShift = (ambulanceId, userProfileId, scheduledEnd, callback) => {
+    // Solo cierra turnos ABANDONADOS (viejos) de esta unidad o de este
+    // paramédico — nunca uno que siga genuinamente activo. Un conflicto con un
+    // turno activo de verdad se rechaza ANTES de llegar aquí (ver
+    // startShift en el controller), no se pisa en silencio.
+    const closeStaleSql = `UPDATE ambulance_shifts SET shift_end = NOW()
+                WHERE shift_end IS NULL AND (ambulance_id = ? OR user_profile_id = ?)
+                AND ${IS_EXPIRED_CONDITION}`;
+    db.query(closeStaleSql, [ambulanceId, userProfileId], (e) => {
+        if (e) return callback(e);
+        const insertSql = `INSERT INTO ambulance_shifts (ambulance_id, user_profile_id, shift_start, scheduled_end)
+                    VALUES (?, ?, NOW(), ?)`;
+        db.query(insertSql, [ambulanceId, userProfileId, scheduledEnd], callback);
+    });
+}
+
+const endShift = (userProfileId, callback) => {
+    const sql = `UPDATE ambulance_shifts SET shift_end = NOW()
+                WHERE user_profile_id = ? AND shift_end IS NULL`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// A quién avisarle cuando se asigna esta unidad a una emergencia. Ignora
+// turnos abandonados/expirados (ver comentario arriba) — uno de esos no
+// cuenta como "hay alguien manejando esta unidad ahora mismo".
+const getActiveShiftByAmbulance = (ambulanceId, callback) => {
+    const sql = `SELECT ambulance_shift_id, user_profile_id, shift_start
+                FROM ambulance_shifts WHERE ambulance_id = ? AND shift_end IS NULL
+                AND ${NOT_STALE_CONDITION} LIMIT 1`;
+    db.query(sql, [ambulanceId], callback);
+}
+
+// Para que el celular sepa, al abrir la app, si ya hay un turno activo
+// (y en qué unidad) sin que el paramédico tenga que volver a elegirla.
+const getActiveShiftByUser = (userProfileId, callback) => {
+    const sql = `SELECT ambulance_shift_id, ambulance_id, shift_start
+                FROM ambulance_shifts WHERE user_profile_id = ? AND shift_end IS NULL
+                AND ${NOT_STALE_CONDITION} LIMIT 1`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Para el barrido periódico (ver startShiftExpirySweep en el controller) —
+// turnos que siguen "activos" en BD (shift_end IS NULL) pero ya pasaron su
+// horario + gracia, para cerrarlos de verdad y avisarle al celular que se
+// cierre solo.
+const getExpiredActiveShifts = (callback) => {
+    const sql = `SELECT ambulance_shift_id, ambulance_id, user_profile_id
+                FROM ambulance_shifts WHERE shift_end IS NULL AND ${IS_EXPIRED_CONDITION}`;
+    db.query(sql, callback);
+}
 
 module.exports = {
     getUserInstitutionInfo, getInstitutionIdByAmbulanceId,
@@ -202,5 +327,7 @@ module.exports = {
     updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
-    getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance
+    getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
+    startShift, endShift, getActiveShiftByAmbulance, getActiveShiftByUser, getCrumAmbulances, getUserSchedule,
+    getUserBasicName, getExpiredActiveShifts, STALE_GRACE_MINUTES
 }

@@ -9,10 +9,23 @@ import './Users.css';
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
+const WEEKDAYS = [
+    { value: 1, label: 'Lun' }, { value: 2, label: 'Mar' }, { value: 3, label: 'Mié' },
+    { value: 4, label: 'Jue' }, { value: 5, label: 'Vie' }, { value: 6, label: 'Sáb' }, { value: 7, label: 'Dom' },
+]
+
+// Un rango de hora POR día — no un solo rango compartido por todos los días
+// seleccionados. Así se puede modelar, por ejemplo, "lunes en la mañana,
+// resto de la semana en la tarde/noche". En el form vive como 7 entradas
+// fijas (una por día de la semana); al enviar, solo se mandan las que
+// quedaron "enabled".
+const emptyShiftWindows = () => WEEKDAYS.map((d) => ({ day: d.value, enabled: false, start: '', end: '' }))
+
 const emptyForm = {
     email: '', password: '', roleId: '', institutionId: '',
     firstName: '', firstSurname: '', secondSurname: '', phone: '',
     birthDate: '', cveUnicaRegistroPob: '', emergencyContact: '', emergencyPhone: '',
+    assignedAmbulanceId: '', shiftWindows: emptyShiftWindows(),
 }
 
 const emptyPatientForm = {
@@ -30,6 +43,7 @@ const Users = () => {
     const [users, setUsers] = useState([]);
     const [roles, setRoles] = useState([]);
     const [institutions, setInstitutions] = useState([]);
+    const [crumAmbulances, setCrumAmbulances] = useState([]);
 
     const [showForm, setShowForm] = useState(false);
     const [editingUserProfileId, setEditingUserProfileId] = useState(null);
@@ -111,6 +125,19 @@ const Users = () => {
             .catch(error => console.error('Error consultando instituciones. ', error))
     }, []);
 
+    // Para el selector de "ambulancia asignada" cuando el rol elegido es
+    // Paramédico — sicem-web solo puede ligarlos a ambulancias de
+    // instituciones CRUM (el backend también lo valida, esto es solo para
+    // no mostrar opciones que de todos modos se van a rechazar).
+    useEffect(() => {
+        fetch('http://localhost:3000/unidades/ambulancias-crum', {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(({ data }) => setCrumAmbulances((data || []).map(a => toLowerCaseKeys(a))))
+            .catch(error => console.error('Error consultando ambulancias CRUM. ', error))
+    }, []);
+
     const toggleUserDetail = (userProfileId) => {
         if (expandedUserId === userProfileId) {
             setExpandedUserId(null)
@@ -136,8 +163,22 @@ const Users = () => {
         setForm((prev) => ({ ...prev, [field]: value }))
     }
 
+    const toggleShiftWindowDay = (day) => {
+        setForm((prev) => ({
+            ...prev,
+            shiftWindows: prev.shiftWindows.map((w) => w.day === day ? { ...w, enabled: !w.enabled } : w),
+        }))
+    }
+
+    const updateShiftWindowTime = (day, field, value) => {
+        setForm((prev) => ({
+            ...prev,
+            shiftWindows: prev.shiftWindows.map((w) => w.day === day ? { ...w, [field]: value } : w),
+        }))
+    }
+
     const openCreateForm = () => {
-        setForm(emptyForm)
+        setForm({ ...emptyForm, shiftWindows: emptyShiftWindows() })
         setEditingUserProfileId(null)
         setShowForm(true)
         setShowPatientForm(false)
@@ -157,12 +198,21 @@ const Users = () => {
             cveUnicaRegistroPob: u.curp || '',
             emergencyContact: u.emergency_contact || '',
             emergencyPhone: u.emergency_phone || '',
+            assignedAmbulanceId: u.assigned_ambulance_id || '',
+            shiftWindows: emptyShiftWindows().map((w) => {
+                const existing = (u.shift_windows || []).find((sw) => parseInt(sw.day) === w.day)
+                return existing ? { day: w.day, enabled: true, start: existing.start, end: existing.end } : w
+            }),
         })
         setEditingUserProfileId(u.user_profile_id)
         setShowForm(true)
         setShowPatientForm(false)
         setShowCredentialsForm(false)
     }
+
+    const buildShiftWindowsPayload = () => form.shiftWindows
+        .filter((w) => w.enabled && w.start && w.end)
+        .map((w) => ({ day: w.day, start: w.start, end: w.end }))
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -183,6 +233,8 @@ const Users = () => {
                     cveUnicaRegistroPob: form.cveUnicaRegistroPob,
                     emergencyContact: form.emergencyContact,
                     emergencyPhone: form.emergencyPhone,
+                    assignedAmbulanceId: parseInt(form.roleId) === 3 ? form.assignedAmbulanceId : undefined,
+                    shiftWindows: parseInt(form.roleId) === 3 ? buildShiftWindowsPayload() : undefined,
                 })
             })
                 .then(parseResponse)
@@ -207,6 +259,8 @@ const Users = () => {
                     cveUnicaRegistroPob: form.cveUnicaRegistroPob,
                     emergencyContact: form.emergencyContact,
                     emergencyPhone: form.emergencyPhone,
+                    assignedAmbulanceId: parseInt(form.roleId) === 3 ? form.assignedAmbulanceId : undefined,
+                    shiftWindows: parseInt(form.roleId) === 3 ? buildShiftWindowsPayload() : undefined,
                 })
             })
                 .then(parseResponse)
@@ -474,6 +528,56 @@ const Users = () => {
                                 </select>
                             </div>
                         </div>
+
+                        {parseInt(form.roleId) === 3 && (
+                            <>
+                                <div className="users-form-row">
+                                    <div className="users-field">
+                                        <label>Ambulancia asignada</label>
+                                        <select value={form.assignedAmbulanceId} onChange={(e) => handleFieldChange('assignedAmbulanceId', e.target.value)} required>
+                                            <option value="">Selecciona una ambulancia (institución CRUM)</option>
+                                            {crumAmbulances.map((amb) => (
+                                                <option key={amb.ambulance_id} value={amb.ambulance_id}>{amb.unit_number}</option>
+                                            ))}
+                                        </select>
+                                        <p className="users-form-hint">Solo se listan unidades de instituciones CRUM. Cambiar esto reasigna al paramédico a otra unidad — útil si la que tenía se dio de baja.</p>
+                                    </div>
+                                </div>
+
+                                <div className="users-field">
+                                    <label>Horario / turno</label>
+                                    <p className="users-form-hint">Activa los días que trabaja y ponle su propio rango de hora a cada uno — pueden ser distintos entre sí (ej. lunes en la mañana, resto de la semana en la tarde). Bloquea el acceso: solo podrá iniciar turno en sicem-mobile dentro de estas ventanas.</p>
+                                    <div className="users-shift-windows">
+                                        {form.shiftWindows.map((w) => {
+                                            const dayLabel = WEEKDAYS.find((d) => d.value === w.day)?.label
+                                            return (
+                                                <div key={w.day} className={`users-shift-window-row ${w.enabled ? 'active' : ''}`}>
+                                                    <label className="users-shift-window-daytoggle">
+                                                        <input type="checkbox" checked={w.enabled} onChange={() => toggleShiftWindowDay(w.day)} />
+                                                        {dayLabel}
+                                                    </label>
+                                                    <input
+                                                        type="time"
+                                                        value={w.start}
+                                                        onChange={(e) => updateShiftWindowTime(w.day, 'start', e.target.value)}
+                                                        disabled={!w.enabled}
+                                                        required={w.enabled}
+                                                    />
+                                                    <span>a</span>
+                                                    <input
+                                                        type="time"
+                                                        value={w.end}
+                                                        onChange={(e) => updateShiftWindowTime(w.day, 'end', e.target.value)}
+                                                        disabled={!w.enabled}
+                                                        required={w.enabled}
+                                                    />
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         <div className="users-form-row">
                             <div className="users-field">

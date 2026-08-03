@@ -8,8 +8,10 @@ router.post('/registrar-ubicacion', middleware.verifyToken, unitController.regis
 router.post('/registrar-ambulancia', middleware.verifyToken, unitController.registerAmbulance); // TODO
 router.post('/crear-tipo-ambulancia', middleware.verifyToken, unitController.createAmbulanceType); // TODO
 router.post('/registrar-estado-ambulancia', middleware.verifyToken, unitController.registerAmbulanceStatus); // TODO
+router.post('/iniciar-turno', middleware.verifyToken, unitController.startShift); // ✅ sicem-mobile
 
 // PATCH
+router.patch('/terminar-turno', middleware.verifyToken, unitController.endShift); // ✅ sicem-mobile
 router.patch('/alternar-ambulancia', middleware.verifyToken, unitController.toggleAmbulance); // TODO
 router.patch('/alternar-tipo-ambulancia', middleware.verifyToken, unitController.toggleAmbulanceType); // TODO
 router.patch('/alternar-estado-ambulancia', middleware.verifyToken, unitController.toggleAmbulanceStatus); // TODO
@@ -25,8 +27,10 @@ router.get('/ambulancias-externas/:institutionId', middleware.verifyToken, unitC
 router.get('/ambulancia/numero/:unitNumber', middleware.verifyToken, unitController.getAmbulanceByUnitNumber); // TODO
 router.get('/ambulancia/placa/:licensePlate', middleware.verifyToken, unitController.getAmbulanceByLicensePlate); // TODO
 router.get('/tipos-ambulancia', unitController.getAllAmbulanceTypes); // ✅ NewEmergency.jsx
+router.get('/ambulancias-crum', unitController.getCrumAmbulances); // ✅ sicem-web (registrar paramédico)
 router.get('/estados-ambulancia', unitController.getAllAmbulanceStatuses); // TODO
 router.get('/ubicacion/:ambulanceId', middleware.verifyToken, unitController.getLocationsByAmbulance); // ✅ Dashboard.jsx
+router.get('/mi-turno-activo', middleware.verifyToken, unitController.getMyActiveShift); // ✅ sicem-mobile
 
 // gets de administración (incluyen activos e inactivos)
 router.get('/ambulancias-todas', middleware.verifyToken, unitController.getAllAmbulancesAdmin);

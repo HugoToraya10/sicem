@@ -98,6 +98,55 @@
     letter-spacing: 0.5px;
 }
 
+.users-form-hint {
+    font-size: 10.5px;
+    color: #999;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+.users-shift-windows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.users-shift-window-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.users-shift-window-row.active {
+    border-color: #2563eb;
+    background: #eff4ff;
+}
+
+.users-shift-window-daytoggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 48px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+}
+
+.users-shift-window-row input[type="time"] {
+    flex: 1;
+}
+
+.users-shift-window-row input[type="time"]:disabled {
+    background: #f0f0f0;
+    color: #bbb;
+}
+
 .users-field input,
 .users-field select {
     border: 1px solid #dcdce4;

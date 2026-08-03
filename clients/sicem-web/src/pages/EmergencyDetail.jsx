@@ -7,6 +7,7 @@ import './EmergencyDetail.css';
 import { getNavLinks } from '../utils/Navlinks';
 import { parseResponse } from '../utils/apiRequest';
 import { connectEmergencySocket } from '../sockets/emergencySocket';
+import { connectUnitsSocket } from '../sockets/unitsSocket';
 import MapArea from '../components/map/MapArea';
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
@@ -345,6 +346,21 @@ const EmergencyDetail = () => {
 
         return () => emergencySocket.disconnect()
     }, [token, emergencyId]);
+
+    // Socket.io — servicio de unidades: estado de las ambulancias ligadas a
+    // esta emergencia en vivo (ej. si un paramédico termina turno a media
+    // emergencia, la unidad deja de verse "Disponible" al instante).
+    useEffect(() => {
+        const unitsSocket = connectUnitsSocket(token)
+        unitsSocket.on('eventAmbulanceStatusChanged', ({ ambulanceId, ambulanceStatusId }) => {
+            setAmbulanceLocations((current) => current.map((u) =>
+                parseInt(u.ambulance_id) === parseInt(ambulanceId)
+                    ? { ...u, ambulance_status_id: ambulanceStatusId }
+                    : u
+            ))
+        })
+        return () => unitsSocket.disconnect()
+    }, [token]);
 
     //---------------------------------registrar, posts--------------------------------------------------
 

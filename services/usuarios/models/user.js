@@ -29,6 +29,18 @@ const getInstitutionCrumFlag = (institutionId, callback) => {
     db.query(sql, [institutionId], callback);
 }
 
+// "ambulances" e "institutions" no son de este servicio, pero se consultan
+// directo — misma BD compartida, mismo patrón ya usado en el resto del
+// proyecto para cruzar tablas de otro servicio. Sirve para validar, al
+// registrar un paramédico, a quién le pertenece la ambulancia que se le
+// quiere asignar (institución dueña + si esa institución es CRUM).
+const getAmbulanceInstitutionInfo = (ambulanceId, callback) => {
+    const sql = `SELECT a.institution_id, i.is_crum_institution
+                FROM ambulances a JOIN institutions i ON a.institution_id = i.institution_id
+                WHERE a.ambulance_id = ?`;
+    db.query(sql, [ambulanceId], callback);
+}
+
 const createCredential = (email, passwordHash, callback) => {
     const sql = `INSERT INTO user_credentials (email, password_hash, created_at, updated_at, is_active) VALUES (?, ?, NOW(), NOW(), 1)`;
 
@@ -36,19 +48,20 @@ const createCredential = (email, passwordHash, callback) => {
 }
 
 const createProfile = (userCredentialId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
-                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone, callback) => {
+                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, callback) => {
     const sql = `INSERT INTO user_profiles (user_credential_id, institution_id, role_id, first_name, first_surname,
-    second_surname, phone_number, birth_date, curp, emergency_contact, emergency_phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
+    second_surname, phone_number, birth_date, curp, emergency_contact, emergency_phone, assigned_ambulance_id, shift_windows, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
 
     const values = [userCredentialId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
-                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone]
+                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId || null,
+                    shiftWindows && shiftWindows.length ? JSON.stringify(shiftWindows) : null]
 
     db.query(sql, values, callback);
 
 }
 
 const login = (email, callback) => {
-    const sql = `SELECT t1.user_profile_id, t1.institution_id, t1.first_name, t1.first_surname, t1.role_id, t1.is_institution_admin, t2.user_credential_id,
+    const sql = `SELECT t1.user_profile_id, t1.institution_id, t1.first_name, t1.first_surname, t1.role_id, t1.is_institution_admin, t1.assigned_ambulance_id, t1.shift_windows, t2.user_credential_id,
     t2.email, t2.password_hash, t2.is_active FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
 	t1.USER_CREDENTIAL_ID = t2.USER_CREDENTIAL_ID WHERE t2.EMAIL = ?`;
     db.query(sql, [email], callback);
@@ -78,13 +91,18 @@ const getCredentialHistory = (userCredentialId, callback) => {
     db.query(sql, [userCredentialId], callback);
 }
 
+// assignedAmbulanceId y shiftWindows solo tienen sentido real para rol 3
+// (paramédico), pero se guardan tal cual vengan — el controller es quien
+// decide cuándo forzarlos a NULL (ej. si el rol editado ya no es paramédico).
 const editUserProfile = (userProfileId, institutionId, roleId, firstName, firstSurname, secondSurname, phone, birth,
-    cveUnicaRegistroPob, emergencyContact, emergencyPhone, callback) => {
+    cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, callback) => {
     const sql = `UPDATE user_profiles SET institution_id = ?, role_id = ?, first_name = ?, first_surname = ?, second_surname = ?,
-    phone_number = ?, birth_date = ?, curp = ?, emergency_contact = ?, emergency_phone = ?, updated_at = NOW() WHERE user_profile_id = ?`;
-    
+    phone_number = ?, birth_date = ?, curp = ?, emergency_contact = ?, emergency_phone = ?, assigned_ambulance_id = ?,
+    shift_windows = ?, updated_at = NOW() WHERE user_profile_id = ?`;
+
     const values = [institutionId, roleId, firstName, firstSurname, secondSurname, phone, birth,
-    cveUnicaRegistroPob, emergencyContact, emergencyPhone, userProfileId]
+    cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId || null,
+    shiftWindows && shiftWindows.length ? JSON.stringify(shiftWindows) : null, userProfileId]
 
     db.query(sql, values, callback)
 }
@@ -102,7 +120,8 @@ const getAllUsers = (callback) => {
     const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
                 t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
                 t2.email, t2.is_active, t2.user_credential_id,
-                t1.institution_id, t1.role_id, t1.is_institution_admin
+                t1.institution_id, t1.role_id, t1.is_institution_admin, t1.assigned_ambulance_id,
+                t1.shift_windows
                 FROM user_profiles t1
                 LEFT JOIN user_credentials t2 ON t1.user_credential_id = t2.user_credential_id`;
     db.query(sql, callback);
@@ -112,7 +131,8 @@ const getUserById = (userProfileId, callback) => {
     const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
                 t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
                 t2.email, t2.is_active, t2.user_credential_id,
-                t1.institution_id, t1.role_id, t1.is_institution_admin
+                t1.institution_id, t1.role_id, t1.is_institution_admin, t1.assigned_ambulance_id,
+                t1.shift_windows
                 FROM user_profiles t1
                 LEFT JOIN user_credentials t2 ON t1.user_credential_id = t2.user_credential_id
                 WHERE t1.user_profile_id = ?`;
@@ -160,6 +180,7 @@ const getUserByCURP = (curp, callback) => {
 }
 
 module.exports = { getUserInstitutionInfo, getUserInstitutionInfoByCredentialId, toggleInstitutionAdmin, getInstitutionCrumFlag,
+                getAmbulanceInstitutionInfo,
                 createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
                 editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP,
                 getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById }

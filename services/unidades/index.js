@@ -8,6 +8,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const jwt = require('jsonwebtoken')
 const { setIo } = require('./config/socket')
+const unitController = require('./controllers/unit')
 
 const app = express();
 
@@ -38,6 +39,11 @@ io.on('connection', (socket) => {
                 userCredentialId,
                 roleId
             } = d;
+            // Room individual — para poder avisarle a ESTE paramédico en
+            // particular (no a todos) cuando su turno se cierra solo por
+            // vencimiento de horario (ver startShiftExpirySweep en
+            // controllers/unit.js, evento eventForceLogout).
+            socket.join('user_' + userProfileId)
             //ahora vamos a meter al wey en un room según su roleId
             switch(parseInt(roleId)) {
                 case 1: socket.join('admin')
@@ -64,4 +70,9 @@ io.on('connection', (socket) => {
 
 module.exports = io
 
-server.listen(PORT, () => {console.log(`Servicio de unidades. Puerto: ${PORT}`)})
+server.listen(PORT, () => {
+    console.log(`Servicio de unidades. Puerto: ${PORT}`)
+    // Empieza a revisar en segundo plano turnos vencidos (horario laboral +
+    // gracia) para cerrarlos y liberar la unidad solos.
+    unitController.startShiftExpirySweep()
+})

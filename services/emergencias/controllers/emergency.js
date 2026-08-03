@@ -115,7 +115,27 @@ const registerAssignment = (req, res) => {
                 });
                 const { emergencyId, ambulanceIds, userProfileId, notes } = req.body;
                 // Faltaba 'hospital' aquí también — misma razón que en eventAmbulanceUnassigned.
-                io.to('paramedic').to('admin').to("dispatcher").to('hospital').emit('eventAmbulanceAssigned', { emergencyId, ambulanceIds, userProfileId, notes });
+                // Ya NO se manda a 'paramedic' en general — ese room recibía esto sin
+                // importar qué unidad trae cada quien. Ahora se manda la alerta completa
+                // (con los datos de la emergencia) SOLO al paramédico con turno activo en
+                // cada unidad asignada, vía su room personal 'user_<id>'.
+                io.to('admin').to("dispatcher").to('hospital').emit('eventAmbulanceAssigned', { emergencyId, ambulanceIds, userProfileId, notes });
+
+                emergencyModel.getEmergencyById(emergencyId, (eDetail, rDetail) => {
+                    const emergencyDetail = (!eDetail && rDetail.length > 0) ? rDetail[0] : null;
+                    ambulanceIds.forEach((ambulanceId) => {
+                        emergencyModel.getActiveShiftUserByAmbulance(ambulanceId, (e3, r3) => {
+                            if (!e3 && r3.length > 0) {
+                                io.to('user_' + r3[0].user_profile_id).emit('eventEmergencyAssignedToMe', {
+                                    emergencyId, ambulanceId, notes, emergency: emergencyDetail
+                                });
+                            }
+                            // Si nadie tiene turno activo en esta unidad, nadie recibe la
+                            // alerta dirigida — no hay a quién avisarle en el celular.
+                        });
+                    });
+                });
+
                 res.status(201).json({message: "Ambulancia asignada con éxito."});
             }
         });
@@ -1247,6 +1267,37 @@ const getAvgTransferTimeForInstitution = (req, res) => {
     }
 }
 
+// Estadísticas personales del paramédico logueado (mes actual) — ver
+// comentario en el modelo sobre cómo se infiere "atendida por él".
+const getMyStatsThisMonth = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 3) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        const userProfileId = req.decoded.userProfileId;
+        emergencyModel.getMyAssignmentCountThisMonth(userProfileId, (e1, r1) => {
+            if (e1) return res.status(500).json({message: "Error del servidor."});
+            emergencyModel.getMyAvgResponseTimeThisMonth(userProfileId, (e2, r2) => {
+                if (e2) return res.status(500).json({message: "Error del servidor."});
+                emergencyModel.getMyAssignmentsByTypeThisMonth(userProfileId, (e3, r3) => {
+                    if (e3) return res.status(500).json({message: "Error del servidor."});
+                    emergencyModel.getMyAssignmentsByWeekThisMonth(userProfileId, (e4, r4) => {
+                        if (e4) return res.status(500).json({message: "Error del servidor."});
+                        res.status(200).json({
+                            message: "Mis estadísticas",
+                            data: {
+                                totalThisMonth: r1[0]?.total || 0,
+                                avgResponseMinutes: r2[0]?.avg_minutes || null,
+                                byType: r3,
+                                byWeek: r4,
+                            }
+                        });
+                    });
+                });
+            });
+        });
+    }
+}
+
 module.exports = {
     // POST
     registerEmergency, registerEmergencyPatient, registerEmergencyNote,
@@ -1268,5 +1319,7 @@ module.exports = {
     //GETs de estadísticas
     getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution,
     //GETs de estadísticas filtradas por hospital
-    getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution
+    getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution,
+    //GET de estadísticas del paramédico (sicem-mobile)
+    getMyStatsThisMonth
 }

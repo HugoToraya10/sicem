@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SICEM — App Móvil (Paramédico)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #222;
+    padding: 24px; }
+
+  .screen-label { background: #2E7D32; color: white; padding: 10px 24px;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+    border-radius: 4px 4px 0 0; }
+
+  .phones-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
+
+  .phone {
+    background: #1a1a2e; border-radius: 36px; padding: 12px;
+    width: 260px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+  }
+  .phone-screen {
+    background: white; border-radius: 26px; overflow: hidden;
+    min-height: 480px; display: flex; flex-direction: column;
+  }
+  .phone-label {
+    font-size: 10px; font-weight: 700; color: #888; text-align: center;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; margin-bottom: 10px;
+  }
+
+  /* STATUS BAR */
+  .status-bar { background: #1a1a2e; color: white; display: flex;
+    justify-content: space-between; padding: 4px 12px; font-size: 9px; }
+
+  /* HEADER APP */
+  .app-header { background: #2E7D32; color: white; padding: 12px 14px; }
+  .app-header .ah-title { font-size: 14px; font-weight: 700; }
+  .app-header .ah-sub { font-size: 10px; opacity: 0.8; margin-top: 2px; }
+
+  /* ALERT SCREEN */
+  .alert-screen { flex: 1; padding: 14px; }
+  .alert-card { background: #fde8e8; border: 2px solid #C0272D; border-radius: 8px;
+    padding: 14px; margin-bottom: 12px; }
+  .alert-title { font-size: 13px; font-weight: 700; color: #C0272D; }
+  .alert-type { font-size: 16px; font-weight: 700; color: #222; margin: 4px 0; }
+  .alert-loc { font-size: 11px; color: #555; }
+  .alert-dist { font-size: 11px; color: #2E7D32; font-weight: 600; margin-top: 4px; }
+
+  .btn-full { width: 100%; padding: 11px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+  .btn-accept { background: #2E7D32; color: white; }
+  .btn-reject { background: white; color: #C0272D; border: 1px solid #C0272D; }
+
+  /* MAP SCREEN */
+  .map-screen-content { flex: 1; display: flex; flex-direction: column; }
+  .map-mini { flex: 1; background: #e8edf2; display: flex; align-items: center;
+    justify-content: center; flex-direction: column; gap: 6px; min-height: 200px; }
+  .map-mini span { font-size: 11px; color: #999; }
+  .bottom-panel { padding: 12px 14px; border-top: 1px solid #eee; }
+  .bp-row { display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px; }
+  .bp-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .bp-value { font-size: 13px; font-weight: 700; color: #222; }
+  .bp-value.red { color: #C0272D; }
+  .bp-value.green { color: #2E7D32; }
+
+  /* PATIENT SCREEN */
+  .patient-screen { flex: 1; padding: 14px; overflow-y: auto; }
+  .ps-name { font-size: 15px; font-weight: 700; color: #222; }
+  .ps-curp { font-size: 10px; color: #888; margin-bottom: 10px; }
+  .ps-section { margin-bottom: 10px; }
+  .ps-section-title { font-size: 10px; font-weight: 700; color: #555;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .ps-row { display: flex; justify-content: space-between; font-size: 11px;
+    padding: 4px 0; border-bottom: 1px solid #f0f0f0; color: #444; }
+  .tag-sm { display: inline-block; padding: 2px 7px; border-radius: 10px;
+    font-size: 9px; font-weight: 700; margin: 2px; }
+  .tag-sm.red { background: #fde8e8; color: #C0272D; }
+  .tag-sm.orange { background: #fff3e0; color: #E65100; }
+  .tag-sm.blue { background: #e3f2fd; color: #1565C0; }
+
+  /* STATUS UPDATE */
+  .status-screen { flex: 1; padding: 14px; }
+  .status-title { font-size: 12px; font-weight: 700; color: #555;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .status-btn { width: 100%; padding: 12px; border-radius: 8px; font-size: 12px;
+    font-weight: 700; cursor: pointer; margin-bottom: 8px; border: none; }
+  .status-btn.active-status { background: #2E7D32; color: white; }
+  .status-btn.inactive { background: #f5f5f5; color: #888; border: 1px solid #e0e0e0; }
+
+  /* CHARTS MOBILE */
+  .charts-screen { flex: 1; padding: 14px; }
+  .mini-chart { margin-bottom: 14px; }
+  .mini-chart h6 { font-size: 10px; font-weight: 700; color: #555;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .mini-bars { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+  .mini-bar { flex: 1; border-radius: 2px 2px 0 0; }
+  .mini-bar-label { font-size: 8px; color: #aaa; text-align: center; margin-top: 2px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav { display: flex; border-top: 1px solid #eee; background: white; }
+  .bn-item { flex: 1; text-align: center; padding: 8px 4px; font-size: 9px;
+    color: #888; cursor: pointer; }
+  .bn-item.active { color: #2E7D32; }
+  .bn-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<div class="screen-label">App Móvil — Paramédico (5 pantallas)</div>
+
+<div class="phones-row" style="margin-top:16px;">
+
+  <!-- PHONE 1: ALERTA DE EMERGENCIA -->
+  <div>
+    <div class="phone-label">Pantalla 1 — Alerta de Emergencia</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:41</span><span>📶 🔋</span></div>
+        <div class="app-header">
+          <div class="ah-title">SICEM</div>
+          <div class="ah-sub">● Roberto García — Paramédico</div>
+        </div>
+        <div class="alert-screen">
+          <div class="alert-card">
+            <div class="alert-title">🚨 NUEVA EMERGENCIA ASIGNADA</div>
+            <div class="alert-type">Infarto agudo al miocardio</div>
+            <div class="alert-loc">📍 Col. Centro, Villahermosa</div>
+            <div class="alert-dist">📏 2.3 km — ~6 min estimado</div>
+          </div>
+          <div style="font-size:11px;color:#555;margin-bottom:10px;">
+            <div><b>Reportado por:</b> María López · 993-123-4567</div>
+            <div><b>Pacientes:</b> 1</div>
+            <div><b>Descripción:</b> Hombre adulto con dolor en el pecho e irradiación al brazo izquierdo.</div>
+          </div>
+          <button class="btn-full btn-accept">✓ Aceptar y navegar</button>
+          <button class="btn-full btn-reject">✗ No puedo atender</button>
+        </div>
+        <div class="bottom-nav">
+          <div class="bn-item active"><span class="bn-icon">🚨</span>Alerta</div>
+          <div class="bn-item"><span class="bn-icon">🗺</span>Mapa</div>
+          <div class="bn-item"><span class="bn-icon">👤</span>Paciente</div>
+          <div class="bn-item"><span class="bn-icon">📊</span>Stats</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONE 2: NAVEGACIÓN -->
+  <div>
+    <div class="phone-label">Pantalla 2 — Navegación en Campo</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:43</span><span>📶 🔋</span></div>
+        <div class="app-header">
+          <div class="ah-title">En ruta</div>
+          <div class="ah-sub">Infarto · Col. Centro</div>
+        </div>
+        <div class="map-screen-content">
+          <div class="map-mini">
+            <span>🗺</span>
+            <span>Google Maps — Navegación activa</span>
+            <span style="font-size:9px;color:#bbb;">Ruta trazada al punto de emergencia</span>
+          </div>
+          <div class="bottom-panel">
+            <div class="bp-row">
+              <div>
+                <div class="bp-label">Tiempo estimado</div>
+                <div class="bp-value red">4 min</div>
+              </div>
+              <div>
+                <div class="bp-label">Distancia</div>
+                <div class="bp-value">1.2 km</div>
+              </div>
+              <div>
+                <div class="bp-label">Velocidad</div>
+                <div class="bp-value">42 km/h</div>
+              </div>
+            </div>
+            <button class="btn-full btn-accept" style="margin-top:8px;font-size:11px;padding:9px;">
+              ✓ He llegado — Estoy en escena
+            </button>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="bn-item"><span class="bn-icon">🚨</span>Alerta</div>
+          <div class="bn-item active"><span class="bn-icon">🗺</span>Mapa</div>
+          <div class="bn-item"><span class="bn-icon">👤</span>Paciente</div>
+          <div class="bn-item"><span class="bn-icon">📊</span>Stats</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONE 3: HISTORIAL DEL PACIENTE -->
+  <div>
+    <div class="phone-label">Pantalla 3 — Historial del Paciente</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:47</span><span>📶 🔋</span></div>
+        <div class="app-header">
+          <div class="ah-title">Historial clínico</div>
+          <div class="ah-sub">Consultando SICEM</div>
+        </div>
+        <div class="patient-screen">
+          <div class="ps-name">Carlos Méndez López</div>
+          <div class="ps-curp">CURP: MELC820412HTCNRL08 · 43 años</div>
+
+          <div class="ps-section">
+            <div class="ps-section-title">Datos básicos</div>
+            <div class="ps-row"><span>Tipo de sangre</span><span><b>O+</b></span></div>
+            <div class="ps-row"><span>Peso</span><span>82 kg</span></div>
+            <div class="ps-row"><span>Estatura</span><span>1.72 m</span></div>
+          </div>
+
+          <div class="ps-section">
+            <div class="ps-section-title">⚠️ Alergias</div>
+            <span class="tag-sm red">Penicilina</span>
+            <span class="tag-sm red">Ibuprofeno</span>
+          </div>
+
+          <div class="ps-section">
+            <div class="ps-section-title">Condiciones crónicas</div>
+            <span class="tag-sm orange">Hipertensión</span>
+            <span class="tag-sm orange">Diabetes T2</span>
+          </div>
+
+          <div class="ps-section">
+            <div class="ps-section-title">Medicamentos</div>
+            <div class="ps-row"><span>Metformina</span><span>850mg / día</span></div>
+            <div class="ps-row"><span>Losartán</span><span>50mg / día</span></div>
+          </div>
+
+          <div class="ps-section">
+            <div class="ps-section-title">Contacto de emergencia</div>
+            <div class="ps-row"><span>Laura Méndez</span><span>993-456-7890</span></div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="bn-item"><span class="bn-icon">🚨</span>Alerta</div>
+          <div class="bn-item"><span class="bn-icon">🗺</span>Mapa</div>
+          <div class="bn-item active"><span class="bn-icon">👤</span>Paciente</div>
+          <div class="bn-item"><span class="bn-icon">📊</span>Stats</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONE 4: ACTUALIZACIÓN DE ESTADO -->
+  <div>
+    <div class="phone-label">Pantalla 4 — Actualizar Estado de Unidad</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>9:52</span><span>📶 🔋</span></div>
+        <div class="app-header">
+          <div class="ah-title">Estado de unidad</div>
+          <div class="ah-sub">Unidad A-03 · Cruz Roja</div>
+        </div>
+        <div class="status-screen">
+          <div class="status-title">Estado actual de la unidad</div>
+          <button class="status-btn inactive">🟢 Disponible</button>
+          <button class="status-btn inactive">🔴 En ruta a emergencia</button>
+          <button class="status-btn active-status">🟡 En escena</button>
+          <button class="status-btn inactive">🔵 Trasladando al hospital</button>
+          <button class="status-btn inactive">⚫ Fuera de servicio</button>
+
+          <div style="margin-top:14px;padding:10px;background:#f5f5f5;border-radius:6px;font-size:11px;color:#555;">
+            <b>Emergencia activa:</b> Infarto · Col. Centro<br>
+            <b>Hospital destino:</b> Hospital Regional<br>
+            <b>ETA hospital:</b> 8 min
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="bn-item"><span class="bn-icon">🚨</span>Alerta</div>
+          <div class="bn-item"><span class="bn-icon">🗺</span>Mapa</div>
+          <div class="bn-item"><span class="bn-icon">👤</span>Paciente</div>
+          <div class="bn-item"><span class="bn-icon">📊</span>Stats</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONE 5: GRÁFICAS -->
+  <div>
+    <div class="phone-label">Pantalla 5 — Estadísticas del Paramédico</div>
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>10:00</span><span>📶 🔋</span></div>
+        <div class="app-header">
+          <div class="ah-title">Mis estadísticas</div>
+          <div class="ah-sub">Mayo 2026</div>
+        </div>
+        <div class="charts-screen">
+          <div style="display:flex;gap:10px;margin-bottom:14px;">
+            <div style="flex:1;background:#e8f5e9;border-radius:6px;padding:10px;text-align:center;">
+              <div style="font-size:22px;font-weight:700;color:#2E7D32">28</div>
+              <div style="font-size:9px;color:#666">Atenciones mes</div>
+            </div>
+            <div style="flex:1;background:#e3f2fd;border-radius:6px;padding:10px;text-align:center;">
+              <div style="font-size:22px;font-weight:700;color:#1565C0">7.4</div>
+              <div style="font-size:9px;color:#666">Min promedio</div>
+            </div>
+          </div>
+
+          <div class="mini-chart">
+            <h6>Emergencias por tipo — Mayo</h6>
+            <div class="mini-bars">
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:50px;background:#2E7D32"></div>
+                <div class="mini-bar-label">Trauma</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:38px;background:#C0272D"></div>
+                <div class="mini-bar-label">Infarto</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:30px;background:#1565C0"></div>
+                <div class="mini-bar-label">Accidente</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:18px;background:#E65100"></div>
+                <div class="mini-bar-label">Otro</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mini-chart">
+            <h6>Atenciones por semana</h6>
+            <div class="mini-bars">
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:30px;background:#2E7D32"></div>
+                <div class="mini-bar-label">S1</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:42px;background:#2E7D32"></div>
+                <div class="mini-bar-label">S2</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:25px;background:#2E7D32"></div>
+                <div class="mini-bar-label">S3</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+                <div class="mini-bar" style="height:55px;background:#2E7D32"></div>
+                <div class="mini-bar-label">S4</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="bn-item"><span class="bn-icon">🚨</span>Alerta</div>
+          <div class="bn-item"><span class="bn-icon">🗺</span>Mapa</div>
+          <div class="bn-item"><span class="bn-icon">👤</span>Paciente</div>
+          <div class="bn-item active"><span class="bn-icon">📊</span>Stats</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

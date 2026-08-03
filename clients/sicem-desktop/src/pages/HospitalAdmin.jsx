@@ -9,7 +9,19 @@ const TABS = ['Camas y Especialidades', 'Ambulancias', 'Empleados', 'Mi Instituc
 
 const emptyAmbulanceForm = { unitNumber: '', licensePlate: '', ambulanceTypeId: '', ambulanceStatusId: '' }
 const emptyAssignSpecialityForm = { specialityId: '', totalBeds: '', availableBeds: '' }
+const WEEKDAYS = [
+    { value: 1, label: 'Lun' }, { value: 2, label: 'Mar' }, { value: 3, label: 'Mié' },
+    { value: 4, label: 'Jue' }, { value: 5, label: 'Vie' }, { value: 6, label: 'Sáb' }, { value: 7, label: 'Dom' },
+]
+
+// Un rango de hora POR día — no un solo rango compartido por todos los días
+// seleccionados. Permite modelar, por ejemplo, "lunes en la mañana, resto de
+// la semana en la tarde/noche". Vive en el form como 7 entradas fijas; al
+// enviar, solo se mandan las que quedaron "enabled".
+const emptyShiftWindows = () => WEEKDAYS.map((d) => ({ day: d.value, enabled: false, start: '', end: '' }))
+
 const emptyEmployeeForm = {
+    roleId: '4', assignedAmbulanceId: '', shiftWindows: emptyShiftWindows(),
     email: '', password: '', firstName: '', firstSurname: '', secondSurname: '', phone: '',
     birthDate: '', cveUnicaRegistroPob: '', emergencyContact: '', emergencyPhone: '',
 }
@@ -191,9 +203,13 @@ const HospitalAdmin = () => {
         fetch('http://localhost:3000/usuarios/obtener-usuarios', { headers })
             .then(res => res.json())
             .then(({ data }) => {
+                // Antes solo listaba rol 4 (empleados administrativos) — ahora
+                // también rol 3 (paramédicos), para poder verlos y editarlos
+                // (reasignar ambulancia, cambiar de rol, poner horario) desde
+                // esta misma tabla.
                 const mine = (data || [])
                     .map(u => toLowerCaseKeys(u))
-                    .filter(u => parseInt(u.institution_id) === parseInt(user.institutionId) && parseInt(u.role_id) === 4)
+                    .filter(u => parseInt(u.institution_id) === parseInt(user.institutionId) && [3, 4].includes(parseInt(u.role_id)))
                 setInstitutionAdmins(mine)
             })
             .catch(error => console.error('Error recuperando usuarios de la institución. ', error))
@@ -201,14 +217,40 @@ const HospitalAdmin = () => {
 
     useEffect(() => { if (activeTab === 'Empleados') fetchInstitutionAdmins() }, [activeTab, fetchInstitutionAdmins])
 
+    const toggleShiftWindowDay = (setter, day) => {
+        setter((prev) => ({
+            ...prev,
+            shiftWindows: prev.shiftWindows.map((w) => w.day === day ? { ...w, enabled: !w.enabled } : w),
+        }))
+    }
+
+    const updateShiftWindowTime = (setter, day, field, value) => {
+        setter((prev) => ({
+            ...prev,
+            shiftWindows: prev.shiftWindows.map((w) => w.day === day ? { ...w, [field]: value } : w),
+        }))
+    }
+
+    const buildShiftWindowsPayload = (form) => form.shiftWindows
+        .filter((w) => w.enabled && w.start && w.end)
+        .map((w) => ({ day: w.day, start: w.start, end: w.end }))
+
     const handleCreateEmployee = (e) => {
         e.preventDefault()
-        // No se manda roleId ni institutionId — ni siquiera se muestran como
-        // campos del formulario. El backend los fuerza a 4 y a la institución
-        // propia respectivamente, sin importar qué se intente mandar.
+        if (parseInt(employeeForm.roleId) === 3 && !employeeForm.assignedAmbulanceId) {
+            alert('Selecciona a qué ambulancia queda asignado este paramédico.')
+            return
+        }
+        // No se manda institutionId — eso el backend lo fuerza a la propia
+        // institución sin importar qué se intente mandar. roleId sí se manda
+        // (3 = paramédico, 4 = empleado administrativo); el backend valida que
+        // solo se puedan crear esos dos desde aquí, nunca otro.
         fetch('http://localhost:3000/usuarios/registro', {
             method: "POST", headers,
             body: JSON.stringify({
+                roleId: employeeForm.roleId,
+                assignedAmbulanceId: parseInt(employeeForm.roleId) === 3 ? employeeForm.assignedAmbulanceId : undefined,
+                shiftWindows: parseInt(employeeForm.roleId) === 3 ? buildShiftWindowsPayload(employeeForm) : undefined,
                 email: employeeForm.email,
                 password: employeeForm.password,
                 firstName: employeeForm.firstName,
@@ -222,7 +264,15 @@ const HospitalAdmin = () => {
             })
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo registrar'); return body }))
-            .then(() => { setEmployeeForm(emptyEmployeeForm); setShowEmployeeForm(false); fetchInstitutionAdmins() })
+            .then(() => {
+                setEmployeeForm({ ...emptyEmployeeForm, shiftWindows: emptyShiftWindows() }); setShowEmployeeForm(false)
+                // La tabla de Empleados de abajo solo lista rol 4 (empleados
+                // administrativos) — un paramédico recién creado no va a
+                // aparecer ahí, vive en la asignación de la ambulancia, no en
+                // esta lista. fetchInstitutionAdmins() solo refresca por si se
+                // registró un rol 4.
+                fetchInstitutionAdmins()
+            })
             .catch(error => { console.error('Error registrando empleado. ', error); alert(error.message) })
     }
 
@@ -255,6 +305,11 @@ const HospitalAdmin = () => {
         setEditingEmployeeId(u.user_profile_id)
         setEditEmployeeForm({
             email: '', password: '',
+            roleId: String(u.role_id), assignedAmbulanceId: u.assigned_ambulance_id || '',
+            shiftWindows: emptyShiftWindows().map((w) => {
+                const existing = (u.shift_windows || []).find((sw) => parseInt(sw.day) === w.day)
+                return existing ? { day: w.day, enabled: true, start: existing.start, end: existing.end } : w
+            }),
             firstName: u.first_name || '', firstSurname: u.first_surname || '', secondSurname: u.second_surname || '',
             phone: u.phone_number || '', birthDate: u.birth_date ? u.birth_date.split('T')[0] : '',
             cveUnicaRegistroPob: u.curp || '', emergencyContact: u.emergency_contact || '', emergencyPhone: u.emergency_phone || '',
@@ -264,12 +319,20 @@ const HospitalAdmin = () => {
 
     const handleUpdateEmployeeProfile = (e) => {
         e.preventDefault()
-        // No se manda roleId ni institutionId — el backend los preserva tal cual
-        // están para este caso (admin editando a OTRO empleado propio).
+        if (parseInt(editEmployeeForm.roleId) === 3 && !editEmployeeForm.assignedAmbulanceId) {
+            alert('Selecciona a qué ambulancia queda asignado este paramédico.')
+            return
+        }
+        // No se manda institutionId — el backend lo preserva tal cual para este
+        // caso (admin editando a OTRO empleado propio). roleId SÍ se manda ahora
+        // — permite pasar de empleado administrativo a paramédico o viceversa.
         fetch('http://localhost:3000/usuarios/actualizar-perfil', {
             method: "PATCH", headers,
             body: JSON.stringify({
                 userProfileId: editingEmployeeId,
+                roleId: editEmployeeForm.roleId,
+                assignedAmbulanceId: parseInt(editEmployeeForm.roleId) === 3 ? editEmployeeForm.assignedAmbulanceId : undefined,
+                shiftWindows: parseInt(editEmployeeForm.roleId) === 3 ? buildShiftWindowsPayload(editEmployeeForm) : undefined,
                 firstName: editEmployeeForm.firstName,
                 firstSurname: editEmployeeForm.firstSurname,
                 secondSurname: editEmployeeForm.secondSurname,
@@ -577,7 +640,53 @@ const HospitalAdmin = () => {
                     {showEmployeeForm && (
                         <form className="hospital-admin-form" onSubmit={handleCreateEmployee}>
                             <h3>Registrar Nuevo Empleado</h3>
-                            <p className="hospital-admin-form-hint">Se registra como personal de tu institución — el rol y la institución no son opciones, ya están fijos.</p>
+                            <p className="hospital-admin-form-hint">Se registra como personal de tu institución — la institución no es opción, ya está fija.</p>
+
+                            <div className="hospital-admin-field">
+                                <label>Tipo de personal</label>
+                                <select value={employeeForm.roleId} onChange={(e) => setEmployeeForm(p => ({ ...p, roleId: e.target.value, assignedAmbulanceId: '' }))}>
+                                    <option value="4">Empleado administrativo</option>
+                                    <option value="3">Paramédico</option>
+                                </select>
+                            </div>
+
+                            {parseInt(employeeForm.roleId) === 3 && (
+                                <div className="hospital-admin-field">
+                                    <label>Ambulancia asignada</label>
+                                    <select value={employeeForm.assignedAmbulanceId} onChange={(e) => setEmployeeForm(p => ({ ...p, assignedAmbulanceId: e.target.value }))} required>
+                                        <option value="">Selecciona una ambulancia de tu institución</option>
+                                        {ambulances.map((amb) => (
+                                            <option key={amb.ambulance_id} value={amb.ambulance_id}>{amb.unit_number}</option>
+                                        ))}
+                                    </select>
+                                    <p className="hospital-admin-form-hint">Este paramédico queda ligado permanentemente a esta unidad — varios paramédicos pueden compartir la misma ambulancia (turnos distintos).</p>
+                                    {ambulances.length === 0 && <p className="hospital-admin-form-hint">Tu institución no tiene ambulancias registradas todavía — registra una primero en la pestaña Ambulancias.</p>}
+                                </div>
+                            )}
+
+                            {parseInt(employeeForm.roleId) === 3 && (
+                                <div className="hospital-admin-field">
+                                    <label>Horario / turno</label>
+                                    <p className="hospital-admin-form-hint">Activa los días que trabaja y ponle su propio rango de hora a cada uno — pueden ser distintos entre sí (ej. lunes en la mañana, resto de la semana en la tarde). Bloquea el acceso: solo podrá iniciar turno en sicem-mobile dentro de estas ventanas.</p>
+                                    <div className="hospital-admin-shift-windows">
+                                        {employeeForm.shiftWindows.map((w) => {
+                                            const dayLabel = WEEKDAYS.find((d) => d.value === w.day)?.label
+                                            return (
+                                                <div key={w.day} className={`hospital-admin-shift-window-row ${w.enabled ? 'active' : ''}`}>
+                                                    <label className="hospital-admin-shift-window-daytoggle">
+                                                        <input type="checkbox" checked={w.enabled} onChange={() => toggleShiftWindowDay(setEmployeeForm, w.day)} />
+                                                        {dayLabel}
+                                                    </label>
+                                                    <input type="time" value={w.start} onChange={(e) => updateShiftWindowTime(setEmployeeForm, w.day, 'start', e.target.value)} disabled={!w.enabled} required={w.enabled} />
+                                                    <span>a</span>
+                                                    <input type="time" value={w.end} onChange={(e) => updateShiftWindowTime(setEmployeeForm, w.day, 'end', e.target.value)} disabled={!w.enabled} required={w.enabled} />
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="hospital-admin-form-row">
                                 <div className="hospital-admin-field">
                                     <label>Correo electrónico</label>
@@ -639,6 +748,7 @@ const HospitalAdmin = () => {
                                 <tr>
                                     <th>Nombre</th>
                                     <th>Correo</th>
+                                    <th>Tipo</th>
                                     <th>Estado</th>
                                     <th>Admin de institución</th>
                                     <th>Acciones</th>
@@ -647,20 +757,31 @@ const HospitalAdmin = () => {
                             <tbody>
                                 {institutionAdmins.map((u) => {
                                     const isSelf = parseInt(u.user_profile_id) === parseInt(user?.profileId)
+                                    const isParamedic = parseInt(u.role_id) === 3
                                     return (
                                         <Fragment key={u.user_profile_id}>
                                             <tr>
                                                 <td>{u.first_name} {u.first_surname} {u.second_surname}</td>
                                                 <td>{u.email || '—'}</td>
                                                 <td>
+                                                    {isParamedic ? `Paramédico${u.assigned_ambulance_id ? ' (unidad #' + u.assigned_ambulance_id + ')' : ' (sin unidad)'}` : 'Empleado'}
+                                                    {isParamedic && u.shift_windows && u.shift_windows.length ? (
+                                                        <div className="hospital-admin-shift-hint">
+                                                            {u.shift_windows.map((w) => `${WEEKDAYS.find(d => d.value === parseInt(w.day))?.label} ${w.start}-${w.end}`).join(', ')}
+                                                        </div>
+                                                    ) : null}
+                                                </td>
+                                                <td>
                                                     <span className={`hospital-admin-status ${u.is_active ? 'status-active' : 'status-inactive'}`}>
                                                         {u.is_active ? 'Activo' : 'Inactivo'}
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <span className={`hospital-admin-status ${u.is_institution_admin ? 'status-active' : 'status-inactive'}`}>
-                                                        {u.is_institution_admin ? 'Sí' : 'No'}
-                                                    </span>
+                                                    {isParamedic ? '—' : (
+                                                        <span className={`hospital-admin-status ${u.is_institution_admin ? 'status-active' : 'status-inactive'}`}>
+                                                            {u.is_institution_admin ? 'Sí' : 'No'}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="hospital-admin-row-actions">
                                                     <button className="hospital-admin-toggle-btn" onClick={() => openEditEmployee(u)}>Editar</button>
@@ -673,20 +794,65 @@ const HospitalAdmin = () => {
                                                     >
                                                         {u.is_active ? 'Desactivar' : 'Activar'}
                                                     </button>
-                                                    <button
-                                                        className="hospital-admin-toggle-btn"
-                                                        onClick={() => handleToggleInstitutionAdmin(u)}
-                                                        disabled={isSelf && u.is_institution_admin}
-                                                        title={isSelf && u.is_institution_admin ? 'No puedes quitarte tu propio privilegio de administrador' : undefined}
-                                                    >
-                                                        {u.is_institution_admin ? 'Quitar privilegio' : 'Dar privilegio'}
-                                                    </button>
+                                                    {!isParamedic && (
+                                                        <button
+                                                            className="hospital-admin-toggle-btn"
+                                                            onClick={() => handleToggleInstitutionAdmin(u)}
+                                                            disabled={isSelf && u.is_institution_admin}
+                                                            title={isSelf && u.is_institution_admin ? 'No puedes quitarte tu propio privilegio de administrador' : undefined}
+                                                        >
+                                                            {u.is_institution_admin ? 'Quitar privilegio' : 'Dar privilegio'}
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                             {editingEmployeeId === u.user_profile_id && (
                                                 <tr className="hospital-admin-detail-row">
-                                                    <td colSpan={5}>
+                                                    <td colSpan={6}>
                                                         <form className="hospital-admin-inline-form" onSubmit={handleUpdateEmployeeProfile}>
+                                                            <div className="hospital-admin-form-row">
+                                                                <div className="hospital-admin-field">
+                                                                    <label>Tipo de personal</label>
+                                                                    <select value={editEmployeeForm.roleId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, roleId: e.target.value, assignedAmbulanceId: '' }))}>
+                                                                        <option value="4">Empleado administrativo</option>
+                                                                        <option value="3">Paramédico</option>
+                                                                    </select>
+                                                                </div>
+                                                                {parseInt(editEmployeeForm.roleId) === 3 && (
+                                                                    <div className="hospital-admin-field">
+                                                                        <label>Ambulancia asignada</label>
+                                                                        <select value={editEmployeeForm.assignedAmbulanceId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, assignedAmbulanceId: e.target.value }))} required>
+                                                                            <option value="">Selecciona una ambulancia</option>
+                                                                            {ambulances.map((amb) => (
+                                                                                <option key={amb.ambulance_id} value={amb.ambulance_id}>{amb.unit_number}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {parseInt(editEmployeeForm.roleId) === 3 && (
+                                                                <div className="hospital-admin-field">
+                                                                    <label>Horario / turno</label>
+                                                                    <p className="hospital-admin-form-hint">Activa los días que trabaja y ponle su propio rango de hora a cada uno.</p>
+                                                                    <div className="hospital-admin-shift-windows">
+                                                                        {editEmployeeForm.shiftWindows.map((w) => {
+                                                                            const dayLabel = WEEKDAYS.find((d) => d.value === w.day)?.label
+                                                                            return (
+                                                                                <div key={w.day} className={`hospital-admin-shift-window-row ${w.enabled ? 'active' : ''}`}>
+                                                                                    <label className="hospital-admin-shift-window-daytoggle">
+                                                                                        <input type="checkbox" checked={w.enabled} onChange={() => toggleShiftWindowDay(setEditEmployeeForm, w.day)} />
+                                                                                        {dayLabel}
+                                                                                    </label>
+                                                                                    <input type="time" value={w.start} onChange={(e) => updateShiftWindowTime(setEditEmployeeForm, w.day, 'start', e.target.value)} disabled={!w.enabled} required={w.enabled} />
+                                                                                    <span>a</span>
+                                                                                    <input type="time" value={w.end} onChange={(e) => updateShiftWindowTime(setEditEmployeeForm, w.day, 'end', e.target.value)} disabled={!w.enabled} required={w.enabled} />
+                                                                                </div>
+                                                                            )
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                             <div className="hospital-admin-form-row">
                                                                 <div className="hospital-admin-field">
                                                                     <label>Nombre(s)</label>
@@ -735,7 +901,7 @@ const HospitalAdmin = () => {
                                             )}
                                             {credentialsEmployeeId === u.user_profile_id && (
                                                 <tr className="hospital-admin-detail-row">
-                                                    <td colSpan={5}>
+                                                    <td colSpan={6}>
                                                         <form className="hospital-admin-inline-form" onSubmit={(e) => handleUpdateEmployeeCredentials(e, u)}>
                                                             <div className="hospital-admin-form-row">
                                                                 <div className="hospital-admin-field">

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SICEM — App Web (Despachador)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #222; }
+
+  .screen-label {
+    background: #C0272D; color: white; padding: 10px 24px;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .screen { margin: 24px auto; max-width: 1100px; background: white;
+    border: 1px solid #ddd; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+
+  /* NAVBAR */
+  .navbar {
+    background: #1a1a2e; color: white; display: flex;
+    align-items: center; justify-content: space-between;
+    padding: 0 20px; height: 48px;
+  }
+  .navbar .logo { font-size: 16px; font-weight: 700; color: #C0272D; letter-spacing: 1px; }
+  .navbar .nav-links { display: flex; gap: 24px; }
+  .navbar .nav-links a { color: #aaa; font-size: 12px; text-decoration: none; }
+  .navbar .nav-links a.active { color: white; }
+  .navbar .user { font-size: 12px; color: #aaa; }
+
+  /* DASHBOARD */
+  .dashboard-layout { display: grid; grid-template-columns: 280px 1fr; height: 520px; }
+  .sidebar { background: #f8f9fa; border-right: 1px solid #e0e0e0; padding: 16px; overflow-y: auto; }
+  .sidebar h4 { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 10px; }
+  .emergency-card {
+    background: white; border: 1px solid #e0e0e0; border-left: 3px solid #C0272D;
+    border-radius: 4px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
+  }
+  .emergency-card.orange { border-left-color: #E65100; }
+  .emergency-card.green { border-left-color: #2E7D32; }
+  .emergency-card .ec-type { font-size: 12px; font-weight: 700; color: #222; }
+  .emergency-card .ec-loc { font-size: 11px; color: #666; margin-top: 2px; }
+  .emergency-card .ec-time { font-size: 10px; color: #999; margin-top: 4px; }
+  .ec-badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px;
+    border-radius: 10px; margin-top: 4px; }
+  .ec-badge.red { background: #fde8e8; color: #C0272D; }
+  .ec-badge.orange { background: #fff3e0; color: #E65100; }
+  .ec-badge.green { background: #e8f5e9; color: #2E7D32; }
+
+  .map-area { position: relative; background: #e8edf2; display: flex;
+    align-items: center; justify-content: center; flex-direction: column; gap: 8px; }
+  .map-placeholder { color: #999; font-size: 13px; }
+  .map-label { font-size: 11px; color: #bbb; }
+
+  /* Ambulance dots */
+  .map-dot { position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+  .map-dot.available { background: #2E7D32; top: 120px; left: 200px; }
+  .map-dot.enroute { background: #C0272D; top: 200px; left: 340px; }
+  .map-dot.available2 { background: #2E7D32; top: 300px; left: 180px; }
+  .map-dot.available3 { background: #2E7D32; top: 160px; left: 480px; }
+  .map-star { position: absolute; top: 240px; left: 310px; font-size: 18px; }
+
+  .map-legend { position: absolute; bottom: 12px; left: 12px; background: white;
+    border: 1px solid #ddd; border-radius: 4px; padding: 8px 12px; font-size: 11px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .weather-widget { position: absolute; top: 12px; right: 12px; background: white;
+    border: 1px solid #ddd; border-radius: 4px; padding: 8px 12px; font-size: 11px; }
+  .weather-widget .wt { font-size: 18px; font-weight: 700; color: #222; }
+  .weather-widget .wd { color: #666; font-size: 10px; }
+
+  /* FORM SCREEN */
+  .form-layout { padding: 24px 32px; }
+  .form-title { font-size: 16px; font-weight: 700; color: #222; margin-bottom: 20px;
+    padding-bottom: 12px; border-bottom: 2px solid #C0272D; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label { font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px;
+    font-size: 13px; color: #222; background: #fafafa;
+  }
+  .form-group textarea { height: 70px; resize: none; }
+  .btn-primary { background: #C0272D; color: white; border: none; border-radius: 4px;
+    padding: 10px 24px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+  .btn-secondary { background: white; color: #555; border: 1px solid #ddd; border-radius: 4px;
+    padding: 10px 24px; font-size: 13px; cursor: pointer; margin-top: 16px; margin-left: 8px; }
+
+  /* SOLICITUDES */
+  .requests-layout { padding: 20px 24px; }
+  .req-title { font-size: 16px; font-weight: 700; margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 2px solid #C0272D; }
+  .req-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .req-table th { background: #1a1a2e; color: white; padding: 9px 12px; text-align: left; font-size: 11px; }
+  .req-table td { padding: 9px 12px; border-bottom: 1px solid #eee; }
+  .req-table tr:hover td { background: #fafafa; }
+  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .status-badge.pending { background: #fff3e0; color: #E65100; }
+  .status-badge.accepted { background: #e8f5e9; color: #2E7D32; }
+  .status-badge.rejected { background: #fde8e8; color: #C0272D; }
+  .btn-sm { padding: 3px 10px; font-size: 11px; border-radius: 3px; border: 1px solid #ddd;
+    cursor: pointer; background: white; }
+
+  /* GRÁFICAS */
+  .charts-layout { padding: 20px 24px; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .chart-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; }
+  .chart-box h5 { font-size: 12px; font-weight: 700; color: #555; margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.5px; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 100px; padding-top: 8px; }
+  .bar { flex: 1; background: #C0272D; border-radius: 2px 2px 0 0; position: relative; }
+  .bar.b2 { background: #E65100; }
+  .bar.b3 { background: #1565C0; }
+  .bar.b4 { background: #2E7D32; }
+  .bar.b5 { background: #6A1B9A; }
+  .bar-label { font-size: 9px; color: #888; text-align: center; margin-top: 4px; }
+  .pie-chart { width: 90px; height: 90px; border-radius: 50%; margin: 0 auto;
+    background: conic-gradient(#C0272D 0% 40%, #E65100 40% 65%, #1565C0 65% 80%, #2E7D32 80% 100%); }
+  .pie-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .pie-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #555; }
+  .pie-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .line-chart { height: 80px; position: relative; }
+  .line-svg { width: 100%; height: 100%; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid #e0e0e0; padding: 0 24px; background: #fafafa; }
+  .tab { padding: 10px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
+    color: #888; border-bottom: 2px solid transparent; }
+  .tab.active { color: #C0272D; border-bottom-color: #C0272D; }
+
+  .section-divider { margin: 32px 0 8px; font-size: 13px; font-weight: 700;
+    color: #C0272D; text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PANTALLA 1: DASHBOARD PRINCIPAL -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="screen-label">Pantalla 1 — Dashboard Principal (Despachador)</div>
+<div class="screen">
+  <div class="navbar">
+    <span class="logo">SICEM</span>
+    <div class="nav-links">
+      <a href="#" class="active">Dashboard</a>
+      <a href="#">Nueva Emergencia</a>
+      <a href="#">Solicitudes</a>
+      <a href="#">Hospitales</a>
+      <a href="#">Gráficas</a>
+    </div>
+    <span class="user">● Javier Méndez — Despachador</span>
+  </div>
+  <div class="dashboard-layout">
+    <div class="sidebar">
+      <h4>Emergencias Activas (3)</h4>
+      <div class="emergency-card">
+        <div class="ec-type">Infarto</div>
+        <div class="ec-loc">Col. Centro, Villahermosa</div>
+        <div class="ec-time">Hace 4 min · Unidad A-03</div>
+        <span class="ec-badge red">En ruta</span>
+      </div>
+      <div class="emergency-card orange">
+        <div class="ec-type">Accidente vial</div>
+        <div class="ec-loc">Blvd. Ruiz Cortines km 12</div>
+        <div class="ec-time">Hace 11 min · Unidad B-07</div>
+        <span class="ec-badge orange">En escena</span>
+      </div>
+      <div class="emergency-card green">
+        <div class="ec-type">Trauma</div>
+        <div class="ec-loc">Col. Tamulté, Villahermosa</div>
+        <div class="ec-time">Hace 22 min · Unidad A-01</div>
+        <span class="ec-badge green">Trasladando</span>
+      </div>
+      <h4 style="margin-top:16px;">Unidades Disponibles</h4>
+      <div style="font-size:12px; color:#555; line-height:2;">
+        <div>● A-02 — Cruz Roja</div>
+        <div>● C-04 — IMSS</div>
+        <div>● A-06 — ISSSTE</div>
+      </div>
+    </div>
+    <div class="map-area">
+      <div class="map-dot available"></div>
+      <div class="map-dot enroute"></div>
+      <div class="map-dot available2"></div>
+      <div class="map-dot available3"></div>
+      <div class="map-star">📍</div>
+      <div class="map-placeholder">🗺 Mapa en tiempo real</div>
+      <div class="map-label">Google Maps — Villahermosa, Tabasco</div>
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#2E7D32"></div>Disponible</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#C0272D"></div>En ruta</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E65100"></div>En escena</div>
+      </div>
+      <div class="weather-widget">
+        <div class="wt">28°C ☀️</div>
+        <div class="wd">Villahermosa · Despejado</div>
+        <div class="wd">Viento: 12 km/h</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PANTALLA 2: NUEVA EMERGENCIA -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="screen-label" style="margin-top:16px;">Pantalla 2 — Registro de Nueva Emergencia</div>
+<div class="screen">
+  <div class="navbar">
+    <span class="logo">SICEM</span>
+    <div class="nav-links">
+      <a href="#">Dashboard</a>
+      <a href="#" class="active">Nueva Emergencia</a>
+      <a href="#">Solicitudes</a>
+      <a href="#">Hospitales</a>
+      <a href="#">Gráficas</a>
+    </div>
+    <span class="user">● Javier Méndez — Despachador</span>
+  </div>
+  <div class="form-layout">
+    <div class="form-title">Registrar Nueva Emergencia</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tipo de Emergencia</label>
+        <select><option>Infarto</option><option>Trauma</option><option>Accidente vial</option><option>Intoxicación</option><option>Parto</option></select>
+      </div>
+      <div class="form-group">
+        <label>Número de Pacientes</label>
+        <input type="number" value="1">
+      </div>
+      <div class="form-group">
+        <label>Nombre de quien reporta</label>
+        <input type="text" placeholder="Nombre completo">
+      </div>
+      <div class="form-group">
+        <label>Teléfono de quien reporta</label>
+        <input type="text" placeholder="10 dígitos">
+      </div>
+      <div class="form-group full">
+        <label>Descripción del evento</label>
+        <textarea placeholder="Descripción breve de lo ocurrido..."></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Ubicación (Latitud, Longitud)</label>
+        <input type="text" placeholder="17.9869, -92.9303 — o seleccionar en mapa">
+      </div>
+      <div class="form-group">
+        <label>Unidad a asignar</label>
+        <select><option>A-02 — Cruz Roja (2.3 km)</option><option>C-04 — IMSS (4.1 km)</option><option>A-06 — ISSSTE (5.7 km)</option></select>
+      </div>
+      <div class="form-group">
+        <label>Hospital de destino sugerido</label>
+        <select><option>Hospital Regional — 3 camas trauma</option><option>IMSS Villahermosa — 1 cama</option></select>
+      </div>
+    </div>
+    <button class="btn-primary">Registrar Emergencia</button>
+    <button class="btn-secondary">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PANTALLA 3: SOLICITUDES INTERINSTITUCIONALES -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="screen-label" style="margin-top:16px;">Pantalla 3 — Solicitudes Interinstitucionales</div>
+<div class="screen">
+  <div class="navbar">
+    <span class="logo">SICEM</span>
+    <div class="nav-links">
+      <a href="#">Dashboard</a>
+      <a href="#">Nueva Emergencia</a>
+      <a href="#" class="active">Solicitudes</a>
+      <a href="#">Hospitales</a>
+      <a href="#">Gráficas</a>
+    </div>
+    <span class="user">● Javier Méndez — Despachador</span>
+  </div>
+  <div class="requests-layout">
+    <div class="req-title">Solicitudes Interinstitucionales</div>
+    <table class="req-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Emergencia</th>
+          <th>Institución solicitante</th>
+          <th>Institución receptora</th>
+          <th>Unidad propuesta</th>
+          <th>Estado</th>
+          <th>Hora</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>#042</td>
+          <td>Infarto · Centro</td>
+          <td>IMSS Villahermosa</td>
+          <td>Cruz Roja Tabasco</td>
+          <td>A-02</td>
+          <td><span class="status-badge pending">Pendiente</span></td>
+          <td>10:34</td>
+          <td><button class="btn-sm">Ver</button></td>
+        </tr>
+        <tr>
+          <td>#041</td>
+          <td>Accidente · Ruiz C.</td>
+          <td>Cruz Roja Tabasco</td>
+          <td>ISSSTE Tabasco</td>
+          <td>C-04</td>
+          <td><span class="status-badge accepted">Aceptada</span></td>
+          <td>10:21</td>
+          <td><button class="btn-sm">Ver</button></td>
+        </tr>
+        <tr>
+          <td>#040</td>
+          <td>Trauma · Tamulté</td>
+          <td>Sec. de Salud</td>
+          <td>IMSS Villahermosa</td>
+          <td>B-07</td>
+          <td><span class="status-badge rejected">Rechazada</span></td>
+          <td>09:58</td>
+          <td><button class="btn-sm">Ver</button></td>
+        </tr>
+        <tr>
+          <td>#039</td>
+          <td>Parto · Col. Maya</td>
+          <td>IMSS Villahermosa</td>
+          <td>Cruz Roja Tabasco</td>
+          <td>A-06</td>
+          <td><span class="status-badge accepted">Aceptada</span></td>
+          <td>09:12</td>
+          <td><button class="btn-sm">Ver</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PANTALLA 4: GRÁFICAS -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="screen-label" style="margin-top:16px;">Pantalla 4 — Módulo de Gráficas (Despachador)</div>
+<div class="screen">
+  <div class="navbar">
+    <span class="logo">SICEM</span>
+    <div class="nav-links">
+      <a href="#">Dashboard</a>
+      <a href="#">Nueva Emergencia</a>
+      <a href="#">Solicitudes</a>
+      <a href="#">Hospitales</a>
+      <a href="#" class="active">Gráficas</a>
+    </div>
+    <span class="user">● Javier Méndez — Despachador</span>
+  </div>
+  <div class="charts-layout">
+    <div class="charts-grid">
+      <div class="chart-box">
+        <h5>Emergencias por tipo — Mayo 2026</h5>
+        <div class="bar-chart">
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar" style="height:80px;width:100%"></div>
+            <div class="bar-label">Trauma</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar b2" style="height:55px;width:100%"></div>
+            <div class="bar-label">Infarto</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar b3" style="height:65px;width:100%"></div>
+            <div class="bar-label">Accidente</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar b4" style="height:30px;width:100%"></div>
+            <div class="bar-label">Parto</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar b5" style="height:20px;width:100%"></div>
+            <div class="bar-label">Otro</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h5>Solicitudes interinstitucionales</h5>
+        <div class="pie-chart"></div>
+        <div class="pie-legend">
+          <div class="pie-legend-item"><div class="pie-dot" style="background:#C0272D"></div>Aceptadas 40%</div>
+          <div class="pie-legend-item"><div class="pie-dot" style="background:#E65100"></div>Pendientes 25%</div>
+          <div class="pie-legend-item"><div class="pie-dot" style="background:#1565C0"></div>Rechazadas 15%</div>
+          <div class="pie-legend-item"><div class="pie-dot" style="background:#2E7D32"></div>Resueltas 20%</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h5>Tiempo promedio de respuesta (min) — Última semana</h5>
+        <div class="line-chart">
+          <svg class="line-svg" viewBox="0 0 300 80">
+            <polyline points="0,60 50,45 100,50 150,30 200,35 250,20 300,25"
+              fill="none" stroke="#C0272D" stroke-width="2"/>
+            <polyline points="0,60 50,45 100,50 150,30 200,35 250,20 300,25"
+              fill="rgba(192,39,45,0.1)" stroke="none"/>
+            <line x1="0" y1="75" x2="300" y2="75" stroke="#eee" stroke-width="1"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:#aaa;margin-top:2px">
+            <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h5>Emergencias por institución — Mayo 2026</h5>
+        <div style="font-size:12px;color:#555;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span>Cruz Roja Tabasco</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:80px;height:10px;background:#eee;border-radius:5px;overflow:hidden">
+                <div style="width:70%;height:100%;background:#C0272D;border-radius:5px"></div>
+              </div>
+              <span style="font-size:11px;color:#888">34</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span>IMSS Villahermosa</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:80px;height:10px;background:#eee;border-radius:5px;overflow:hidden">
+                <div style="width:50%;height:100%;background:#1565C0;border-radius:5px"></div>
+              </div>
+              <span style="font-size:11px;color:#888">24</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span>ISSSTE Tabasco</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:80px;height:10px;background:#eee;border-radius:5px;overflow:hidden">
+                <div style="width:35%;height:100%;background:#2E7D32;border-radius:5px"></div>
+              </div>
+              <span style="font-size:11px;color:#888">17</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Sec. de Salud</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:80px;height:10px;background:#eee;border-radius:5px;overflow:hidden">
+                <div style="width:20%;height:100%;background:#E65100;border-radius:5px"></div>
+              </div>
+              <span style="font-size:11px;color:#888">10</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="height:32px"></div>
+</body>
+</html>

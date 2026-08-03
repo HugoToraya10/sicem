@@ -41,6 +41,12 @@ io.on('connection', (socket) => {
             socket.roleString = roleString;
 
             const { userProfileId, userCredentialId, roleId } = d;
+
+            // Room personal, aparte del room de rol — para poder dirigir un evento
+            // a UNA persona específica (ej. solo al paramédico con turno activo en
+            // la unidad que se acaba de asignar) sin transmitirlo a todo su rol.
+            socket.join('user_' + userProfileId)
+
             switch(roleId) {
                 case 1: {
                     socket.roleString = 'admin'

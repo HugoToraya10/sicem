@@ -923,6 +923,76 @@ const getAvgTransferTimeForInstitution = (institutionId, callback) => {
     db.query(sql, [institutionId], callback);
 }
 
+// ambulance_shifts "pertenece" a unidades, pero se consulta directo aquí —
+// mismo patrón ya usado en este archivo para institutions/institutions_specialities
+// (comparten la misma BD, no se llama por HTTP a otro servicio). Sirve para
+// saber a QUIÉN dirigir la notificación cuando se le asigna esta unidad a una
+// emergencia: solo al paramédico con turno activo ahora mismo en esa unidad,
+// no a todos los paramédicos conectados.
+// No hace falta filtrar turnos "vencidos" (horario laboral + gracia ya
+// pasado) aquí — un barrido periódico en el servicio de unidades
+// (startShiftExpirySweep, cada ~20s) ya se encarga de cerrar esos
+// (shift_end = NOW()) apenas se cumple STALE_GRACE_MINUTES, así que
+// shift_end IS NULL es casi siempre confiable como "turno de verdad activo".
+const getActiveShiftUserByAmbulance = (ambulanceId, callback) => {
+    const sql = `SELECT user_profile_id FROM ambulance_shifts WHERE ambulance_id = ? AND shift_end IS NULL LIMIT 1`;
+    db.query(sql, [ambulanceId], callback);
+}
+
+// Estadísticas personales del paramédico — no existe una tabla que diga
+// "este paramédico atendió esta emergencia" directamente, así que se infiere
+// cruzando assignments (qué unidad fue asignada a qué emergencia, y cuándo)
+// contra ambulance_shifts (quién traía esa unidad en ese momento). Es una
+// aproximación razonable: cuenta como "atendida por él" toda asignación que
+// cayó dentro de una de sus ventanas de turno en esa unidad.
+const getMyAssignmentCountThisMonth = (userProfileId, callback) => {
+    const sql = `SELECT COUNT(*) AS total
+                FROM assignments a
+                JOIN ambulance_shifts s ON a.ambulance_id = s.ambulance_id
+                    AND a.assigned_at BETWEEN s.shift_start AND COALESCE(s.shift_end, NOW())
+                WHERE s.user_profile_id = ?
+                    AND MONTH(a.assigned_at) = MONTH(CURDATE()) AND YEAR(a.assigned_at) = YEAR(CURDATE())`;
+    db.query(sql, [userProfileId], callback);
+}
+
+const getMyAvgResponseTimeThisMonth = (userProfileId, callback) => {
+    const sql = `SELECT AVG(TIMESTAMPDIFF(MINUTE, e.created_at, a.assigned_at)) AS avg_minutes
+                FROM assignments a
+                JOIN ambulance_shifts s ON a.ambulance_id = s.ambulance_id
+                    AND a.assigned_at BETWEEN s.shift_start AND COALESCE(s.shift_end, NOW())
+                JOIN emergencies e ON a.emergency_id = e.emergency_id
+                WHERE s.user_profile_id = ?
+                    AND MONTH(a.assigned_at) = MONTH(CURDATE()) AND YEAR(a.assigned_at) = YEAR(CURDATE())`;
+    db.query(sql, [userProfileId], callback);
+}
+
+const getMyAssignmentsByTypeThisMonth = (userProfileId, callback) => {
+    const sql = `SELECT et.name, COUNT(*) AS total
+                FROM assignments a
+                JOIN ambulance_shifts s ON a.ambulance_id = s.ambulance_id
+                    AND a.assigned_at BETWEEN s.shift_start AND COALESCE(s.shift_end, NOW())
+                JOIN emergencies e ON a.emergency_id = e.emergency_id
+                JOIN emergency_types et ON e.emergency_type_id = et.emergency_type_id
+                WHERE s.user_profile_id = ?
+                    AND MONTH(a.assigned_at) = MONTH(CURDATE()) AND YEAR(a.assigned_at) = YEAR(CURDATE())
+                GROUP BY et.emergency_type_id, et.name
+                ORDER BY total DESC`;
+    db.query(sql, [userProfileId], callback);
+}
+
+const getMyAssignmentsByWeekThisMonth = (userProfileId, callback) => {
+    const sql = `SELECT WEEK(a.assigned_at, 3) - WEEK(DATE_SUB(a.assigned_at, INTERVAL DAYOFMONTH(a.assigned_at) - 1 DAY), 3) + 1 AS week_of_month,
+                COUNT(*) AS total
+                FROM assignments a
+                JOIN ambulance_shifts s ON a.ambulance_id = s.ambulance_id
+                    AND a.assigned_at BETWEEN s.shift_start AND COALESCE(s.shift_end, NOW())
+                WHERE s.user_profile_id = ?
+                    AND MONTH(a.assigned_at) = MONTH(CURDATE()) AND YEAR(a.assigned_at) = YEAR(CURDATE())
+                GROUP BY week_of_month
+                ORDER BY week_of_month`;
+    db.query(sql, [userProfileId], callback);
+}
+
 
 module.exports = {
     // POST
@@ -950,5 +1020,7 @@ module.exports = {
     //GETs de estadísticas
     getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution,
     //GETs de estadísticas filtradas por hospital
-    getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution
+    getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution,
+    getActiveShiftUserByAmbulance,
+    getMyAssignmentCountThisMonth, getMyAvgResponseTimeThisMonth, getMyAssignmentsByTypeThisMonth, getMyAssignmentsByWeekThisMonth
 }

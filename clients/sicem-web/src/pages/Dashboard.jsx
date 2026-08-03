@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
+import { connectUnitsSocket } from '../sockets/unitsSocket'
 import './Dashboard.css'
 import { getNavLinks } from '../utils/Navlinks';
 
@@ -178,6 +179,24 @@ console.log('navLinks calculados:', navLinks)
 
         return () => emergencySocket.disconnect()
     }, [])
+
+    // Socket.io — servicio de unidades: estado de ambulancias en vivo (se
+    // emite al iniciar/terminar turno o cambiar el estado manualmente desde
+    // sicem-mobile), para que "Disponible" en el mapa refleje si de verdad
+    // hay alguien manejando la unidad ahora mismo, sin tener que refrescar.
+    useEffect(() => {
+        const unitsSocket = connectUnitsSocket(token)
+
+        unitsSocket.on('eventAmbulanceStatusChanged', ({ ambulanceId, ambulanceStatusId }) => {
+            setAmbulances(current => current.map(amb =>
+                parseInt(amb.ambulance_id) === parseInt(ambulanceId)
+                    ? { ...amb, ambulance_status_id: ambulanceStatusId }
+                    : amb
+            ))
+        })
+
+        return () => unitsSocket.disconnect()
+    }, [token])
 
     // Fuerza un re-render cada minuto para que "elapsedLabel" y la marca de
     // "estancada" avancen solas sin que el despachador tenga que refrescar.

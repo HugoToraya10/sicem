@@ -20,6 +20,8 @@ const createUserWithCredentials = (req, res) => {
     cveUnicaRegistroPob,
     emergencyContact,
     emergencyPhone,
+    assignedAmbulanceId,
+    shiftWindows,
   } = req.body;
 
   const proceed = () => {
@@ -33,6 +35,7 @@ const createUserWithCredentials = (req, res) => {
               .json({ message: "Error creando credenciales" });
           }
           let userId = result.insertId;
+          const isParamedic = parseInt(roleId) === 3;
           userModel.createProfile(
             userId,
             institutionId,
@@ -45,6 +48,8 @@ const createUserWithCredentials = (req, res) => {
             cveUnicaRegistroPob,
             emergencyContact,
             emergencyPhone,
+            isParamedic ? assignedAmbulanceId : null,
+            isParamedic ? shiftWindows : null,
             (error, result) => {
               if (error) {
                 console.log(error);
@@ -82,21 +87,51 @@ const createUserWithCredentials = (req, res) => {
 //este controller es para registrar un usuario no paciente, en el caso de poder hashear la contraseña, se crea su perfil
 const register = (req, res) => {
   if(req.decoded.roleId === 1) { //si el usuario es administrador, puede usar este controller
-  createUserWithCredentials(req, res);
+  // Si el admin está creando un paramédico (rol 3) con ambulancia asignada,
+  // esa ambulancia debe pertenecer a una institución CRUM — sicem-web es la
+  // herramienta del despachador/CRUM, no tiene sentido asignar desde ahí
+  // paramédicos a ambulancias de hospitales que no son CRUM (eso es trabajo
+  // de sicem-desktop, ver la rama de rol 4 abajo).
+  if (parseInt(req.body.roleId) === 3 && req.body.assignedAmbulanceId) {
+    userModel.getAmbulanceInstitutionInfo(req.body.assignedAmbulanceId, (e, r) => {
+      if (e || r.length === 0) {
+        return res.status(404).json({message: "Ambulancia no encontrada."});
+      } else if (!r[0].is_crum_institution) {
+        return res.status(400).json({message: "Desde aquí solo puedes asignar paramédicos a ambulancias de instituciones CRUM."});
+      } else {
+        createUserWithCredentials(req, res);
+      }
+    });
+  } else {
+    createUserWithCredentials(req, res);
+  }
 } else if (parseInt(req.decoded.roleId) === 4) {
-  // Un admin de hospital (is_institution_admin) solo puede dar de alta
-  // personal rol 4 de SU PROPIA institución — jamás otro rol ni otra
-  // institución, sin importar qué venga en el body. Se fuerzan ambos valores
-  // server-side.
+  // Un admin de hospital (is_institution_admin) puede dar de alta personal de
+  // SU PROPIA institución — antes solo rol 4 (empleados administrativos),
+  // ahora también rol 3 (paramédicos) ligados a UNA ambulancia de su propia
+  // institución. Nunca otra institución, sin importar qué venga en el body.
   userModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
     if (e || r.length === 0) {
       return res.status(500).json({message: "Error del servidor."});
     } else if (!r[0].is_institution_admin) {
       return res.status(403).json({message: "Necesitas privilegios de administrador de tu institución."});
     } else {
-      req.body.roleId = 4;
+      const requestedRole = parseInt(req.body.roleId) === 3 ? 3 : 4;
+      req.body.roleId = requestedRole;
       req.body.institutionId = r[0].institution_id;
-      createUserWithCredentials(req, res);
+      if (requestedRole === 3 && req.body.assignedAmbulanceId) {
+        userModel.getAmbulanceInstitutionInfo(req.body.assignedAmbulanceId, (e2, r2) => {
+          if (e2 || r2.length === 0) {
+            return res.status(404).json({message: "Ambulancia no encontrada."});
+          } else if (parseInt(r2[0].institution_id) !== parseInt(r[0].institution_id)) {
+            return res.status(403).json({message: "Solo puedes asignar paramédicos a ambulancias de tu propia institución."});
+          } else {
+            createUserWithCredentials(req, res);
+          }
+        });
+      } else {
+        createUserWithCredentials(req, res);
+      }
     }
   });
 } else {
@@ -139,6 +174,8 @@ const registerPatient = (req, res) => {
       cveUnicaRegistroPob,
       emergencyContact,
       emergencyPhone,
+      null,
+      null,
       (e, r) => {
         if (e) {
           if (e.code === 'ER_DATA_TOO_LONG') {
@@ -196,7 +233,9 @@ const login = (req, res) => {
                   .json({ message: "Ingreso exitoso", jwtToken: token,
                     user : {
                       profileId:userProfileId, roleId:roleId, firstName:userFirstName, firstSurname:userFirstSurname,
-                      institutionId: institutionId, isInstitutionAdmin: Boolean(result[0].is_institution_admin)}});
+                      institutionId: institutionId, isInstitutionAdmin: Boolean(result[0].is_institution_admin),
+                      assignedAmbulanceId: result[0].assigned_ambulance_id,
+                      shiftWindows: result[0].shift_windows ? JSON.parse(result[0].shift_windows) : null}});
               }
               // Defensa adicional: si ya existiera una cuenta rol 2 mal asignada de
               // antes de esta regla (institución no-CRUM), se bloquea aquí también,
@@ -346,7 +385,13 @@ const editUserProfile = (req, res) => {
   // "editando su propio perfil" podía mandar roleId/institutionId distintos en
   // el body y el modelo los aplicaba sin validar nada (auto-ascenso de
   // privilegios). Se corrige preservando siempre los valores reales de BD.
-  const editProfile = (userProfileId, institutionId, roleId) => {
+  // assignedAmbulanceId y el horario (shiftWindows — un rango de hora por
+  // día, ver isWithinSchedule) siguen la misma lógica: nunca se confía en
+  // que el usuario se los auto-asigne, solo un admin (rol 1 o 4) puede
+  // cambiarlos. Esto es crítico para el horario en particular — si un
+  // paramédico pudiera editar su propio horario, podría ponerse "disponible
+  // siempre" y saltarse el bloqueo de iniciar-turno-fuera-de-horario.
+  const editProfile = (userProfileId, institutionId, roleId, assignedAmbulanceId, shiftWindows) => {
     const {
           firstName,
           firstSurname,
@@ -358,7 +403,7 @@ const editUserProfile = (req, res) => {
           emergencyPhone } = req.body
 
     userModel.editUserProfile(userProfileId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
-    birthDate, cveUnicaRegistroPob, emergencyContact, emergencyPhone, (e, r) => {
+    birthDate, cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, (e, r) => {
       if (e) {
         console.log(e)
         return res.status(500).json({message: "Error actualizando datos."})
@@ -368,30 +413,57 @@ const editUserProfile = (req, res) => {
     })
   }
 
+  // shift_windows llega de BD como un string JSON (columna JSON de MySQL) —
+  // hay que parsearlo antes de reusarlo, nunca reenviarlo tal cual al modelo
+  // (que hace JSON.stringify esperando un array, no un string ya serializado).
+  const parseStoredWindows = (raw) => {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+
   const targetUserProfileId = parseInt(req.body.userProfileId);
   const callerRoleId = parseInt(req.decoded.roleId);
 
   if (callerRoleId === 1) {
-    // Rol 1: bypass total, incluyendo institutionId y roleId del body.
-    editProfile(targetUserProfileId, req.body.institutionId, req.body.roleId);
+    // Rol 1: bypass total, incluyendo institutionId y roleId del body. Igual
+    // que al registrar, si el rol nuevo es paramédico con ambulancia, esa
+    // ambulancia debe ser de una institución CRUM.
+    const newRoleId = parseInt(req.body.roleId);
+    const newAmbulanceId = newRoleId === 3 ? (req.body.assignedAmbulanceId || null) : null;
+    const newShiftWindows = newRoleId === 3 ? (req.body.shiftWindows || null) : null;
+    if (newRoleId === 3 && newAmbulanceId) {
+      userModel.getAmbulanceInstitutionInfo(newAmbulanceId, (e, r) => {
+        if (e || r.length === 0) return res.status(404).json({message: "Ambulancia no encontrada."});
+        if (!r[0].is_crum_institution) return res.status(400).json({message: "Desde aquí solo puedes asignar paramédicos a ambulancias de instituciones CRUM."});
+        editProfile(targetUserProfileId, req.body.institutionId, newRoleId, newAmbulanceId, newShiftWindows);
+      });
+    } else {
+      editProfile(targetUserProfileId, req.body.institutionId, newRoleId, newAmbulanceId, newShiftWindows);
+    }
     return;
   }
 
   if (req.decoded.userProfileId === targetUserProfileId) {
-    // Auto-edición: cualquier rol autenticado puede editar sus propios datos de
-    // contacto, pero nunca su propio institutionId ni roleId.
-    userModel.getUserInstitutionInfo(targetUserProfileId, (e, r) => {
+    // Auto-edición: cualquier rol autenticado puede editar sus propios datos
+    // de contacto, pero nunca su propio institutionId, roleId,
+    // assigned_ambulance_id, ni horario — todos esos son exclusivos de un
+    // admin (ver comentario arriba de editProfile).
+    userModel.getUserById(targetUserProfileId, (e, r) => {
       if (e || r.length === 0) {
         return res.status(500).json({message: "Error del servidor."});
       }
-      editProfile(targetUserProfileId, r[0].institution_id, r[0].role_id);
+      const self = r[0];
+      editProfile(targetUserProfileId, self.institution_id, self.role_id, self.assigned_ambulance_id, parseStoredWindows(self.shift_windows));
     });
     return;
   }
 
   if (callerRoleId === 4) {
-    // Admin de institución: puede editar datos de contacto de OTRO empleado
-    // rol 4 de SU MISMA institución únicamente — nunca institutionId ni roleId.
+    // Admin de institución: puede editar personal de SU MISMA institución —
+    // antes solo rol 4, ahora también rol 3 (paramédicos), incluyendo poder
+    // cambiar entre esos dos roles y reasignar la ambulancia de un
+    // paramédico (ej. si la unidad que tenía se dio de baja). Nunca
+    // institutionId, nunca otro rol distinto de 3/4.
     userModel.getUserInstitutionInfo(req.decoded.userProfileId, (eCaller, rCaller) => {
       if (eCaller || rCaller.length === 0) {
         return res.status(500).json({message: "Error del servidor."});
@@ -400,15 +472,30 @@ const editUserProfile = (req, res) => {
       if (!caller.is_institution_admin) {
         return res.status(403).json({message: "No tienes privilegios de administrador de tu institución."});
       }
-      userModel.getUserInstitutionInfo(targetUserProfileId, (eTarget, rTarget) => {
+      userModel.getUserById(targetUserProfileId, (eTarget, rTarget) => {
         if (eTarget || rTarget.length === 0) {
           return res.status(404).json({message: "Usuario no encontrado."});
         }
         const target = rTarget[0];
-        if (parseInt(target.role_id) !== 4 || parseInt(target.institution_id) !== parseInt(caller.institution_id)) {
-          return res.status(403).json({message: "Solo puedes editar personal de tu propia institución."});
+        if (![3, 4].includes(parseInt(target.role_id)) || parseInt(target.institution_id) !== parseInt(caller.institution_id)) {
+          return res.status(403).json({message: "Solo puedes editar personal (paramédicos o empleados) de tu propia institución."});
         }
-        editProfile(targetUserProfileId, target.institution_id, target.role_id);
+        const requestedRole = parseInt(req.body.roleId) === 3 ? 3 : 4;
+        if (requestedRole !== 3) {
+          return editProfile(targetUserProfileId, target.institution_id, requestedRole, null, null);
+        }
+        // Si el body no trae un campo nuevo, conserva el que ya tenía — así un
+        // PATCH que no lo toca no lo borra por accidente.
+        const newAmbulanceId = req.body.assignedAmbulanceId || target.assigned_ambulance_id;
+        const newShiftWindows = req.body.shiftWindows !== undefined ? req.body.shiftWindows : parseStoredWindows(target.shift_windows);
+        if (!newAmbulanceId) {
+          return editProfile(targetUserProfileId, target.institution_id, requestedRole, null, newShiftWindows);
+        }
+        userModel.getAmbulanceInstitutionInfo(newAmbulanceId, (e2, r2) => {
+          if (e2 || r2.length === 0) return res.status(404).json({message: "Ambulancia no encontrada."});
+          if (parseInt(r2[0].institution_id) !== parseInt(caller.institution_id)) return res.status(403).json({message: "Solo puedes asignar ambulancias de tu propia institución."});
+          editProfile(targetUserProfileId, target.institution_id, requestedRole, newAmbulanceId, newShiftWindows);
+        });
       });
     });
     return;
@@ -479,6 +566,14 @@ const editUserCredentials = (req, res) => {
 //---------------Controllers para hacer get de las tablas necesarias------------------
 //No considero que estas tablas deban tener restricción por JWT
 
+// shift_windows viaja en BD como string JSON (columna JSON de MySQL, el
+// driver no lo auto-parsea) — se convierte a array aquí para que ningún
+// cliente tenga que hacer JSON.parse por su cuenta.
+const parseShiftWindowsRow = (row) => ({
+  ...row,
+  shift_windows: row.shift_windows ? JSON.parse(row.shift_windows) : null,
+})
+
 //Controller para obtener los datos de todos los usuarios
 const getAllUsers = (req, res) => {
   const allowedRoles = [1, 2, 3, 4]
@@ -487,7 +582,7 @@ const getAllUsers = (req, res) => {
       if (e){
         return res.status(500).json({message: "Error del servidor."})
       } else {
-        res.status(200).json({message:"Datos obtenidos correctamente", data: r})
+        res.status(200).json({message:"Datos obtenidos correctamente", data: r.map(parseShiftWindowsRow)})
       }
     })
   } else {
@@ -513,7 +608,7 @@ const getUserById = (req, res) => {
           return res.status(404).json({message: "Usuario no encontrado", user: null})
           //este user: null lo voy a usar para cuando el frontend consulte y vea que no existe el user
         } else {
-          res.status(200).json({message: "Usuario encontrado:", user: r})
+          res.status(200).json({message: "Usuario encontrado:", user: r.map(parseShiftWindowsRow)})
         }
       }
     })

@@ -23,7 +23,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "SICEM necesita tu ubicación para que el despachador vea en tiempo real dónde está tu ambulancia."
+        }
+      ]
     ]
   }
 }

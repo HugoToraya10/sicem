@@ -6,6 +6,7 @@ import Navbar from "../components/layout/Navbar";
 import MapArea from "../components/map/MapArea";
 import { getNavLinks } from "../utils/Navlinks";
 import { parseResponse } from '../utils/apiRequest';
+import { connectUnitsSocket } from '../sockets/unitsSocket';
 import './NewEmergency.css';
 
 // Ruta real por calle (no línea recta) vía OSRM — mismo ecosistema OpenStreetMap
@@ -114,13 +115,23 @@ const NewEmergency = () => {
             .catch(error => console.error('Error recuperando los niveles de triage. ', error))
     }, []);
 
-    useEffect(()=>{
+    // Función con nombre (no solo un efecto inline) porque también hay que
+    // volver a llamarla cuando llega eventAmbulanceStatusChanged por socket —
+    // así la lista de "disponibles" se mantiene correcta en vivo sin que el
+    // despachador tenga que recargar la pantalla (una unidad puede aparecer o
+    // desaparecer de aquí según inicien/terminen turno en sicem-mobile).
+    const fetchAvailableUnits = () => {
         fetch(`http://localhost:3000/unidades/ambulancias-disponibles/${user.institutionId}`,
             { headers: { "Content-Type": "application/json", "Authorization":`Bearer ${token}` } })
             .then(res => res.json())
-            .then(({data}) => setAvailableUnits(data.map((u) => toLowerCaseKeys(u))))
+            .then(({data}) => {
+                const units = data.map((u) => toLowerCaseKeys(u))
+                setAvailableUnits(units)
+                setSelectedUnits((current) => current.filter((id) => units.some((u) => u.ambulance_id === id)))
+            })
             .catch(error => console.error('Error recuperando las unidades disponibles. ', error))
-    }, [])
+    }
+    useEffect(fetchAvailableUnits, [])
 
     // Última ubicación conocida de cada unidad propia disponible — para poder
     // recomendar la más cercana en cuanto se marque dónde está la emergencia.
@@ -155,13 +166,35 @@ const NewEmergency = () => {
             .finally(() => setRoutesLoading(false))
     }, [latitude, longitude, availableUnits, unitLocations])
 
-    useEffect(()=>{
+    const fetchExternalUnits = () => {
         fetch(`http://localhost:3000/unidades/ambulancias-externas/${user.institutionId}`,
             { headers: { "Content-Type": "application/json", "Authorization":`Bearer ${token}` } })
             .then(res => res.json())
-            .then(({data}) => setExternalUnits(data.map((u) => toLowerCaseKeys(u))))
+            .then(({data}) => {
+                const units = data.map((u) => toLowerCaseKeys(u))
+                setExternalUnits(units)
+                setSelectedExternalUnits((current) => current.filter((id) => units.some((u) => u.ambulance_id === id)))
+            })
             .catch(error => console.error('Error recuperando las unidades externas. ', error))
+    }
+    useEffect(()=>{
+        fetchExternalUnits()
     }, [])
+
+    // Socket.io — servicio de unidades: si una unidad entra o sale de
+    // "Disponible" (turno iniciado/terminado en sicem-mobile, o cambio manual
+    // de estado) mientras el despachador tiene esta pantalla abierta, se
+    // vuelve a pedir la lista completa — es más simple y confiable que tratar
+    // de reconstruir a mano una unidad nueva que aparece (no llega toda su
+    // info por el socket, solo el ID y el estado).
+    useEffect(() => {
+        const unitsSocket = connectUnitsSocket(token)
+        unitsSocket.on('eventAmbulanceStatusChanged', () => {
+            fetchAvailableUnits()
+            fetchExternalUnits()
+        })
+        return () => unitsSocket.disconnect()
+    }, [token])
 
     // Misma idea que unitLocations pero para las externas — así también se ven
     // en el mapa, no solo las propias.

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SICEM — App Escritorio (Hospital)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #222; }
+
+  .screen-label { background: #1565C0; color: white; padding: 10px 24px;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+
+  .screen { margin: 24px auto; max-width: 1100px; background: white;
+    border: 1px solid #ddd; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+
+  .navbar { background: #1a1a2e; color: white; display: flex;
+    align-items: center; justify-content: space-between; padding: 0 20px; height: 48px; }
+  .navbar .logo { font-size: 16px; font-weight: 700; color: #1565C0; letter-spacing: 1px; }
+  .navbar .nav-links { display: flex; gap: 24px; }
+  .navbar .nav-links a { color: #aaa; font-size: 12px; text-decoration: none; }
+  .navbar .nav-links a.active { color: white; }
+  .navbar .user { font-size: 12px; color: #aaa; }
+
+  /* PACIENTES EN CAMINO */
+  .incoming-layout { padding: 20px 24px; }
+  .section-title { font-size: 16px; font-weight: 700; margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 2px solid #1565C0; }
+
+  .patient-card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px;
+    margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: center; }
+  .patient-card.urgent { border-left: 4px solid #C0272D; }
+  .patient-card.normal { border-left: 4px solid #1565C0; }
+
+  .pc-name { font-size: 14px; font-weight: 700; color: #222; }
+  .pc-type { font-size: 12px; color: #C0272D; font-weight: 600; margin-top: 2px; }
+  .pc-detail { font-size: 11px; color: #666; margin-top: 2px; }
+  .pc-eta { font-size: 22px; font-weight: 700; color: #1565C0; }
+  .pc-eta-label { font-size: 10px; color: #888; }
+  .pc-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; }
+  .tag.allergy { background: #fde8e8; color: #C0272D; }
+  .tag.condition { background: #fff3e0; color: #E65100; }
+  .tag.blood { background: #e3f2fd; color: #1565C0; }
+  .btn-detail { background: #1565C0; color: white; border: none; border-radius: 4px;
+    padding: 8px 16px; font-size: 12px; cursor: pointer; }
+
+  /* CAPACIDAD */
+  .capacity-layout { padding: 20px 24px; }
+  .capacity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .capacity-card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; }
+  .capacity-card h5 { font-size: 12px; font-weight: 700; color: #555; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 12px; }
+  .capacity-numbers { display: flex; gap: 16px; margin-bottom: 10px; }
+  .cn-item { text-align: center; }
+  .cn-num { font-size: 24px; font-weight: 700; color: #222; }
+  .cn-label { font-size: 10px; color: #888; }
+  .cn-num.available { color: #2E7D32; }
+  .cn-num.occupied { color: #C0272D; }
+  .progress-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  .progress-fill.high { background: #C0272D; }
+  .progress-fill.mid { background: #E65100; }
+  .progress-fill.low { background: #2E7D32; }
+  .update-btn { display: block; width: 100%; margin-top: 10px; background: white;
+    border: 1px solid #1565C0; color: #1565C0; border-radius: 4px;
+    padding: 6px; font-size: 11px; cursor: pointer; }
+
+  /* GRÁFICAS HOSPITAL */
+  .charts-layout { padding: 20px 24px; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .chart-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; }
+  .chart-box h5 { font-size: 12px; font-weight: 700; color: #555; margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.5px; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 100px; }
+  .bar { flex: 1; border-radius: 2px 2px 0 0; }
+  .bar-label { font-size: 9px; color: #888; text-align: center; margin-top: 4px; }
+  .pie-chart { width: 90px; height: 90px; border-radius: 50%; margin: 0 auto;
+    background: conic-gradient(#1565C0 0% 45%, #C0272D 45% 75%, #2E7D32 75% 100%); }
+  .pie-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .pie-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #555; }
+  .pie-dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA 1: PACIENTES EN CAMINO -->
+<div class="screen-label">Pantalla 1 — Pacientes en Camino (Hospital)</div>
+<div class="screen">
+  <div class="navbar">
+    <span class="logo">SICEM</span>
+    <div class="nav-links">
+      <a href="#" class="active">Pacientes en Camino</a>
+      <a href="#">Capacidad</a>
+      <a href="#">Historial</a>
+      <a href="#">Gráficas</a>
+    </div>
+    <span class="user">● Hospital Regional de Villahermosa</span>
+  </div>
+  <div class="incoming-layout">
+    <div class="section-title">Pacientes en Camino (2)</div>
+
+    <div class="patient-card urgent">
+      <div>
+        <div class="pc-name">Carlos Méndez López</div>
+        <div class="pc-type">Infarto agudo al miocardio</div>
+        <div class="pc-detail">Unidad A-03 · Cruz Roja · CURP: MELC820412</div>
+        <div class="pc-detail">Paramédico: Roberto García</div>
+      </div>
+      <div class="pc-tags">
+        <span class="tag blood">O+</span>
+        <span class="tag allergy">Alergia: Penicilina</span>
+        <span class="tag condition">Hipertensión</span>
+        <span class="tag condition">Diabetes T2</span>
+      </div>
+      <div>
+        <div class="pc-eta">8 min</div>
+        <div class="pc-eta-label">Tiempo estimado</div>
+      </div>
+      <button class="btn-detail">Ver historial</button>
+    </div>
+
+    <div class="patient-card normal">
+      <div>
+        <div class="pc-name">Paciente no identificado</div>
+        <div class="pc-type">Trauma — Accidente vial</div>
+        <div class="pc-detail">Unidad B-07 · IMSS · Sin CURP</div>
+        <div class="pc-detail">Paramédico: Ana Pérez</div>
+      </div>
+      <div class="pc-tags">
+        <span class="tag blood">Desconocido</span>
+        <span class="tag allergy">Sin alergias registradas</span>
+      </div>
+      <div>
+        <div class="pc-eta">14 min</div>
+        <div class="pc-eta-label">Tiempo estimado</div>
+      </div>
+      <button class="btn-detail">Ver detalle</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANTALLA 2: CAPACIDAD -->
+<div class="screen-label" style="margin-top:16px;">Pantalla 2 — Gestión de Capacidad (Hospital)</div>
+<div class="screen">
+  <div class="navbar">
+    <span class="logo">SICEM</span>
+    <div class="nav-links">
+      <a href="#">Pacientes en Camino</a>
+      <a href="#" class="active">Capacidad</a>
+      <a href="#">Historial</a>
+      <a href="#">Gráficas</a>
+    </div>
+    <span class="user">● Hospital Regional de Villahermosa</span>
+  </div>
+  <div class="capacity-layout">
+    <div class="section-title">Capacidad por Especialidad</div>
+    <div class="capacity-grid">
+
+      <div class="capacity-card">
+        <h5>Cardiología</h5>
+        <div class="capacity-numbers">
+          <div class="cn-item"><div class="cn-num available">3</div><div class="cn-label">Disponibles</div></div>
+          <div class="cn-item"><div class="cn-num occupied">7</div><div class="cn-label">Ocupadas</div></div>
+          <div class="cn-item"><div class="cn-num">10</div><div class="cn-label">Total</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill high" style="width:70%"></div></div>
+        <button class="update-btn">Actualizar disponibilidad</button>
+      </div>
+
+      <div class="capacity-card">
+        <h5>Traumatología</h5>
+        <div class="capacity-numbers">
+          <div class="cn-item"><div class="cn-num available">8</div><div class="cn-label">Disponibles</div></div>
+          <div class="cn-item"><div class="cn-num occupied">7</div><div class="cn-label">Ocupadas</div></div>
+          <div class="cn-item"><div class="cn-num">15</div><div class="cn-label">Total</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill mid" style="width:47%"></div></div>
+        <button class="update-btn">Actualizar disponibilidad</button>
+      </div>
+
+      <div class="capacity-card">
+        <h5>Pediatría</h5>
+        <div class="capacity-numbers">
+          <div class="cn-item"><div class="cn-num available">12</div><div class="cn-label">Disponibles</div></div>
+          <div class="cn-item"><div class="cn-num occupied">8</div><div class="cn-label">Ocupadas</div></div>
+          <div class="cn-item"><div class="cn-num">20</div><div class="cn-label">Total</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill low" style="width:40%"></div></div>
+        <button class="update-btn">Actualizar disponibilidad</button>
+      </div>
+
+      <div class="capacity-card">
+        <h5>Neurología</h5>
+        <div class="capacity-numbers">
+          <div class="cn-item"><div class="cn-num available">1</div><div class="cn-label">Disponibles</div></div>
+          <div class="cn-item"><div class="cn-num occupied">7</div><div class="cn-label">Ocupadas</div></div>
+          <div class="cn-item"><div class="cn-num">8</div><div class="cn-label">Total</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill high" style="width:87%"></div></div>
+        <button class="update-btn">Actualizar disponibilidad</button>
+      </div>
+
+      <div class="capacity-card">
+        <h5>Urgencias Generales</h5>
+        <div class="capacity-numbers">
+          <div class="cn-item"><div class="cn-num available">5</div><div class="cn-label">Disponibles</div></div>
+          <div class="cn-item"><div class="cn-num occupied">10</div><div class="cn-label">Ocupadas</div></div>
+          <div class="cn-item"><div class="cn-num">15</div><div class="cn-label">Total</div></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill mid" style="width:66%"></div></div>
+        <button class="update-btn">Actualizar disponibilidad</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- PANTALLA 3: GRÁFICAS HOSPITAL -->
+<div class="screen-label" style="margin-top:16px;">Pantalla 3 — Módulo de Gráficas (Hospital)</div>
+<div class="screen">
+  <div class="navbar">
+    <span class="logo">SICEM</span>
+    <div class="nav-links">
+      <a href="#">Pacientes en Camino</a>
+      <a href="#">Capacidad</a>
+      <a href="#">Historial</a>
+      <a href="#" class="active">Gráficas</a>
+    </div>
+    <span class="user">● Hospital Regional de Villahermosa</span>
+  </div>
+  <div class="charts-layout">
+    <div class="charts-grid">
+      <div class="chart-box">
+        <h5>Pacientes recibidos por tipo — Mayo 2026</h5>
+        <div class="bar-chart">
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar" style="height:75px;width:100%;background:#1565C0;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Trauma</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar" style="height:60px;width:100%;background:#C0272D;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Infarto</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar" style="height:45px;width:100%;background:#E65100;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Accidente</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div class="bar" style="height:25px;width:100%;background:#2E7D32;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Parto</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h5>Ocupación de camas por especialidad</h5>
+        <div class="pie-chart"></div>
+        <div class="pie-legend">
+          <div class="pie-legend-item"><div class="pie-dot" style="background:#1565C0"></div>Cardiología 45%</div>
+          <div class="pie-legend-item"><div class="pie-dot" style="background:#C0272D"></div>Traumatología 30%</div>
+          <div class="pie-legend-item"><div class="pie-dot" style="background:#2E7D32"></div>Otros 25%</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h5>Tiempo promedio de preparación vs. llegada (min)</h5>
+        <div style="height:80px;position:relative;">
+          <svg width="100%" height="80" viewBox="0 0 300 80">
+            <polyline points="0,55 50,40 100,45 150,30 200,35 250,22 300,28"
+              fill="none" stroke="#1565C0" stroke-width="2"/>
+            <polyline points="0,65 50,55 100,58 150,48 200,50 250,38 300,42"
+              fill="none" stroke="#C0272D" stroke-width="2" stroke-dasharray="4"/>
+            <line x1="0" y1="75" x2="300" y2="75" stroke="#eee" stroke-width="1"/>
+          </svg>
+          <div style="display:flex;gap:16px;margin-top:4px;font-size:10px;color:#888;">
+            <span style="color:#1565C0">— Tiempo preparación</span>
+            <span style="color:#C0272D">-- Tiempo llegada</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h5>Pacientes atendidos por mes — 2026</h5>
+        <div class="bar-chart">
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div style="height:50px;width:100%;background:#1565C0;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Ene</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div style="height:65px;width:100%;background:#1565C0;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Feb</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div style="height:45px;width:100%;background:#1565C0;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Mar</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div style="height:80px;width:100%;background:#1565C0;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">Abr</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <div style="height:70px;width:100%;background:#C0272D;border-radius:2px 2px 0 0"></div>
+            <div class="bar-label">May</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="height:32px"></div>
+</body>
+</html>
