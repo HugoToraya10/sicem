@@ -62,9 +62,19 @@ const createProfile = (userCredentialId, institutionId, roleId, firstName, first
 
 const login = (email, callback) => {
     const sql = `SELECT t1.user_profile_id, t1.institution_id, t1.first_name, t1.first_surname, t1.role_id, t1.is_institution_admin, t1.assigned_ambulance_id, t1.shift_windows, t2.user_credential_id,
-    t2.email, t2.password_hash, t2.is_active FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
+    t2.email, t2.password_hash, t2.is_active, t2.active_session_id FROM user_profiles AS t1 INNER JOIN user_credentials AS t2 ON
 	t1.USER_CREDENTIAL_ID = t2.USER_CREDENTIAL_ID WHERE t2.EMAIL = ?`;
     db.query(sql, [email], callback);
+}
+
+// Un solo "sessionId" válido a la vez por credencial — cada login genera uno
+// nuevo y pisa el anterior, así que si alguien inicia sesión en OTRO
+// dispositivo, el token del dispositivo viejo deja de servir en cuanto haga
+// su siguiente petición (verifyToken lo revisa, ver middlewares/auth.js).
+// Solo se usa para rol 3 (paramédico) por ahora — ver comentario en login().
+const updateActiveSession = (userCredentialId, sessionId, callback) => {
+    const sql = `UPDATE user_credentials SET active_session_id = ? WHERE user_credential_id = ?`;
+    db.query(sql, [sessionId, userCredentialId], callback);
 }
 
 const toggleActiveUser = (userCredentialId, callback) => {
@@ -111,6 +121,16 @@ const editUserCredentials = (userCredentialId, email, password, callback) => {
     const sql = `UPDATE user_credentials SET email = ?, password_hash = ?, updated_at = NOW() WHERE user_credential_id = ?`;
     const values = [email, password, userCredentialId];
     db.query(sql, values, callback);
+}
+
+// Token de dispositivo de FCM — para poder mandarle notificaciones push a
+// este usuario aunque tenga la app cerrada (ver registerAssignment en
+// services/emergencias). Un solo token por usuario, igual que solo se
+// permite un turno activo por dispositivo — el más reciente pisa al
+// anterior (si inició sesión en otro celular, el viejo ya no debe recibir).
+const updatePushToken = (userProfileId, pushToken, callback) => {
+    const sql = `UPDATE user_profiles SET push_token = ?, updated_at = NOW() WHERE user_profile_id = ?`;
+    db.query(sql, [pushToken, userProfileId], callback);
 }
 
 
@@ -183,4 +203,5 @@ module.exports = { getUserInstitutionInfo, getUserInstitutionInfoByCredentialId,
                 getAmbulanceInstitutionInfo,
                 createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
                 editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP,
-                getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById }
+                getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
+                updatePushToken, updateActiveSession }

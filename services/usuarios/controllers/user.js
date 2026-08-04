@@ -217,11 +217,12 @@ const login = (req, res) => {
               if(isActive === 0){
                 return res.status(401).json({message: "Este usuario está desactivado"});
               }
-              const issueToken = () => {
+              const sendToken = (sessionId) => {
                 let payload = {
                   userProfileId: userProfileId,
                   userCredentialId: result[0].user_credential_id,
                   roleId: roleId,
+                  sessionId: sessionId || undefined,
                 };
                 let jwtOptions = {
                   expiresIn: "8h",
@@ -236,6 +237,39 @@ const login = (req, res) => {
                       institutionId: institutionId, isInstitutionAdmin: Boolean(result[0].is_institution_admin),
                       assignedAmbulanceId: result[0].assigned_ambulance_id,
                       shiftWindows: result[0].shift_windows ? JSON.parse(result[0].shift_windows) : null}});
+              }
+              // Rol 3 (paramédico, sicem-mobile) solo puede tener sesión activa en
+              // UN dispositivo a la vez — cada login genera un sessionId nuevo y lo
+              // guarda como el único válido; el token del dispositivo anterior deja
+              // de servir en cuanto haga su siguiente petición (verifyToken lo
+              // compara, respaldo garantizado). Además, si YA había una sesión
+              // previa (alguien logueado en otro celular ahora mismo), se le avisa
+              // por socket para que se cierre AL INSTANTE, sin esperar a que ese
+              // celular pregunte algo — ver notifyForceLogout en services/unidades.
+              // No aplica a los demás roles (web/desktop institucionales, donde
+              // varias pestañas/sesiones de la misma cuenta son normales).
+              const issueToken = () => {
+                if (parseInt(roleId) !== 3) {
+                  return sendToken(null);
+                }
+                const previousSessionId = result[0].active_session_id;
+                const sessionId = require('crypto').randomUUID();
+                userModel.updateActiveSession(result[0].user_credential_id, sessionId, (eSession) => {
+                  if (eSession) {
+                    return res.status(500).json({message: "Error del servidor."});
+                  }
+                  sendToken(sessionId);
+                  // Fire-and-forget: si unidades no responde o está caída, el login
+                  // ya se mandó — el respaldo de verifyToken sigue cerrando la
+                  // sesión vieja de todos modos en su siguiente petición.
+                  if (previousSessionId) {
+                    fetch('http://localhost:3003/unidades/notificar-cierre-sesion', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': process.env.INTERNAL_SERVICE_SECRET },
+                      body: JSON.stringify({ oldSessionId: previousSessionId, reason: 'Se inició sesión con tu cuenta en otro dispositivo.' })
+                    }).catch((error) => console.error('Error avisando cierre de sesión a unidades. ', error.message));
+                  }
+                });
               }
               // Defensa adicional: si ya existiera una cuenta rol 2 mal asignada de
               // antes de esta regla (institución no-CRUM), se bloquea aquí también,
@@ -705,6 +739,23 @@ const getUserByCURP = (req, res) => {
     });
 }
 
+// Cualquier usuario autenticado puede registrar SU PROPIO token — nunca el
+// de otro (userProfileId siempre sale del JWT, nunca del body).
+const registerPushToken = (req, res) => {
+    const { pushToken } = req.body;
+    if (!pushToken) {
+        return res.status(400).json({message: "Falta el token."});
+    }
+    userModel.updatePushToken(req.decoded.userProfileId, pushToken, (e) => {
+        if (e) {
+            return res.status(500).json({message: "Error del servidor."});
+        } else {
+            res.status(200).json({message: "Token registrado."});
+        }
+    });
+}
+
 
 module.exports = { register, login, registerPatient, toggleActiveUser, toggleInstitutionAdmin, editUserProfile, editUserCredentials, getUserByCURP,
-                  getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById};
+                  getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
+                  registerPushToken};

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { Alert } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import { router } from 'expo-router'
 
@@ -28,9 +29,10 @@ const AuthProvider = ({ children }) => {
 
     // Mismo criterio que sicem-web/sicem-desktop: un 401 en una petición que
     // SÍ llevaba token significa que la sesión ya no es válida (token
-    // vencido — dura 8h — o usuario desactivado). No se toca el fetch del
-    // login mismo, ese nunca manda Authorization. Aquí es `global.fetch`,
-    // no `window.fetch` — React Native no tiene `window`.
+    // vencido — dura 8h, usuario desactivado, o se inició sesión con la
+    // misma cuenta en otro dispositivo — ver verifyToken en el backend). No
+    // se toca el fetch del login mismo, ese nunca manda Authorization. Aquí
+    // es `global.fetch`, no `window.fetch` — React Native no tiene `window`.
     useEffect(() => {
         const originalFetch = global.fetch
         let redirecting = false
@@ -40,11 +42,15 @@ const AuthProvider = ({ children }) => {
                 const hadAuthHeader = Boolean(headers.Authorization || headers.authorization)
                 if (response.status === 401 && hadAuthHeader && !redirecting) {
                     redirecting = true
+                    // .clone() porque quien llamó a este fetch todavía va a leer el
+                    // body original de "response" — no se le puede quitar de encima.
+                    const message = await response.clone().json().then((body) => body.message).catch(() => null)
                     await SecureStore.deleteItemAsync('token')
                     await SecureStore.deleteItemAsync('user')
                     setToken(null)
                     setUser(null)
                     router.replace('/login')
+                    if (message) Alert.alert('Sesión cerrada', message)
                 }
                 return response
             })

@@ -14,6 +14,7 @@ router.patch('/actualizar-perfil', middleware.verifyToken, userController.editUs
 //patches
 router.patch('/invertir-estado-usuario', middleware.verifyToken, userController.toggleActiveUser); // TODO
 router.patch('/alternar-admin-institucion', middleware.verifyToken, userController.toggleInstitutionAdmin);
+router.patch('/registrar-push-token', middleware.verifyToken, userController.registerPushToken); // sicem-mobile — notificaciones FCM
 
 //login
 router.post('/login', userController.login); // ✅ Login.jsx

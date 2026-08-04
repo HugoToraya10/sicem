@@ -11,12 +11,14 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.sicem.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -29,7 +31,15 @@
         {
           "locationWhenInUsePermission": "SICEM necesita tu ubicación para que el despachador vea en tiempo real dónde está tu ambulancia."
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-foreground.png",
+          "color": "#2E7D32"
+        }
+      ],
+      "./plugins/withNdkVersion.js"
     ]
   }
 }

@@ -46,10 +46,14 @@ const MapaScreen = () => {
     useEffect(() => {
         Location.requestForegroundPermissionsAsync().then(({ status }) => {
             if (status !== 'granted') return
-            Location.getCurrentPositionAsync({}).then((pos) => {
-                setMyLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
-            })
-        })
+            Location.getCurrentPositionAsync({})
+                .then((pos) => {
+                    setMyLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+                })
+                // GPS apagado o no disponible (común en emuladores) — no debe
+                // tumbar la pantalla, solo se queda sin marcar "mi ubicación".
+                .catch((error) => console.warn('No se pudo obtener tu ubicación (¿GPS apagado?). ', error.message))
+        }).catch((error) => console.warn('Error pidiendo permiso de ubicación. ', error.message))
     }, [])
 
     useEffect(() => {

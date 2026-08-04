@@ -37,13 +37,23 @@ io.on('connection', (socket) => {
             const {
                 userProfileId,
                 userCredentialId,
-                roleId
+                roleId,
+                sessionId,
             } = d;
             // Room individual — para poder avisarle a ESTE paramédico en
             // particular (no a todos) cuando su turno se cierra solo por
             // vencimiento de horario (ver startShiftExpirySweep en
             // controllers/unit.js, evento eventForceLogout).
             socket.join('user_' + userProfileId)
+            // Room por SESIÓN (solo rol 3 trae sessionId en el token — ver login
+            // en services/usuarios) — separado del room por usuario a propósito:
+            // cuando alguien inicia sesión en otro dispositivo con la misma
+            // cuenta, hay que avisarle SOLO al socket de la sesión VIEJA que se
+            // cierre, nunca al que apenas se acaba de conectar (que ya trae la
+            // sesión nueva). Si se usara el room por usuario para esto, ambos
+            // dispositivos lo recibirían — con este room aparte, es imposible
+            // que la sesión nueva se cierre a sí misma por accidente.
+            if (sessionId) socket.join('session_' + sessionId)
             //ahora vamos a meter al wey en un room según su roleId
             switch(parseInt(roleId)) {
                 case 1: socket.join('admin')

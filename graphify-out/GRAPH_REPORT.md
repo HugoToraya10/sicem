@@ -1,16 +1,16 @@
-# Graph Report - SICEM  (2026-08-03)
+# Graph Report - SICEM  (2026-08-04)
 
 ## Corpus Check
-- 137 files · ~276,653 words
+- 140 files · ~279,209 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1116 nodes · 1596 edges · 72 communities (44 shown, 28 thin omitted)
-- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 375 edges (avg confidence: 0.51)
+- 1150 nodes · 1635 edges · 75 communities (47 shown, 28 thin omitted)
+- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 381 edges (avg confidence: 0.51)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `305ae8ba`
+- Built from commit: `3e3d9dd9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -45,6 +45,7 @@
 - EmergencyDetail.jsx
 - Patients.jsx
 - hospitales/index.js
+- pacientes/index.js
 - toLowerCaseKeys
 - unidades/index.js
 - usuarios/index.js
@@ -57,11 +58,12 @@
 - closeEmergencyRaw
 - routes/hospital.js
 - getIo
+- routes/patient.js
 - sicem-web index.html (Vite entry, mounts main.jsx)
 - main.js
 - CLAUDE.md
 - getIo
-- getEmergencyById
+- firebase.js
 - escalateEmergencyTriageLevel
 - How Hugo Likes to Work (real DB verification, confirm big decisions only)
 - Android Adaptive Icon Background
@@ -82,6 +84,7 @@
 - Vite Logo (Boilerplate Asset)
 - hola.txt (trivial placeholder file)
 - useAuth
+- withNdkVersion.js
 - README.md
 
 ## God Nodes (most connected - your core abstractions)
@@ -89,7 +92,7 @@
 2. `useAuth()` - 29 edges
 3. `getNavLinks()` - 27 edges
 4. `toLowerCaseKeys()` - 27 edges
-5. `useAuth()` - 23 edges
+5. `useAuth()` - 24 edges
 6. `toLowerCaseKeys()` - 21 edges
 7. `parseResponse()` - 19 edges
 8. `Navbar()` - 15 edges
@@ -116,11 +119,15 @@
 - **SICEM Client Applications (Dispatcher/Hospital/Paramedic)** — sicem_handoff_sicem_web_client, sicem_handoff_sicem_desktop_client, sicem_handoff_sicem_mobile_client [EXTRACTED 1.00]
 - **SICEM Backend Microservices (SOA)** — sicem_handoff_gateway_service, sicem_handoff_usuarios_service, sicem_handoff_hospitales_service, sicem_handoff_unidades_service, sicem_handoff_pacientes_service, sicem_handoff_emergencias_service [EXTRACTED 1.00]
 
-## Communities (72 total, 28 thin omitted)
+## Communities (75 total, 28 thin omitted)
 
 ### Community 0 - "useAuth"
 Cohesion: 0.06
 Nodes (55): App(), RootRedirect(), AmbulanceStatusCard(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), SpecialityAdminCard() (+47 more)
+
+### Community 2 - "controllers/emergency.js"
+Cohesion: 0.03
+Nodes (3): configSocket, emergencyModel, { sendPushNotification }
 
 ### Community 3 - "dependencies"
 Cohesion: 0.04
@@ -135,20 +142,20 @@ Cohesion: 0.04
 Nodes (44): build, appId, directories, files, productName, dependencies, leaflet, react (+36 more)
 
 ### Community 8 - "dependencies"
-Cohesion: 0.05
-Nodes (36): dependencies, expo, expo-constants, expo-linking, expo-location, expo-router, expo-secure-store, expo-status-bar (+28 more)
+Cohesion: 0.04
+Nodes (46): dependencies, expo, expo-build-properties, expo-constants, expo-device, expo-linking, expo-location, expo-notifications (+38 more)
 
 ### Community 9 - "dependencies"
 Cohesion: 0.07
-Nodes (26): dependencies, bcrypt, cors, dotenv, express, http-proxy-middleware, jsonwebtoken, mysql2 (+18 more)
+Nodes (28): firebase-admin, dependencies, bcrypt, cors, dotenv, express, firebase-admin, http-proxy-middleware (+20 more)
 
 ### Community 10 - "emergencias/index.js"
 Cohesion: 0.08
 Nodes (18): connection, mysql, app, configSocket, cors, { createServer }, db, emergencyRoutes (+10 more)
 
 ### Community 12 - "controllers/patient.js"
-Cohesion: 0.05
-Nodes (18): connection, mysql, getAllergiesByRecord(), getClinicalRecordByUser(), getConditionsByRecord(), getMedicationsByRecord(), patientModel, app (+10 more)
+Cohesion: 0.09
+Nodes (5): getAllergiesByRecord(), getClinicalRecordByUser(), getConditionsByRecord(), getMedicationsByRecord(), patientModel
 
 ### Community 13 - "controllers/unit.js"
 Cohesion: 0.08
@@ -159,8 +166,8 @@ Cohesion: 0.08
 Nodes (23): dependencies, bcrypt, cors, dotenv, express, jsonwebtoken, mysql2, nodemon (+15 more)
 
 ### Community 15 - "expo"
-Cohesion: 0.10
-Nodes (18): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, expo, android, icon (+10 more)
+Cohesion: 0.09
+Nodes (20): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, googleServicesFile, package, expo (+12 more)
 
 ### Community 16 - "pacientes/package.json"
 Cohesion: 0.09
@@ -214,6 +221,10 @@ Nodes (13): emptyAllergyForm, emptyConditionForm, emptyEditAllergyForm, emptyEdi
 Cohesion: 0.17
 Nodes (11): setIo(), app, cors, db, express, hospitalRoutes, http, io (+3 more)
 
+### Community 30 - "pacientes/index.js"
+Cohesion: 0.22
+Nodes (7): connection, mysql, app, cors, db, express, patientRoutes
+
 ### Community 31 - "toLowerCaseKeys"
 Cohesion: 0.14
 Nodes (18): EmergencyCatalogs(), emptyEditNameForm, emptyEditTriageForm, emptyNameForm, emptyTriageForm, roleLabels, TABS, BAR_COLORS (+10 more)
@@ -259,8 +270,12 @@ Cohesion: 0.40
 Nodes (4): express, hospitalController, middleware, router
 
 ### Community 42 - "getIo"
-Cohesion: 0.39
-Nodes (8): getIo(), computeScheduledEnd(), endShift(), registerLocations(), startShift(), startShiftExpirySweep(), sweepExpiredShifts(), updateAmbulanceStatus()
+Cohesion: 0.33
+Nodes (9): getIo(), computeScheduledEnd(), endShift(), notifyForceLogout(), registerLocations(), startShift(), startShiftExpirySweep(), sweepExpiredShifts() (+1 more)
+
+### Community 43 - "routes/patient.js"
+Cohesion: 0.22
+Nodes (6): db, jwt, express, middleware, patientController, router
 
 ### Community 44 - "sicem-web index.html (Vite entry, mounts main.jsx)"
 Cohesion: 0.67
@@ -270,16 +285,16 @@ Nodes (3): sicem-desktop index.html (Electron/Vite entry, mounts main.jsx), sice
 Cohesion: 0.67
 Nodes (3): getIo(), updateAvailableBedsI(), updateAvailableBedsIS()
 
-### Community 48 - "getEmergencyById"
-Cohesion: 0.67
-Nodes (3): getEmergencyById(), registerAssignment(), registerEmergency()
+### Community 48 - "firebase.js"
+Cohesion: 0.20
+Nodes (9): fs, { getMessaging }, { initializeApp, cert }, path, sendPushNotification(), SERVICE_ACCOUNT_PATH, getEmergencyById(), registerAssignment() (+1 more)
 
 ### Community 72 - "useAuth"
-Cohesion: 0.09
-Nodes (40): AlertaScreen(), formatSchedule(), styles, WEEKDAY_LABELS, LocationReporter(), fetchRoute(), MapaScreen(), styles (+32 more)
+Cohesion: 0.08
+Nodes (43): AlertaScreen(), formatSchedule(), styles, WEEKDAY_LABELS, LocationReporter(), PushNotificationRegistrar(), fetchRoute(), MapaScreen() (+35 more)
 
 ## Knowledge Gaps
-- **371 isolated node(s):** `__dirname`, `name`, `private`, `version`, `type` (+366 more)
+- **387 isolated node(s):** `__dirname`, `name`, `private`, `version`, `type` (+382 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -287,16 +302,16 @@ Nodes (40): AlertaScreen(), formatSchedule(), styles, WEEKDAY_LABELS, LocationRe
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `expo` connect `expo` to `useAuth`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `plugins` connect `useAuth` to `expo`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `__dirname`, `name`, `private` to the rest of the system?**
-  _371 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _387 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useAuth` be split into smaller, more focused modules?**
   _Cohesion score 0.06442577030812324 - nodes in this community are weakly interconnected._
 - **Should `models/emergency.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.0273972602739726 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02702702702702703 - nodes in this community are weakly interconnected._
 - **Should `controllers/emergency.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03389830508474576 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.041666666666666664 - nodes in this community are weakly interconnected._

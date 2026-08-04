@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Config de Firebase (FCM) — específico del proyecto de Firebase de cada
+# quien lo corra localmente, no se comparte por git. Ver README de
+# notificaciones push para cómo conseguirlo.
+google-services.json

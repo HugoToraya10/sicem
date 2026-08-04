@@ -939,6 +939,16 @@ const getActiveShiftUserByAmbulance = (ambulanceId, callback) => {
     db.query(sql, [ambulanceId], callback);
 }
 
+// "user_profiles" no es de este servicio, pero se consulta directo — mismo
+// patrón que getActiveShiftUserByAmbulance arriba. Sirve para poder
+// mandarle una notificación push (FCM) al paramédico aunque tenga la app
+// cerrada — el socket (eventEmergencyAssignedToMe) solo funciona con la app
+// abierta y conectada, esto es el respaldo para cuando no lo está.
+const getUserPushToken = (userProfileId, callback) => {
+    const sql = `SELECT push_token FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
+}
+
 // Estadísticas personales del paramédico — no existe una tabla que diga
 // "este paramédico atendió esta emergencia" directamente, así que se infiere
 // cruzando assignments (qué unidad fue asignada a qué emergencia, y cuándo)
@@ -1021,6 +1031,6 @@ module.exports = {
     getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution,
     //GETs de estadísticas filtradas por hospital
     getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution,
-    getActiveShiftUserByAmbulance,
+    getActiveShiftUserByAmbulance, getUserPushToken,
     getMyAssignmentCountThisMonth, getMyAvgResponseTimeThisMonth, getMyAssignmentsByTypeThisMonth, getMyAssignmentsByWeekThisMonth
 }

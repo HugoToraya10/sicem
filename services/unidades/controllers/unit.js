@@ -738,6 +738,24 @@ const getMyActiveShift = (req, res) => {
     })
 }
 
+// Interno — no lleva JWT de usuario (no hay usuario "llamando" esto, es
+// services/usuarios avisando de un evento). Se autentica con un secreto
+// compartido por variable de entorno, nunca con verifyToken normal.
+const notifyForceLogout = (req, res) => {
+    if (req.headers['x-internal-secret'] !== process.env.INTERNAL_SERVICE_SECRET) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    const { oldSessionId, reason } = req.body;
+    if (!oldSessionId) {
+        return res.status(400).json({message: "Falta oldSessionId."});
+    }
+    const io = getIo();
+    io.to('session_' + oldSessionId).emit('eventForceLogout', {
+        reason: reason || 'Se inició sesión con tu cuenta en otro dispositivo.'
+    });
+    res.status(200).json({message: "Aviso enviado."});
+}
+
 module.exports = {
     registerLocations, registerAmbulance, createAmbulanceType, registerAmbulanceStatus,
     toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus, getExternalAvailableAmbulances,
@@ -745,5 +763,5 @@ module.exports = {
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
-    startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep
+    startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep, notifyForceLogout
 }

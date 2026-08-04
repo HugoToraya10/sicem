@@ -1,5 +1,6 @@
 const emergencyModel = require('../models/emergency');
 const configSocket = require('../config/socket')
+const { sendPushNotification } = require('../config/firebase')
 
 // ─── POST ────────────────────────────────────────────────────────────────────
 
@@ -126,8 +127,24 @@ const registerAssignment = (req, res) => {
                     ambulanceIds.forEach((ambulanceId) => {
                         emergencyModel.getActiveShiftUserByAmbulance(ambulanceId, (e3, r3) => {
                             if (!e3 && r3.length > 0) {
-                                io.to('user_' + r3[0].user_profile_id).emit('eventEmergencyAssignedToMe', {
+                                const assignedUserProfileId = r3[0].user_profile_id;
+                                io.to('user_' + assignedUserProfileId).emit('eventEmergencyAssignedToMe', {
                                     emergencyId, ambulanceId, notes, emergency: emergencyDetail
+                                });
+                                // Además del socket (que solo llega con la app abierta y
+                                // conectada), se manda una notificación push por FCM — así
+                                // le llega al paramédico AUNQUE tenga la app cerrada. Si no
+                                // tiene push_token guardado o Firebase no está configurado
+                                // todavía, sendPushNotification simplemente no hace nada.
+                                emergencyModel.getUserPushToken(assignedUserProfileId, (e4, r4) => {
+                                    if (!e4 && r4.length > 0 && r4[0].push_token) {
+                                        sendPushNotification(
+                                            r4[0].push_token,
+                                            'Nueva emergencia asignada',
+                                            emergencyDetail?.type_name || 'Se te asignó una emergencia — abre la app.',
+                                            { emergencyId, ambulanceId }
+                                        );
+                                    }
                                 });
                             }
                             // Si nadie tiene turno activo en esta unidad, nadie recibe la
