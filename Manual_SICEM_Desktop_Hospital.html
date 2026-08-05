@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Usuario — SICEM Desktop (Hospital)</title>
+<style>
+  :root {
+    --navy: #1a1a2e; --blue: #1565C0; --blue-bg: #e3f2fd; --red: #C0272D; --red-bg: #fde8e8;
+    --orange: #E65100; --orange-bg: #fff3e0; --green: #2E7D32; --green-bg: #e8f5e9;
+    --purple: #8E44AD; --purple-bg: #f3e8fb; --gray: #666; --gray-light: #999; --border: #e0e0e0; --bg: #f5f6f8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: #222; line-height: 1.65; font-size: 15px; }
+  .page { max-width: 880px; margin: 0 auto; background: white; }
+
+  .cover { background: linear-gradient(135deg, var(--navy) 0%, #2a2a4a 100%); color: white; padding: 90px 60px 70px; text-align: center; position: relative; overflow: hidden; }
+  .cover::after { content: ""; position: absolute; bottom: -40px; right: -40px; width: 220px; height: 220px; border-radius: 50%; background: rgba(21,101,192,0.2); }
+  .cover::before { content: ""; position: absolute; top: -60px; left: -60px; width: 260px; height: 260px; border-radius: 50%; background: rgba(142,68,173,0.15); }
+  .cover .badge { display: inline-block; background: var(--blue); color: white; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 18px; border-radius: 20px; margin-bottom: 24px; position: relative; z-index: 1; }
+  .cover h1 { font-size: 38px; font-weight: 800; letter-spacing: -0.5px; position: relative; z-index: 1; }
+  .cover h2 { font-size: 18px; font-weight: 400; color: #c9c9d8; margin-top: 10px; position: relative; z-index: 1; }
+  .cover .meta { margin-top: 40px; font-size: 12px; color: #9999b3; position: relative; z-index: 1; }
+  .cover .roles { margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+  .role-pill { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 16px; font-size: 12px; }
+
+  .toc { padding: 40px 60px; border-bottom: 1px solid var(--border); }
+  .toc h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gray-light); margin-bottom: 16px; }
+  .toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  .toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  .toc li a { color: var(--navy); text-decoration: none; font-size: 13.5px; font-weight: 600; }
+  .toc li a::before { content: counter(toc) ". "; color: var(--blue); font-weight: 700; }
+  .toc li a:hover { text-decoration: underline; }
+
+  section { padding: 46px 60px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  h2.sec-title { font-size: 25px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+  .sec-sub { color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+  h3.sub-title { font-size: 17px; font-weight: 700; color: var(--navy); margin: 30px 0 12px; padding-top: 6px; }
+  h4.mini-title { font-size: 14px; font-weight: 700; color: #333; margin: 18px 0 8px; }
+  p { margin-bottom: 12px; color: #333; }
+  ul { margin: 10px 0 16px 22px; }
+  ul li { margin-bottom: 6px; color: #333; }
+  ol.steps { counter-reset: step; list-style: none; margin: 10px 0 16px 0; }
+  ol.steps li { counter-increment: step; position: relative; padding-left: 34px; margin-bottom: 12px; }
+  ol.steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  strong { color: var(--navy); }
+  code { background: #f0f0f5; border-radius: 3px; padding: 1px 6px; font-size: 0.9em; font-family: Consolas, monospace; color: var(--blue); }
+
+  .note { border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 13.5px; border-left: 4px solid; }
+  .note.tip { background: var(--blue-bg); border-color: var(--blue); }
+  .note.warn { background: var(--orange-bg); border-color: var(--orange); }
+  .note.danger { background: var(--red-bg); border-color: var(--red); }
+  .note.ok { background: var(--green-bg); border-color: var(--green); }
+  .note strong { display: block; margin-bottom: 3px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .note.tip strong { color: var(--blue); } .note.warn strong { color: var(--orange); }
+  .note.danger strong { color: var(--red); } .note.ok strong { color: var(--green); }
+
+  .figure { margin: 22px 0 28px; }
+  .figure-cap { font-size: 11.5px; color: var(--gray-light); text-align: center; margin-top: 8px; font-style: italic; }
+  .mockup { border: 1px solid #d5d5dd; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.08); background: white; }
+  .mockup .navbar { background: var(--navy); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; height: 42px; font-size: 11px; }
+  .mockup .navbar .logo { font-weight: 800; color: var(--blue); letter-spacing: 1px; font-size: 13px; }
+  .mockup .navbar .nav-links { display: flex; gap: 18px; }
+  .mockup .navbar .nav-links span { color: #9999b3; }
+  .mockup .navbar .nav-links span.active { color: white; border-bottom: 2px solid var(--blue); padding-bottom: 12px; }
+  .mockup .navbar .user { color: #9999b3; }
+  .mockup .body { padding: 16px; background: #fafafb; }
+
+  .m-patient { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .m-patient.urgent { border-left: 5px solid var(--red); box-shadow: 0 0 0 1px var(--red), 0 3px 10px rgba(192,39,45,0.15); }
+  .m-patient.normal { border-left: 3px solid var(--blue); }
+  .m-patient .name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .m-patient .name { font-size: 13px; font-weight: 700; color: #222; }
+  .m-patient .detail { font-size: 10.5px; color: var(--gray); margin-top: 3px; }
+  .m-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+  .m-badge { display: inline-block; font-size: 8.5px; font-weight: 700; padding: 2px 7px; border-radius: 9px; letter-spacing: 0.3px; }
+  .m-badge.red { background: var(--red-bg); color: var(--red); }
+  .m-badge.orange { background: var(--orange-bg); color: var(--orange); }
+  .m-badge.green { background: var(--green-bg); color: var(--green); }
+  .m-badge.blue { background: var(--blue-bg); color: var(--blue); }
+  .m-badge.urgent-badge { background: var(--red); color: white; }
+  .m-btn { display: inline-block; border-radius: 4px; padding: 7px 14px; font-size: 11px; font-weight: 700; color: white; text-align: center; white-space: nowrap; }
+  .m-btn.blue { background: var(--blue); } .m-btn.green { background: var(--green); }
+  .m-btn.red { background: var(--red); } .m-btn.ghost { background: white; color: #555; border: 1px solid var(--border); }
+  .m-btn-row { display: flex; gap: 6px; }
+
+  .cap-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .cap-card { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+  .cap-card .n { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 6px; }
+  .cap-nums { display: flex; gap: 10px; }
+  .cap-item { text-align: center; }
+  .cap-item .v { font-size: 18px; font-weight: 800; }
+  .cap-item .v.avail { color: var(--green); } .cap-item .v.occ { color: var(--red); }
+  .cap-item .l { font-size: 8.5px; color: var(--gray-light); }
+
+  .detail-modal { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .detail-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 11px; }
+  .detail-row .l { color: #888; } .detail-row .v { font-weight: 700; color: #222; }
+
+  .feat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0; }
+  .feat-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; background: #fafafb; }
+  .feat-card .icon { font-size: 20px; margin-bottom: 8px; }
+  .feat-card h5 { font-size: 13.5px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .feat-card p { font-size: 12.5px; color: var(--gray); margin-bottom: 0; }
+
+  .flow { display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; margin: 20px 0; }
+  .flow-step { flex: 1; min-width: 140px; background: white; border: 1.5px solid var(--border); border-radius: 8px; padding: 12px 14px; position: relative; margin: 4px; }
+  .flow-step .num { font-size: 10px; font-weight: 800; color: white; background: var(--navy); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .flow-step .t { font-size: 12.5px; font-weight: 700; color: var(--navy); }
+  .flow-step .d { font-size: 11px; color: var(--gray); margin-top: 3px; }
+  .flow-step.actor-hosp { border-top: 3px solid var(--blue); }
+  .flow-step.actor-para { border-top: 3px solid var(--green); }
+  .flow-legend { display: flex; gap: 18px; font-size: 11px; color: var(--gray); margin-top: 4px; flex-wrap: wrap; }
+  .flow-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .flow-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .case-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; background: #fafafb; }
+  .case-card .ct { font-size: 13.5px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .case-card .ct::before { content: "⚙ "; color: var(--blue); }
+  .case-card p { font-size: 13px; margin-bottom: 6px; }
+  .case-card p:last-child { margin-bottom: 0; }
+
+  .faq-item { border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; background: #fafafb; }
+  .faq-q { font-weight: 700; font-size: 13.5px; color: var(--navy); margin-bottom: 5px; }
+  .faq-q::before { content: "P· "; color: var(--blue); }
+  .faq-a { font-size: 13px; color: #444; }
+  .faq-a::before { content: "R· "; color: var(--green); font-weight: 700; }
+
+  .gloss { display: grid; grid-template-columns: 210px 1fr; gap: 4px 20px; font-size: 13px; }
+  .gloss dt { font-weight: 700; color: var(--navy); padding: 8px 0; border-top: 1px solid #eee; }
+  .gloss dd { padding: 8px 0; border-top: 1px solid #eee; color: #444; }
+
+  .footer { text-align: center; padding: 30px; font-size: 11px; color: var(--gray-light); }
+
+  @media print {
+    body { background: white; font-size: 12px; }
+    .page { max-width: 100%; }
+    .cover { page-break-after: always; }
+    section { page-break-inside: avoid; padding: 24px 30px; }
+    .toc { page-break-after: always; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @page { margin: 14mm; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover">
+    <div class="badge">Manual de usuario</div>
+    <h1>SICEM Desktop</h1>
+    <h2>Sistema Integral de Coordinación de Emergencias Médicas</h2>
+    <div class="roles"><div class="role-pill">🏥 Rol Hospital</div></div>
+    <div class="meta">Aplicación de escritorio · Tabasco, México · Versión del manual: 2.0 — Agosto 2026</div>
+  </div>
+
+  <div class="toc">
+    <h3>Contenido</h3>
+    <ol>
+      <li><a href="#intro">Introducción</a></li>
+      <li><a href="#acceso">Acceso y notificaciones</a></li>
+      <li><a href="#camino">Pacientes en camino</a></li>
+      <li><a href="#detalle">Ver detalle de un paciente</a></li>
+      <li><a href="#seguimiento">Seguimiento</a></li>
+      <li><a href="#solicitudes">Solicitudes de unidad entrantes</a></li>
+      <li><a href="#historial">Historial</a></li>
+      <li><a href="#capacidad">Administración del hospital</a></li>
+      <li><a href="#perfil">Mi perfil</a></li>
+      <li><a href="#flujo">Flujo completo ilustrado</a></li>
+      <li><a href="#casos">Casos especiales</a></li>
+      <li><a href="#faq">Preguntas frecuentes</a></li>
+      <li><a href="#glosario">Glosario de términos</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 -->
+  <section id="intro">
+    <div class="eyebrow">Capítulo 1</div>
+    <h2 class="sec-title">Introducción</h2>
+    <p><strong>SICEM Desktop</strong> es la aplicación que usa el personal de <strong>admisión/urgencias de un hospital</strong> para recibir en tiempo real a los pacientes que las ambulancias del CRUM (o de otras instituciones) les están trayendo. Sustituye la llamada telefónica de "les traemos un paciente, ¿tienen cupo?" por un aviso instantáneo en pantalla, con todos los datos clínicos disponibles ya capturados por el paramédico desde el lugar de los hechos.</p>
+    <p>Con esta aplicación tu hospital puede: <strong>aceptar o rechazar</strong> cada caso según tu capacidad real, <strong>confirmar</strong> cuando el paciente llega físicamente, <strong>darlo de alta</strong> cuando termina su atención, y decidir si prestan alguna de sus propias ambulancias a otra institución que la necesite.</p>
+    <div class="note tip">
+      <strong>Tu hospital, tu criterio</strong>
+      Solo ves y decides sobre los pacientes cuyo <em>destino</em> es tu institución — nunca los de otros hospitales. La capacidad de camas que registres también es exclusivamente la tuya; nadie más la puede modificar.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="acceso">
+    <div class="eyebrow">Capítulo 2</div>
+    <h2 class="sec-title">Acceso y notificaciones</h2>
+    <p>Inicia sesión con el correo y contraseña que te dio el administrador de tu institución (o el administrador general de SICEM). Puede haber más de una cuenta por hospital — típicamente una para el admin de la institución y una o varias para el personal de admisión en turno.</p>
+    <div class="note warn">
+      <strong>Activa las notificaciones de escritorio</strong>
+      La primera vez que abras la aplicación, el sistema pedirá permiso para mandarte notificaciones nativas del sistema operativo (Windows/macOS). Acéptalo — es lo que te avisa de un paciente nuevo, una unidad que ya llegó, o una solicitud de préstamo de ambulancia, <strong>aunque tengas la ventana minimizada</strong> o estés trabajando en otra pantalla de la app.
+    </div>
+    <p>Si en algún momento rechazaste el permiso por accidente, revisa la configuración de notificaciones de tu sistema operativo para la aplicación SICEM Desktop y actívalo manualmente — sin él, los avisos solo aparecen dentro de la propia app mientras la tengas visible en pantalla.</p>
+  </section>
+
+  <!-- 3 -->
+  <section id="camino">
+    <div class="eyebrow">Capítulo 3</div>
+    <h2 class="sec-title">Pacientes en camino</h2>
+    <p class="sec-sub">La bandeja de entrada: pacientes que de verdad piden una decisión tuya ahora mismo (Aceptar / Rechazar). Es la pantalla en la que más tiempo pasa el personal de admisión durante un turno activo.</p>
+
+    <div class="figure">
+      <div class="mockup">
+        <div class="navbar">
+          <span class="logo">SICEM</span>
+          <div class="nav-links"><span class="active">Pacientes en camino</span><span>Seguimiento</span><span>Solicitudes</span><span>Historial</span></div>
+          <span class="user">Hospital 46 IMSS</span>
+        </div>
+        <div class="body">
+          <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:8px;">Trauma (2)</div>
+          <div class="m-patient urgent">
+            <div>
+              <div class="name-row">
+                <span class="name">No identificado</span>
+                <span class="m-badge urgent-badge">🚑 Unidad ya llegó</span>
+                <span class="m-badge red">II · Naranja</span>
+                <span class="m-badge">⏱ 12 min</span>
+              </div>
+              <div class="detail">Unidad IMSS46-1 · Hospital 46 IMSS de Tabasco</div>
+              <div class="m-tags"><span class="m-badge red">Alergia: penicilina</span><span class="m-badge blue">O+</span></div>
+            </div>
+            <div class="m-btn-row"><span class="m-btn green">Aceptar</span><span class="m-btn red">Rechazar</span></div>
+          </div>
+          <div class="m-patient normal">
+            <div>
+              <div class="name-row"><span class="name">Pepe López Aldama</span><span class="m-badge orange">III · Amarillo</span><span class="m-badge">⏱ 3 min</span></div>
+              <div class="detail">Unidad CRUZ-777 · Cruz Roja Tabasco</div>
+              <div class="m-tags"><span class="m-badge">Sin alergias registradas</span></div>
+            </div>
+            <div class="m-btn-row"><span class="m-btn green">Aceptar</span><span class="m-btn red">Rechazar</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="figure-cap">Pacientes en camino, agrupados por especialidad. La primera tarjeta muestra el aviso rojo pulsante de "Concluir traslado".</div>
+    </div>
+
+    <h3 class="sub-title">Qué información trae cada tarjeta</h3>
+    <ul>
+      <li><strong>Nivel de triage</strong> y color, con el <strong>tiempo esperando</strong> desde que se registró — si supera el máximo tolerable de su triage, se marca visualmente como <strong>vencido</strong> (⚠), para que salte a la vista antes que los demás.</li>
+      <li><strong>Tipo de sangre, alergias y condiciones crónicas</strong> ya registradas en el expediente del paciente (si el paramédico ya las capturó desde el celular) — muy útil para decidir con criterio antes de que llegue.</li>
+      <li><strong>Unidad e institución</strong> que lo trae, y cuántos pacientes más trae esa misma emergencia.</li>
+      <li>Los pacientes se <strong>agrupan por especialidad</strong> — un grupo se marca en naranja si llegan <strong>más solicitudes que camas disponibles</strong> tienes para esa especialidad, para que priorices con cuidado cuál aceptar primero.</li>
+    </ul>
+
+    <div class="note danger">
+      <strong>El aviso rojo pulsante: "🚑 Unidad ya llegó"</strong>
+      Cuando el paramédico toca "Concluir traslado" en su celular (porque ya llegó físicamente a tu hospital), la tarjeta de ese paciente se resalta en rojo con este aviso — <em>incluso si todavía no lo has aceptado administrativamente</em>. Es a propósito: en la práctica una ambulancia puede llegar a tu puerta antes de que termines de decidir si aceptas, y este aviso es tu señal de que hay alguien esperando físicamente ahí, no en un rato más.
+    </div>
+
+    <h3 class="sub-title">Aceptar o rechazar</h3>
+    <ol class="steps">
+      <li><strong>Aceptar</strong> reserva de inmediato una cama de la especialidad correspondiente y mueve al paciente a la pestaña <a href="#seguimiento">Seguimiento</a>. Ya no vuelve a aparecer aquí.</li>
+      <li><strong>Rechazar</strong> te pide escribir un motivo obligatorio (falta de cupo, no es tu especialidad, etc.) — se le avisa al paramédico en su celular de inmediato, para que consulte con su CRUM cómo proceder (reasignar a otro hospital, por ejemplo). El paciente sale de tu lista y ya no vuelve a aparecerte para ese caso.</li>
+    </ol>
+    <p>Toca <strong>Ver detalle</strong> en cualquier tarjeta para ver el expediente clínico completo del paciente antes de decidir — ver el siguiente capítulo.</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="detalle">
+    <div class="eyebrow">Capítulo 4</div>
+    <h2 class="sec-title">Ver detalle de un paciente</h2>
+    <p class="sec-sub">Toda la información clínica disponible antes de decidir, en una sola ventana.</p>
+    <div class="figure">
+      <div class="detail-modal">
+        <div style="font-weight:800; font-size:14px; margin-bottom: 10px;">No identificado — Trauma</div>
+        <div class="detail-row"><span class="l">CURP</span><span class="v">Sin registrar</span></div>
+        <div class="detail-row"><span class="l">Tipo de sangre</span><span class="v">O+</span></div>
+        <div class="detail-row"><span class="l">Peso / Estatura</span><span class="v">— / —</span></div>
+        <div class="detail-row"><span class="l">Alergias</span><span class="v" style="color:#C0272D">Penicilina (grave)</span></div>
+        <div class="detail-row"><span class="l">Condiciones crónicas</span><span class="v">Ninguna registrada</span></div>
+        <div class="detail-row"><span class="l">Especialidad destino</span><span class="v">Trauma</span></div>
+        <div class="detail-row"><span class="l">Notas de urgencia</span><span class="v">PA 110/70 · FC 92 · SatO2 96%</span></div>
+      </div>
+      <div class="figure-cap">Ventana de detalle: expediente clínico y notas de urgencia del paciente, todo lo que el paramédico ya capturó.</div>
+    </div>
+    <p>Esta ventana reúne el <strong>expediente clínico permanente</strong> del paciente (alergias, condiciones crónicas, medicamentos, tipo de sangre) con la <strong>nota de urgencia</strong> específica de esta emergencia (signos vitales, diagnóstico inicial, tratamiento aplicado) — toda capturada por el paramédico desde el celular en el lugar de los hechos, sin que tú tengas que preguntarla por teléfono. Desde aquí mismo también puedes Aceptar o Rechazar, sin tener que cerrar la ventana y volver a la lista.</p>
+  </section>
+
+  <!-- 5 -->
+  <section id="seguimiento">
+    <div class="eyebrow">Capítulo 5</div>
+    <h2 class="sec-title">Seguimiento</h2>
+    <p class="sec-sub">Todo lo que ya aceptaste y sigue activo: esperando llegar, o ya adentro esperando el alta.</p>
+
+    <div class="figure">
+      <div class="mockup">
+        <div class="navbar">
+          <span class="logo">SICEM</span>
+          <div class="nav-links"><span>Pacientes en camino</span><span class="active">Seguimiento</span><span>Solicitudes</span><span>Historial</span></div>
+          <span class="user">Hospital 46 IMSS</span>
+        </div>
+        <div class="body">
+          <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:8px;">Esperando llegada (1)</div>
+          <div class="m-patient urgent">
+            <div>
+              <div class="name-row"><span class="name">No identificado</span><span class="m-badge urgent-badge">🚑 Unidad ya llegó</span></div>
+              <div class="detail">Toxicología · CURP: sin registrar</div>
+            </div>
+            <div class="m-btn-row"><span class="m-btn blue">Confirmar llegada</span></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;margin:16px 0 8px;">Esperando alta (1)</div>
+          <div class="m-patient normal">
+            <div><div class="name-row"><span class="name">Pepe López Aldama</span></div><div class="detail">Neurología · internado</div></div>
+            <div class="m-btn-row"><span class="m-btn" style="background:#8E44AD">Dar de alta</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="figure-cap">Seguimiento: esperando llegada física (arriba) y esperando alta (abajo).</div>
+    </div>
+
+    <h3 class="sub-title">Confirmar llegada física</h3>
+    <p>Esta es la acción real de <strong>"ya está aquí, físicamente, en mi hospital"</strong> — distinta de "aceptar", que fue una decisión administrativa previa (reservar cama sin que el paciente hubiera llegado todavía). Confírmala solo cuando el paciente de verdad cruce la puerta de tu institución.</p>
+    <div class="note ok">
+      <strong>Efecto en cadena</strong>
+      Si este era el <em>último</em> paciente pendiente de la emergencia, esta confirmación cierra la emergencia sola del lado del despachador, sin que nadie tenga que hacer nada más. Además, es una de las dos condiciones (junto con que el paramédico haya tocado "Concluir traslado") que se necesitan para que su ambulancia pueda volver a marcarse Disponible — tu confirmación es literalmente la mitad de esa decisión.
+    </div>
+
+    <h3 class="sub-title">Dar de alta</h3>
+    <p>Una vez que el paciente ya fue atendido y se retira de tu hospital, dar de alta <strong>libera la cama</strong> que tenías reservada para esa especialidad, para que vuelva a contar en tu capacidad disponible y puedas recibir al siguiente caso de esa misma especialidad.</p>
+    <div class="note warn">
+      <strong>Dar de alta requiere llegada confirmada primero</strong>
+      No puedes dar de alta a un paciente que nunca confirmaste como llegado físicamente — el sistema lo bloquea, porque no tendría sentido "liberar" una cama que en teoría nunca llegó a ocuparse de verdad según el registro.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="solicitudes">
+    <div class="eyebrow">Capítulo 6</div>
+    <h2 class="sec-title">Solicitudes de unidad entrantes</h2>
+    <p>Cuando otra institución (típicamente el CRUM) quiere pedir prestada una de <strong>tus</strong> ambulancias para atender una emergencia, la solicitud aparece aquí — con el nombre de la institución solicitante, qué emergencia es, y qué unidad tuya están pidiendo.</p>
+    <ol class="steps">
+      <li>Revisa qué emergencia es y qué unidad tuya están pidiendo, y si tienes disponibilidad real de personal para esa unidad en ese momento.</li>
+      <li><strong>Aceptar</strong>: tu ambulancia queda comprometida de inmediato — su paramédico (si tiene turno activo en ese momento) recibe el aviso al instante en su celular y arranca "En camino" de verdad, sin que tengas que hacer nada más.</li>
+      <li><strong>Rechazar</strong>: tu unidad se libera sola y vuelve a mostrarse como Disponible para ti, sin ningún compromiso — el despachador que la pidió tendrá que buscar otra opción.</li>
+    </ol>
+    <div class="note tip">
+      <strong>La unidad sigue siendo tuya</strong>
+      Prestar una ambulancia no cambia su dueño en ningún momento. Al terminar el traslado completo (incluyendo que tu propio paramédico marque "Disponible" desde el celular al final del ciclo), la unidad queda libre bajo tu propia institución otra vez — nunca se queda "atada" a quien la pidió prestada, ni siquiera de forma temporal.
+    </div>
+    <div class="note warn">
+      <strong>Si no tienes personal de turno en esa unidad</strong>
+      Aceptar una solicitud no crea un turno de paramédico de la nada — si esa ambulancia no tiene a nadie con turno activo en ese momento, nadie recibe el aviso, aunque la solicitud sí quede aceptada en el sistema. Coordina internamente antes de aceptar una solicitud para una unidad sin tripulación disponible.
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="historial">
+    <div class="eyebrow">Capítulo 7</div>
+    <h2 class="sec-title">Historial</h2>
+    <p>Consulta de <strong>todos</strong> los pacientes que alguna vez tuvieron tu institución como destino — aceptados, rechazados, cerrados o todavía abiertos. Útil para auditoría interna, para reconstruir un caso pasado en caso de una queja o revisión, o simplemente para buscar por nombre o fecha algo que ya pasó hace días o semanas.</p>
+  </section>
+
+  <!-- 8 -->
+  <section id="capacidad">
+    <div class="eyebrow">Capítulo 8</div>
+    <h2 class="sec-title">Administración del hospital</h2>
+    <p class="sec-sub">Mantén al día cuántas camas tienes disponibles por especialidad — es lo que usa el resto del sistema (incluyendo la recomendación de hospital destino que ve el paramédico) para saber a dónde conviene mandar a cada paciente.</p>
+
+    <div class="figure">
+      <div class="mockup">
+        <div class="navbar"><span class="logo">SICEM</span><div class="nav-links"><span>Pacientes en camino</span><span>Seguimiento</span><span class="active">Administración</span></div><span class="user">Hospital 46 IMSS</span></div>
+        <div class="body">
+          <div class="cap-grid">
+            <div class="cap-card"><div class="n">Toxicología</div><div class="cap-nums"><div class="cap-item"><div class="v avail">3</div><div class="l">DISPONIBLES</div></div><div class="cap-item"><div class="v occ">5</div><div class="l">OCUPADAS</div></div></div></div>
+            <div class="cap-card"><div class="n">Neurología</div><div class="cap-nums"><div class="cap-item"><div class="v avail">1</div><div class="l">DISPONIBLES</div></div><div class="cap-item"><div class="v occ">7</div><div class="l">OCUPADAS</div></div></div></div>
+            <div class="cap-card"><div class="n">Trauma</div><div class="cap-nums"><div class="cap-item"><div class="v avail">0</div><div class="l">DISPONIBLES</div></div><div class="cap-item"><div class="v occ">4</div><div class="l">OCUPADAS</div></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="figure-cap">Capacidad de camas por especialidad — se descuenta al aceptar y se libera al dar de alta.</div>
+    </div>
+    <p>Cada vez que <strong>aceptas</strong> un paciente de cierta especialidad, la cama disponible baja uno; cada vez que lo <strong>das de alta</strong>, sube uno de vuelta. No hace falta llevar la cuenta a mano ni actualizarla manualmente — el sistema lo hace solo en cada acción.</p>
+    <p>El <strong>administrador de la institución</strong> puede además ajustar el número total de camas por especialidad (por ejemplo, si se habilita un área adicional temporalmente), gestionar qué especialidades ofrece el hospital, y ver estadísticas propias: pacientes por tipo, pacientes por mes, y tiempo promedio de traslado hacia esa institución.</p>
+  </section>
+
+  <!-- 9 -->
+  <section id="perfil">
+    <div class="eyebrow">Capítulo 9</div>
+    <h2 class="sec-title">Mi perfil</h2>
+    <p>Actualiza tus datos de contacto o cambia tu contraseña desde aquí. Si tu cuenta es la de administrador de la institución, aquí también puedes gestionar otras cuentas de tu mismo hospital (ver <a href="#capacidad">Administración del hospital</a>).</p>
+  </section>
+
+  <!-- 10 -->
+  <section id="flujo">
+    <div class="eyebrow">Capítulo 10</div>
+    <h2 class="sec-title">Flujo completo ilustrado</h2>
+    <p class="sec-sub">La recepción de un paciente, desde que aparece en tu bandeja hasta que se va de alta.</p>
+    <div class="flow">
+      <div class="flow-step actor-hosp"><div class="num">1</div><div class="t">Aparece en "Pacientes en camino"</div><div class="d">El paramédico lo registró con tu hospital como destino</div></div>
+      <div class="flow-step actor-hosp"><div class="num">2</div><div class="t">Aceptas (o rechazas)</div><div class="d">Se reserva una cama de su especialidad</div></div>
+      <div class="flow-step actor-para"><div class="num">3</div><div class="t">La ambulancia llega</div><div class="d">Paramédico toca "Concluir traslado" a &lt;300m</div></div>
+      <div class="flow-step actor-hosp"><div class="num">4</div><div class="t">Ves el aviso rojo en tu pantalla</div><div class="d">"🚑 Unidad ya llegó" — en Pacientes en camino o Seguimiento</div></div>
+      <div class="flow-step actor-hosp"><div class="num">5</div><div class="t">Confirmas llegada física</div><div class="d">La emergencia puede cerrarse sola</div></div>
+      <div class="flow-step actor-hosp"><div class="num">6</div><div class="t">Das de alta cuando corresponda</div><div class="d">Libera la cama reservada</div></div>
+    </div>
+    <div class="flow-legend"><span><i style="background:#1565C0"></i> Acción del hospital</span><span><i style="background:#2E7D32"></i> Acción del paramédico (celular)</span></div>
+  </section>
+
+  <!-- 11 -->
+  <section id="casos">
+    <div class="eyebrow">Capítulo 11</div>
+    <h2 class="sec-title">Casos especiales</h2>
+    <p class="sec-sub">Situaciones que salen del camino perfecto pero pasan seguido en la operación real de un hospital.</p>
+
+    <div class="case-card">
+      <div class="ct">Llegan más pacientes que camas disponibles para una especialidad</div>
+      <p>El grupo de esa especialidad se marca visualmente en naranja, con la advertencia de que hay más solicitudes que cupo real. El sistema no bloquea que aceptes de todos modos (la decisión médica es tuya), pero sí te avisa con claridad antes de que aceptes sin darte cuenta del sobrecupo.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">La ambulancia llega antes de que hayas decidido si aceptas</div>
+      <p>Es un escenario común, no un error: el aviso rojo de "Unidad ya llegó" aparece igual, sea que el paciente ya esté aceptado o siga "Pendiente". Acepta en cuanto puedas; el paramédico ya está esperando.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Un paciente rechazado necesita reasignarse a otro hospital</div>
+      <p>Una vez que rechazas, ya no puedes revertirlo desde tu lado — el despachador es quien reasigna ese paciente a otro hospital destino desde SICEM Web. Tu rechazo con su motivo queda visible para que el despachador tenga contexto de por qué no fue tu institución.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Prestaste una ambulancia y parece que "no regresa"</div>
+      <p>Revisa si el paramédico de esa unidad ya confirmó llegada física de todos sus pacientes contigo (o con el hospital destino que le hayan asignado) y si ya tocó "Marcar Disponible" en su celular. Mientras él no lo confirme, la unidad se queda como "Trasladando" aunque la emergencia que la trajo ya esté cerrada — es intencional, ver el capítulo de <a href="#flujo">Flujo completo</a>.</p>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section id="faq">
+    <div class="eyebrow">Capítulo 12</div>
+    <h2 class="sec-title">Preguntas frecuentes</h2>
+    <div class="faq-item"><div class="faq-q">No me llegan notificaciones aunque la app esté abierta</div><div class="faq-a">Revisa el permiso de notificaciones del sistema operativo para SICEM Desktop — pudo haberse revocado después de la primera vez que lo aceptaste. Dentro de la app, mientras la tengas visible, los avisos también aparecen en pantalla aunque el permiso del sistema esté apagado.</div></div>
+    <div class="faq-item"><div class="faq-q">Un paciente sigue "Pendiente" pero la ambulancia ya está afuera</div><div class="faq-a">Puede pasar: la ambulancia puede llegar antes de que termines de decidir si aceptas. El aviso rojo "Unidad ya llegó" aparece igual, esté aceptado o no — acéptalo en cuanto puedas para que el flujo siga avanzando.</div></div>
+    <div class="faq-item"><div class="faq-q">¿Puedo rechazar un paciente ya aceptado?</div><div class="faq-a">No — una vez aceptado, la vía normal es confirmar su llegada y, si al final no corresponde a tu hospital por alguna razón excepcional, coordinarlo directamente con el CRUM para reasignarlo. El botón de rechazo solo aplica mientras el paciente sigue "Pendiente".</div></div>
+    <div class="faq-item"><div class="faq-q">Presté una ambulancia y ya pasó mucho tiempo sin que regrese a "mía"</div><div class="faq-a">Revisa si su paramédico todavía no confirma "Marcar Disponible" desde el celular — es la única forma en que esa unidad vuelve a aparecer libre, y depende exclusivamente de él, no de tu hospital ni del despachador.</div></div>
+    <div class="faq-item"><div class="faq-q">¿Cómo sé cuántas camas me quedan de cada especialidad sin entrar a Administración?</div><div class="faq-a">La pantalla de "Pacientes en camino" ya te muestra la cuenta de camas disponibles al lado del nombre de cada especialidad, y resalta en naranja si estás sobrepasado.</div></div>
+    <div class="faq-item"><div class="faq-q">Di de alta a un paciente por error, ¿se puede deshacer?</div><div class="faq-a">No directamente desde la interfaz — contacta al administrador general del sistema si necesitas corregir un registro así.</div></div>
+  </section>
+
+  <!-- 13 -->
+  <section id="glosario">
+    <div class="eyebrow">Capítulo 13</div>
+    <h2 class="sec-title">Glosario de términos</h2>
+    <dl class="gloss">
+      <dt>Aceptar</dt><dd>Decisión administrativa de recibir a un paciente — reserva cama, pero no significa que ya llegó físicamente.</dd>
+      <dt>Confirmar llegada física</dt><dd>Certificación de que el paciente ya está físicamente en tu hospital; distinta y posterior a "aceptar".</dd>
+      <dt>Dar de alta</dt><dd>Cierra la atención del paciente y libera la cama reservada de su especialidad, solo disponible después de confirmar llegada.</dd>
+      <dt>Concluir traslado</dt><dd>Aviso que manda el paramédico al llegar a tu hospital, desde su celular, antes de que confirmes la llegada física.</dd>
+      <dt>Especialidad</dt><dd>Área médica a la que se destina un paciente (trauma, toxicología, neurología, etc.) — cada una con su propio conteo de camas disponibles/ocupadas.</dd>
+      <dt>Triage vencido</dt><dd>Un paciente que ya superó el tiempo máximo de espera tolerable para su nivel de urgencia asignado.</dd>
+      <dt>Solicitud de unidad entrante</dt><dd>Petición de otra institución para usar temporalmente una ambulancia propia de tu hospital.</dd>
+    </dl>
+  </section>
+
+  <div class="footer">SICEM — Sistema Integral de Coordinación de Emergencias Médicas · Manual de usuario, aplicación de escritorio · Tabasco, México</div>
+</div>
+</body>
+</html>

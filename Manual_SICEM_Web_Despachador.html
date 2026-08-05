@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Usuario — SICEM Web (Despachador CRUM / Administrador)</title>
+<style>
+  :root {
+    --navy: #1a1a2e; --red: #C0272D; --red-bg: #fde8e8; --orange: #E65100; --orange-bg: #fff3e0;
+    --green: #2E7D32; --green-bg: #e8f5e9; --blue: #1565C0; --blue-bg: #e3f2fd;
+    --purple: #8E44AD; --purple-bg: #f3e8fb; --gray: #666; --gray-light: #999; --border: #e0e0e0; --bg: #f5f6f8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: #222; line-height: 1.65; font-size: 15px; }
+  .page { max-width: 880px; margin: 0 auto; background: white; }
+
+  .cover { background: linear-gradient(135deg, var(--navy) 0%, #2a2a4a 100%); color: white; padding: 90px 60px 70px; text-align: center; position: relative; overflow: hidden; }
+  .cover::after { content: ""; position: absolute; bottom: -40px; right: -40px; width: 220px; height: 220px; border-radius: 50%; background: rgba(192,39,45,0.15); }
+  .cover::before { content: ""; position: absolute; top: -60px; left: -60px; width: 260px; height: 260px; border-radius: 50%; background: rgba(21,101,192,0.15); }
+  .cover .badge { display: inline-block; background: var(--red); color: white; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 18px; border-radius: 20px; margin-bottom: 24px; position: relative; z-index: 1; }
+  .cover h1 { font-size: 38px; font-weight: 800; letter-spacing: -0.5px; position: relative; z-index: 1; }
+  .cover h2 { font-size: 18px; font-weight: 400; color: #c9c9d8; margin-top: 10px; position: relative; z-index: 1; }
+  .cover .meta { margin-top: 40px; font-size: 12px; color: #9999b3; position: relative; z-index: 1; }
+  .cover .roles { margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+  .role-pill { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 16px; font-size: 12px; }
+
+  .toc { padding: 40px 60px; border-bottom: 1px solid var(--border); }
+  .toc h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gray-light); margin-bottom: 16px; }
+  .toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  .toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  .toc li a { color: var(--navy); text-decoration: none; font-size: 13.5px; font-weight: 600; }
+  .toc li a::before { content: counter(toc) ". "; color: var(--red); font-weight: 700; }
+  .toc li a:hover { text-decoration: underline; }
+
+  section { padding: 46px 60px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+  h2.sec-title { font-size: 25px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+  .sec-sub { color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+  h3.sub-title { font-size: 17px; font-weight: 700; color: var(--navy); margin: 30px 0 12px; padding-top: 6px; }
+  h4.mini-title { font-size: 14px; font-weight: 700; color: #333; margin: 18px 0 8px; }
+  p { margin-bottom: 12px; color: #333; }
+  ul, ol.steps { margin: 10px 0 16px 22px; }
+  ul li, ol.steps li { margin-bottom: 6px; color: #333; }
+  ol.steps { counter-reset: step; list-style: none; margin-left: 0; }
+  ol.steps li { counter-increment: step; position: relative; padding-left: 34px; margin-bottom: 12px; }
+  ol.steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  strong { color: var(--navy); }
+  code { background: #f0f0f5; border-radius: 3px; padding: 1px 6px; font-size: 0.9em; font-family: Consolas, monospace; color: var(--red); }
+
+  .note { border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 13.5px; border-left: 4px solid; }
+  .note.tip { background: var(--blue-bg); border-color: var(--blue); }
+  .note.warn { background: var(--orange-bg); border-color: var(--orange); }
+  .note.danger { background: var(--red-bg); border-color: var(--red); }
+  .note.ok { background: var(--green-bg); border-color: var(--green); }
+  .note strong { display: block; margin-bottom: 3px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .note.tip strong { color: var(--blue); } .note.warn strong { color: var(--orange); }
+  .note.danger strong { color: var(--red); } .note.ok strong { color: var(--green); }
+
+  .figure { margin: 22px 0 28px; }
+  .figure-cap { font-size: 11.5px; color: var(--gray-light); text-align: center; margin-top: 8px; font-style: italic; }
+  .mockup { border: 1px solid #d5d5dd; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.08); background: white; }
+  .mockup .navbar { background: var(--navy); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; height: 42px; font-size: 11px; }
+  .mockup .navbar .logo { font-weight: 800; color: var(--red); letter-spacing: 1px; font-size: 13px; }
+  .mockup .navbar .nav-links { display: flex; gap: 18px; }
+  .mockup .navbar .nav-links span { color: #9999b3; }
+  .mockup .navbar .nav-links span.active { color: white; border-bottom: 2px solid var(--red); padding-bottom: 12px; }
+  .mockup .navbar .user { color: #9999b3; }
+  .mockup .body { padding: 16px; background: #fafafb; }
+  .mockup .body.tight { padding: 0; }
+
+  .m-grid { display: grid; gap: 12px; }
+  .m-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .m-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .m-card { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+  .m-card.acc-red { border-left: 3px solid var(--red); }
+  .m-card.acc-orange { border-left: 3px solid var(--orange); }
+  .m-card.acc-green { border-left: 3px solid var(--green); }
+  .m-card.acc-purple { border-left: 3px solid var(--purple); }
+  .m-card .t { font-size: 12px; font-weight: 700; color: #222; }
+  .m-card .d { font-size: 10.5px; color: var(--gray); margin-top: 2px; }
+  .m-badge { display: inline-block; font-size: 8.5px; font-weight: 700; padding: 2px 7px; border-radius: 9px; margin-top: 5px; letter-spacing: 0.3px; }
+  .m-badge.red { background: var(--red-bg); color: var(--red); }
+  .m-badge.orange { background: var(--orange-bg); color: var(--orange); }
+  .m-badge.green { background: var(--green-bg); color: var(--green); }
+  .m-badge.purple { background: var(--purple-bg); color: var(--purple); }
+  .m-badge.blue { background: var(--blue-bg); color: var(--blue); }
+
+  .m-map { position: relative; background: #e8edf2; border-radius: 6px; height: 210px; overflow: hidden; }
+  .m-dot { position: absolute; width: 11px; height: 11px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .m-pin { position: absolute; font-size: 15px; }
+  .m-map-tag { position: absolute; background: white; border: 1px solid var(--border); border-radius: 5px; padding: 5px 9px; font-size: 9.5px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+  .m-field { margin-bottom: 10px; }
+  .m-field label { display: block; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #777; margin-bottom: 4px; }
+  .m-field .box { border: 1px solid #dcdce4; border-radius: 4px; padding: 7px 9px; font-size: 11.5px; background: white; color: #444; }
+  .m-btn { display: inline-block; border-radius: 4px; padding: 8px 18px; font-size: 11.5px; font-weight: 700; color: white; text-align: center; }
+  .m-btn.red { background: var(--red); } .m-btn.blue { background: var(--blue); }
+  .m-btn.green { background: var(--green); } .m-btn.ghost { background: white; color: #555; border: 1px solid var(--border); }
+  .m-btn.sm { padding: 4px 10px; font-size: 10px; }
+
+  table.m-table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; }
+  table.m-table th { background: var(--navy); color: white; padding: 7px 10px; text-align: left; font-weight: 600; }
+  table.m-table td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+
+  .feat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0; }
+  .feat-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; background: #fafafb; }
+  .feat-card .icon { font-size: 20px; margin-bottom: 8px; }
+  .feat-card h5 { font-size: 13.5px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .feat-card p { font-size: 12.5px; color: var(--gray); margin-bottom: 0; }
+
+  .flow { display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; margin: 20px 0; }
+  .flow-step { flex: 1; min-width: 140px; background: white; border: 1.5px solid var(--border); border-radius: 8px; padding: 12px 14px; position: relative; margin: 4px; }
+  .flow-step .num { font-size: 10px; font-weight: 800; color: white; background: var(--navy); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .flow-step .t { font-size: 12.5px; font-weight: 700; color: var(--navy); }
+  .flow-step .d { font-size: 11px; color: var(--gray); margin-top: 3px; }
+  .flow-step.actor-desp { border-top: 3px solid var(--red); }
+  .flow-step.actor-para { border-top: 3px solid var(--green); }
+  .flow-step.actor-hosp { border-top: 3px solid var(--blue); }
+  .flow-legend { display: flex; gap: 18px; font-size: 11px; color: var(--gray); margin-top: 4px; flex-wrap: wrap; }
+  .flow-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .flow-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .case-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; background: #fafafb; }
+  .case-card .ct { font-size: 13.5px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .case-card .ct::before { content: "⚙ "; color: var(--red); }
+  .case-card p { font-size: 13px; margin-bottom: 6px; }
+  .case-card p:last-child { margin-bottom: 0; }
+
+  .faq-item { border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; background: #fafafb; }
+  .faq-q { font-weight: 700; font-size: 13.5px; color: var(--navy); margin-bottom: 5px; }
+  .faq-q::before { content: "P· "; color: var(--red); }
+  .faq-a { font-size: 13px; color: #444; }
+  .faq-a::before { content: "R· "; color: var(--green); font-weight: 700; }
+
+  .gloss { display: grid; grid-template-columns: 210px 1fr; gap: 4px 20px; font-size: 13px; }
+  .gloss dt { font-weight: 700; color: var(--navy); padding: 8px 0; border-top: 1px solid #eee; }
+  .gloss dd { padding: 8px 0; border-top: 1px solid #eee; color: #444; }
+
+  .triage-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 14px 0; }
+  .triage-table th { background: var(--navy); color: white; padding: 8px 12px; text-align: left; }
+  .triage-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+  .triage-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+  .footer { text-align: center; padding: 30px; font-size: 11px; color: var(--gray-light); }
+
+  @media print {
+    body { background: white; font-size: 12px; }
+    .page { max-width: 100%; }
+    .cover { page-break-after: always; }
+    section { page-break-inside: avoid; padding: 24px 30px; }
+    .toc { page-break-after: always; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @page { margin: 14mm; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ===================== PORTADA ===================== -->
+  <div class="cover">
+    <div class="badge">Manual de usuario</div>
+    <h1>SICEM Web</h1>
+    <h2>Sistema Integral de Coordinación de Emergencias Médicas</h2>
+    <div class="roles">
+      <div class="role-pill">👤 Rol Despachador (CRUM)</div>
+      <div class="role-pill">🛡️ Rol Administrador</div>
+    </div>
+    <div class="meta">Aplicación web · Tabasco, México · Versión del manual: 2.0 — Agosto 2026</div>
+  </div>
+
+  <!-- ===================== TABLA DE CONTENIDO ===================== -->
+  <div class="toc">
+    <h3>Contenido</h3>
+    <ol>
+      <li><a href="#intro">Introducción y roles</a></li>
+      <li><a href="#acceso">Acceso al sistema</a></li>
+      <li><a href="#dashboard">Panel principal (Dashboard)</a></li>
+      <li><a href="#nueva">Registrar una nueva emergencia</a></li>
+      <li><a href="#detalle">Detalle y cierre de una emergencia</a></li>
+      <li><a href="#solicitudes">Solicitudes interinstitucionales</a></li>
+      <li><a href="#historial">Historial</a></li>
+      <li><a href="#perfil">Mi perfil</a></li>
+      <li><a href="#admin">Administración del sistema</a></li>
+      <li><a href="#flujo">Flujo completo ilustrado</a></li>
+      <li><a href="#casos">Casos especiales</a></li>
+      <li><a href="#faq">Preguntas frecuentes</a></li>
+      <li><a href="#glosario">Glosario de términos</a></li>
+    </ol>
+  </div>
+
+  <!-- ===================== 1. INTRODUCCIÓN ===================== -->
+  <section id="intro">
+    <div class="eyebrow">Capítulo 1</div>
+    <h2 class="sec-title">Introducción y roles</h2>
+    <p><strong>SICEM</strong> (Sistema Integral de Coordinación de Emergencias Médicas) es la plataforma que conecta a despachadores, paramédicos y hospitales durante una emergencia médica, desde que se recibe la llamada hasta que el paciente queda internado y la ambulancia vuelve a estar disponible. Reemplaza el trabajo que antes se hacía por radio y teléfono — ubicar la ambulancia más cercana, confirmar si un hospital tiene cupo, avisar cuando la unidad llega — con datos en tiempo real que todos los involucrados ven al mismo tiempo.</p>
+    <p><strong>SICEM Web</strong> es la aplicación de navegador que usa el <strong>CRUM</strong> (Centro Regulador de Urgencias Médicas): el centro de mando que recibe el reporte de la emergencia, decide qué ambulancia enviar y da seguimiento a todo el operativo hasta que se resuelve. Es la pieza central del sistema — sin un despachador que registre la emergencia, nada más se pone en marcha: ni el paramédico recibe la alerta en su celular, ni el hospital sabe que le viene un paciente.</p>
+
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="icon">🚑</div>
+        <h5>Rol Despachador</h5>
+        <p>Registra emergencias, asigna ambulancias (propias o prestadas de otra institución), da seguimiento en el mapa en vivo y cierra los casos. Es el uso diario y operativo del sistema.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">🛡️</div>
+        <h5>Rol Administrador</h5>
+        <p>Todo lo del despachador, más la gestión completa del sistema: altas de ambulancias, instituciones, usuarios y catálogos. Además puede forzar el cierre de casos atorados y ver estadísticas globales, no solo las de su institución.</p>
+      </div>
+    </div>
+
+    <h3 class="sub-title">Qué es una institución CRUM</h3>
+    <p>No todas las ambulancias en el sistema pertenecen a la misma organización — puede haber Cruz Roja, bomberos, hospitales del IMSS, ISSSTE, Secretaría de Salud, etc. Algunas de esas instituciones están marcadas como parte de la <strong>red CRUM</strong>: entre ellas, sus ambulancias se comparten automáticamente como si fueran "propias" de cualquier despachador de esa red, sin pedir permiso. Las instituciones que <em>no</em> son CRUM (típicamente hospitales que también tienen su propia flotilla, pero no forman parte del regulador central) sí requieren una <a href="#solicitudes">solicitud interinstitucional</a> formal — con aceptación explícita de su lado — antes de que su ambulancia se mueva.</p>
+    <div class="note tip">
+      <strong>Por qué existe esta distinción</strong>
+      La red CRUM funciona como un solo pool de recursos coordinados centralmente: cualquier despachador de esa red puede mover cualquier unidad de la red sin fricción, porque operativamente ya están bajo la misma autoridad reguladora. Una institución externa (como un hospital privado con su propia ambulancia) conserva control total sobre cuándo prestarla — de ahí que su ambulancia se marque "Reservada" mientras decide, y solo se mueva si acepta explícitamente.
+    </div>
+  </section>
+
+  <!-- ===================== 2. ACCESO ===================== -->
+  <section id="acceso">
+    <div class="eyebrow">Capítulo 2</div>
+    <h2 class="sec-title">Acceso al sistema</h2>
+    <p>Se ingresa con el correo electrónico y contraseña que dio de alta el administrador de tu institución. No hay registro público — todas las cuentas las crea un administrador desde el panel de <a href="#admin">Usuarios</a>, y cada cuenta queda ligada a una institución y un rol específicos desde su creación.</p>
+    <ol class="steps">
+      <li>Abre la dirección de SICEM Web en tu navegador (funciona en cualquier navegador moderno: Chrome, Edge, Firefox).</li>
+      <li>Escribe tu correo y contraseña.</li>
+      <li>Pulsa <strong>Entrar</strong>. Si tus datos son correctos, entras directo al Dashboard de tu institución.</li>
+    </ol>
+    <div class="note warn">
+      <strong>Una sesión a la vez (solo para personal de campo)</strong>
+      Si tu cuenta se usa también en el celular con rol paramédico, iniciar sesión en un segundo dispositivo cierra automáticamente la sesión anterior — es para evitar que dos celulares reporten ubicación al mismo tiempo para la misma unidad. Para cuentas de despachador y administrador esta restricción <em>no</em> aplica: puedes tener SICEM Web abierto en varias computadoras a la vez sin problema.
+    </div>
+    <div class="note tip">
+      <strong>¿Olvidaste tu contraseña?</strong>
+      No hay recuperación automática por correo todavía — pide a tu administrador que te la restablezca desde el panel de <a href="#admin">Usuarios</a>.
+    </div>
+  </section>
+
+  <!-- ===================== 3. DASHBOARD ===================== -->
+  <section id="dashboard">
+    <div class="eyebrow">Capítulo 3</div>
+    <h2 class="sec-title">Panel principal (Dashboard)</h2>
+    <p class="sec-sub">Es la pantalla de aterrizaje: el mapa en vivo de toda la operación y la lista de emergencias activas. Es la pantalla en la que un despachador pasa la mayor parte de su turno.</p>
+
+    <div class="figure">
+      <div class="mockup">
+        <div class="navbar">
+          <span class="logo">SICEM</span>
+          <div class="nav-links"><span class="active">Dashboard</span><span>Nueva emergencia</span><span>Solicitudes</span><span>Historial</span></div>
+          <span class="user">María López · Despachador</span>
+        </div>
+        <div class="body">
+          <div class="m-grid" style="grid-template-columns: 260px 1fr;">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:8px;">Emergencias activas (3)</div>
+              <div class="m-card acc-red" style="margin-bottom:8px;">
+                <div class="t">Trauma — Col. Centro</div>
+                <div class="d">Unidad CRUZ-777 · hace 4 min</div>
+                <span class="m-badge red">En camino</span>
+              </div>
+              <div class="m-card acc-orange" style="margin-bottom:8px;">
+                <div class="t">Infarto — Blvd. Ruiz C.</div>
+                <div class="d">Unidad A-02 · hace 11 min</div>
+                <span class="m-badge orange">En escena</span>
+              </div>
+              <div class="m-card acc-purple">
+                <div class="t">Intoxicación — Tamulté</div>
+                <div class="d">Unidad IMSS46-1 · hace 22 min</div>
+                <span class="m-badge purple">Trasladando</span>
+              </div>
+            </div>
+            <div class="m-map">
+              <div class="m-dot" style="background:#2E7D32; top:40px; left:60px;"></div>
+              <div class="m-dot" style="background:#C0272D; top:100px; left:150px;"></div>
+              <div class="m-dot" style="background:#E65100; top:70px; left:230px;"></div>
+              <div class="m-dot" style="background:#8E44AD; top:150px; left:100px;"></div>
+              <div class="m-pin" style="top:95px;left:145px;">📍</div>
+              <div class="m-map-tag" style="top:8px;right:8px;">🏥 H — Hospital 46 IMSS</div>
+              <div class="m-map-tag" style="bottom:8px;left:8px;">🟢 Disponible &nbsp; 🔴 En camino &nbsp; 🟠 En escena &nbsp; 🟣 Trasladando</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="figure-cap">Panel Dashboard: lista de emergencias activas a la izquierda, mapa en tiempo real a la derecha.</div>
+    </div>
+
+    <h3 class="sub-title">Qué muestra el mapa</h3>
+    <ul>
+      <li><strong>Ambulancias</strong> — un punto de color según su estado: verde (Disponible), rojo (En camino), naranja (En escena), morado (Trasladando), gris (Fuera de servicio / En mantenimiento), amarillo (Reservada, pendiente de una solicitud interinstitucional).</li>
+      <li><strong>Hospitales</strong> — un marcador morado con una "H", para ubicar de un vistazo a dónde se puede trasladar pacientes y qué tan lejos está cada uno de una emergencia nueva.</li>
+      <li><strong>Emergencias</strong> — un pin en la ubicación reportada, que se queda fijo mientras el caso siga abierto.</li>
+      <li>Todo se actualiza <strong>en vivo</strong>, sin recargar la página: en cuanto una ambulancia reporta su posición (el celular del paramédico la envía cada pocos segundos mientras está en turno) o cambia de estado, el mapa se mueve solo.</li>
+    </ul>
+
+    <h3 class="sub-title">La lista de emergencias activas</h3>
+    <p>Cada tarjeta resume un caso abierto: tipo de emergencia, ubicación aproximada, unidad asignada, cuánto tiempo lleva abierto, y su estado actual con el mismo código de color que el mapa. Haz clic en cualquiera para abrir su <a href="#detalle">detalle completo</a>.</p>
+
+    <h3 class="sub-title">Avisos en tiempo real (toasts)</h3>
+    <p>En la esquina de la pantalla aparecen notificaciones emergentes cuando pasa algo relevante mientras tienes el Dashboard abierto:</p>
+    <ul>
+      <li>Una <strong>emergencia nueva</strong> se registra (útil si trabajan varios despachadores a la vez).</li>
+      <li>Un <strong>cambio de estado</strong> de cualquier ambulancia o emergencia.</li>
+      <li>Una <strong>falla reportada</strong> por un paramédico en su unidad — este aviso se destaca especialmente, porque puede requerir reasignar esa ambulancia de inmediato antes de que llegue a la escena.</li>
+    </ul>
+    <p>Estos avisos son solo informativos — no sustituyen entrar al detalle de la emergencia si necesitas actuar sobre algo.</p>
+  </section>
+
+  <!-- ===================== 4. NUEVA EMERGENCIA ===================== -->
+  <section id="nueva">
+    <div class="eyebrow">Capítulo 4</div>
+    <h2 class="sec-title">Registrar una nueva emergencia</h2>
+    <p class="sec-sub">El corazón de la operación: aquí se da de alta el caso y se decide qué ambulancia va. Es, junto con el Dashboard, la pantalla que más se usa.</p>
+
+    <div class="figure">
+      <div class="mockup">
+        <div class="navbar">
+          <span class="logo">SICEM</span>
+          <div class="nav-links"><span>Dashboard</span><span class="active">Nueva emergencia</span><span>Solicitudes</span><span>Historial</span></div>
+          <span class="user">María López · Despachador</span>
+        </div>
+        <div class="body">
+          <div class="m-grid cols-2">
+            <div class="m-field"><label>Tipo de emergencia</label><div class="box">Trauma</div></div>
+            <div class="m-field"><label>Nivel de triage</label><div class="box">II — Naranja (urgente)</div></div>
+            <div class="m-field"><label>Número de pacientes</label><div class="box">1</div></div>
+            <div class="m-field"><label>Teléfono de quien reporta</label><div class="box">993 000 0000</div></div>
+            <div class="m-field" style="grid-column: 1/-1;"><label>Descripción</label><div class="box">Caída de altura, paciente consciente</div></div>
+            <div class="m-field" style="grid-column: 1/-1;"><label>Ubicación</label><div class="box">📍 17.9869, -92.9303 — clic en el mapa para marcar</div></div>
+          </div>
+          <div style="margin-top:14px;font-size:10px;font-weight:700;color:#888;text-transform:uppercase;">Unidad recomendada (más cercana)</div>
+          <div class="m-card acc-green" style="margin-top:6px;">
+            <div class="t">CRUZ-777 — Cruz Roja Tabasco</div>
+            <div class="d">2.1 km · ETA 5 min (ruta real, no línea recta) · Disponible</div>
+          </div>
+          <div style="margin-top:10px;"><span class="m-badge blue">Incluir unidades de otras instituciones ⬜</span></div>
+          <div style="margin-top:16px;"><span class="m-btn red">Registrar y asignar</span> <span class="m-btn ghost">Cancelar</span></div>
+        </div>
+      </div>
+      <div class="figure-cap">Formulario de nueva emergencia, con la unidad más cercana ya recomendada.</div>
+    </div>
+
+    <h3 class="sub-title">Paso a paso</h3>
+    <ol class="steps">
+      <li>Ve a <strong>Nueva emergencia</strong> en el menú superior.</li>
+      <li>Llena el <strong>tipo de emergencia</strong> (trauma, infarto, accidente vial, intoxicación, parto, etc. — catálogo configurado por el administrador).</li>
+      <li>Elige el <strong>nivel de triage</strong> según la urgencia médica reportada (ver tabla más abajo). Este dato determina cuánto tiempo tolerará el hospital que ese paciente espere en su bandeja de "Pacientes en camino" antes de marcarse como vencido.</li>
+      <li>Indica el <strong>número de pacientes</strong> y los datos de quien reporta (nombre y teléfono) — útil si hace falta volver a contactarlo.</li>
+      <li>Escribe una <strong>descripción</strong> breve de lo ocurrido.</li>
+      <li>Marca la <strong>ubicación</strong> en el mapa (clic) o escribe las coordenadas directamente si ya las tienes.</li>
+      <li>El sistema recomienda sola la <strong>unidad disponible más cercana</strong>, calculando la ruta real por calles (no una línea recta), igual que lo haría un GPS.</li>
+      <li>Si quieres considerar también ambulancias de <strong>otras instituciones</strong> (no solo las tuyas o las de tu red CRUM) para la recomendación de "más cercana", activa la casilla <strong>Recomendar unidades de otras instituciones</strong>. Está apagada por defecto porque normalmente se prefiere resolver con recursos propios antes de pedir prestado.</li>
+      <li>Elige la unidad (la recomendada u otra de la lista) y pulsa <strong>Registrar y asignar</strong>. La emergencia queda creada y la asignación se hace en la misma acción.</li>
+    </ol>
+
+    <h4 class="mini-title">Niveles de triage</h4>
+    <table class="triage-table">
+      <thead><tr><th>Nivel</th><th>Color</th><th>Urgencia</th></tr></thead>
+      <tbody>
+        <tr><td>I</td><td><span class="triage-dot" style="background:#C0272D"></span>Rojo</td><td>Reanimación inmediata — riesgo vital</td></tr>
+        <tr><td>II</td><td><span class="triage-dot" style="background:#E65100"></span>Naranja</td><td>Muy urgente — atención en minutos</td></tr>
+        <tr><td>III</td><td><span class="triage-dot" style="background:#F9A825"></span>Amarillo</td><td>Urgente</td></tr>
+        <tr><td>IV</td><td><span class="triage-dot" style="background:#2E7D32"></span>Verde</td><td>Poco urgente</td></tr>
+        <tr><td>V</td><td><span class="triage-dot" style="background:#1565C0"></span>Azul</td><td>No urgente</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note tip">
+      <strong>¿Unidad propia o prestada?</strong>
+      Si eliges una ambulancia de <em>tu misma institución</em> (o de tu red CRUM), la asignación es inmediata: el estado de la unidad cambia a "En camino" al instante y su paramédico recibe el aviso en su celular en ese mismo momento. Si eliges una externa, el sistema en automático genera una <a href="#solicitudes">solicitud interinstitucional</a> en vez de asignar directo — esa unidad no se mueve hasta que la institución dueña la acepte explícitamente.
+    </div>
+
+    <div class="note danger">
+      <strong>Una unidad, una emergencia a la vez</strong>
+      El sistema no deja asignar una ambulancia que ya esté atendiendo otra emergencia sin cerrar — verás un mensaje de error explicando cuál unidad está ocupada. Esto evita que una misma unidad termine "atendiendo" dos casos a la vez, algo que en la práctica generaba confusión real antes de que este control existiera: la unidad reportaba estados y ubicación mezclados entre dos emergencias distintas.
+    </div>
+  </section>
+
+  <!-- ===================== 5. DETALLE ===================== -->
+  <section id="detalle">
+    <div class="eyebrow">Capítulo 5</div>
+    <h2 class="sec-title">Detalle y cierre de una emergencia</h2>
+    <p>Al abrir una emergencia desde el Dashboard o el Historial, ves todo lo relacionado con ese caso en una sola pantalla:</p>
+    <ul>
+      <li><strong>Ambulancia(s) asignada(s)</strong> y su estado actual, actualizado en vivo.</li>
+      <li><strong>Pacientes registrados</strong> — cada uno con su hospital destino, especialidad, estado de recepción (Pendiente / Aceptada / Rechazada) y si ya fue entregado físicamente.</li>
+      <li><strong>Notas de urgencia</strong> que el paramédico haya capturado desde el celular: signos vitales, diagnóstico inicial, tratamiento aplicado y estado del paciente en el momento de la atención.</li>
+    </ul>
+    <p>Desde aquí también puedes <strong>asignar una segunda ambulancia</strong> a la misma emergencia si hace falta (por ejemplo, si el número de pacientes aumentó), o <strong>reasignar el hospital destino</strong> de un paciente en particular si el original lo rechazó.</p>
+
+    <h3 class="sub-title">Cerrar una emergencia</h3>
+    <p>Una emergencia se cierra <strong>sola</strong> en cuanto el último paciente pendiente queda entregado físicamente en su hospital destino (esa confirmación la hace el hospital desde su propia aplicación, SICEM Desktop). También puedes cerrarla manualmente desde aquí si por algún motivo ya no queda nada pendiente pero el cierre automático no se disparó.</p>
+    <div class="note warn">
+      <strong>Cierre forzado</strong>
+      Si un caso quedó "atorado" (por ejemplo, la ambulancia se canceló a medio camino, o un paciente fue rechazado por un hospital y nunca se reasignó a otro), un <strong>administrador</strong> puede usar el <em>cierre forzado</em>, que ignora los pendientes — pero exige escribir el motivo, y ese motivo queda guardado permanentemente en el historial para trazabilidad.
+    </div>
+    <div class="note ok">
+      <strong>La unidad no siempre se libera al cerrar</strong>
+      Si la ambulancia ya llegó al hospital (estado <em>Trasladando</em>) y el paramédico todavía no confirma "Concluir traslado" en su celular, la unidad se queda como está aunque la emergencia se cierre a su alrededor — solo el propio paramédico, físicamente en el lugar, puede marcarla Disponible de nuevo, y solo una vez que el hospital confirme la llegada física de todos sus pacientes. Este es uno de los pocos puntos del sistema donde el cierre de la emergencia y la disponibilidad de la ambulancia se desacoplan a propósito. Ver el manual de <em>SICEM Mobile</em>, capítulo "Concluir traslado y Marcar Disponible", para el detalle completo.
+    </div>
+  </section>
+
+  <!-- ===================== 6. SOLICITUDES ===================== -->
+  <section id="solicitudes">
+    <div class="eyebrow">Capítulo 6</div>
+    <h2 class="sec-title">Solicitudes interinstitucionales</h2>
+    <p class="sec-sub">Para pedir prestada una ambulancia que no es tuya ni de tu red CRUM.</p>
+
+    <div class="figure">
+      <div class="mockup">
+        <div class="navbar">
+          <span class="logo">SICEM</span>
+          <div class="nav-links"><span>Dashboard</span><span>Nueva emergencia</span><span class="active">Solicitudes</span><span>Historial</span></div>
+          <span class="user">María López · Despachador</span>
+        </div>
+        <div class="body tight">
+          <table class="m-table">
+            <thead><tr><th>Emergencia</th><th>Institución dueña</th><th>Unidad</th><th>Estado</th><th>Hora</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Trauma · Centro</td><td>Hospital 46 IMSS</td><td>IMSS46-1</td><td><span class="m-badge orange">Pendiente</span></td><td>10:34</td><td><span class="m-btn ghost sm">Cancelar</span></td></tr>
+              <tr><td>Accidente · Ruiz C.</td><td>Cruz Roja Tabasco</td><td>CRUZ-777</td><td><span class="m-badge green">Aceptada</span></td><td>10:21</td><td><span class="m-btn ghost sm">Ver</span></td></tr>
+              <tr><td>Parto · Col. Maya</td><td>ISSSTE Tabasco</td><td>ISSSTE-04</td><td><span class="m-badge red">Rechazada</span></td><td>09:58</td><td><span class="m-btn ghost sm">Ver</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="figure-cap">Bandeja de solicitudes interinstitucionales, con su estado actual.</div>
+    </div>
+
+    <h3 class="sub-title">Cómo funciona, paso a paso</h3>
+    <ol class="steps">
+      <li>Al elegir una ambulancia externa desde <a href="#nueva">Nueva emergencia</a>, se crea la solicitud automáticamente con estado <strong>Pendiente</strong> — no hace falta llenar un formulario aparte.</li>
+      <li>Mientras está pendiente, esa unidad queda marcada como <strong>Reservada</strong> en el mapa de todo el sistema — nadie más puede tomarla mientras se decide, ni siquiera su propia institución para otro caso.</li>
+      <li>La institución dueña la <strong>acepta o rechaza</strong> desde <em>SICEM Desktop</em> (o desde aquí mismo, si esa institución también la administras tú).</li>
+      <li>Si <strong>acepta</strong>: la unidad pasa a "En camino" de verdad, su paramédico recibe el aviso en su celular en ese instante, y la solicitud queda comprometida — ya no hace falta hacer nada más de este lado.</li>
+      <li>Si <strong>rechaza</strong> (con un motivo obligatorio): la unidad regresa sola a "Disponible" para su propia institución, y tendrás que buscar otra opción para esa emergencia — el sistema no reintenta automáticamente con otra unidad.</li>
+    </ol>
+    <p>También puedes <strong>cancelar</strong> una solicitud tuya en cualquier momento — incluso una ya aceptada, si al final ya no la necesitas (por ejemplo, pediste dos unidades de más para el mismo caso y con una basta).</p>
+
+    <div class="note tip">
+      <strong>¿Y si la institución dueña nunca responde?</strong>
+      No hay un límite de tiempo automático — la solicitud se queda "Pendiente" indefinidamente y la unidad indefinidamente "Reservada" hasta que alguien la responda o el despachador la cancele. En la práctica, si pasa mucho tiempo sin respuesta, lo más rápido suele ser cancelarla y pedir otra unidad distinta.
+    </div>
+  </section>
+
+  <!-- ===================== 7. HISTORIAL ===================== -->
+  <section id="historial">
+    <div class="eyebrow">Capítulo 7</div>
+    <h2 class="sec-title">Historial</h2>
+    <p>Aquí se consultan todas las emergencias <strong>ya cerradas</strong>. Se puede filtrar por fecha, tipo de emergencia e institución, y buscar un caso puntual para revisar cómo se resolvió: qué unidad fue, cuánto tardó, qué hospital lo recibió, y qué notas de urgencia se registraron en el camino. Es la fuente principal para auditorías, reportes y para las <strong>gráficas de desempeño</strong> disponibles para el rol administrador (emergencias por tipo, tiempos de respuesta, emergencias por institución).</p>
+  </section>
+
+  <!-- ===================== 8. PERFIL ===================== -->
+  <section id="perfil">
+    <div class="eyebrow">Capítulo 8</div>
+    <h2 class="sec-title">Mi perfil</h2>
+    <p>Desde tu perfil puedes actualizar tus datos de contacto (teléfono, correo secundario, etc.) y cambiar tu contraseña. No puedes cambiar tu propio rol, institución ni permisos — eso, por diseño, solo lo puede hacer un administrador desde <a href="#admin">Usuarios</a>, para que nadie pueda auto-otorgarse privilegios.</p>
+  </section>
+
+  <!-- ===================== 9. ADMINISTRACIÓN ===================== -->
+  <section id="admin">
+    <div class="eyebrow">Capítulo 9 · Solo rol Administrador</div>
+    <h2 class="sec-title">Administración del sistema</h2>
+    <p class="sec-sub">Un menú aparte, visible únicamente para cuentas con rol de Administrador. Es donde se configura todo lo que el resto del sistema da por hecho.</p>
+
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="icon">🚑</div>
+        <h5>Ambulancias</h5>
+        <p>Dar de alta/baja unidades, asignarlas a una institución, cambiar su tipo (básica, avanzada, aérea) o número de unidad, y desactivarlas temporalmente sin borrar su historial.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">🏥</div>
+        <h5>Instituciones</h5>
+        <p>Altas de hospitales/bases, marcar cuáles forman parte de la red CRUM, y administrar sus especialidades y número de camas por especialidad.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">👥</div>
+        <h5>Usuarios</h5>
+        <p>Crear cuentas de despachador, hospital o paramédico; asignar la ambulancia y el horario de turno de cada paramédico; activar/desactivar cuentas; restablecer contraseñas.</p>
+      </div>
+      <div class="feat-card">
+        <div class="icon">📋</div>
+        <h5>Catálogos</h5>
+        <p>Tipos de emergencia, niveles de triage (con su tiempo máximo de espera), estados y motivos — el vocabulario compartido que usa todo el sistema, en las tres aplicaciones.</p>
+      </div>
+    </div>
+
+    <h3 class="sub-title">Crear una cuenta de paramédico</h3>
+    <ol class="steps">
+      <li>En <strong>Usuarios</strong>, elige "Nuevo usuario" y selecciona el rol Paramédico.</li>
+      <li>Llena sus datos personales y credenciales de acceso.</li>
+      <li>Asígnale una <strong>ambulancia</strong> de tu institución (obligatorio — sin unidad asignada no puede iniciar turno en su celular).</li>
+      <li>Configura su <strong>horario de trabajo</strong>: un rango de hora por cada día de la semana que le corresponda (puede cruzar medianoche, por ejemplo 20:00–04:00 para un turno nocturno).</li>
+      <li>Guarda. El paramédico ya puede iniciar sesión en SICEM Mobile con las credenciales que le diste.</li>
+    </ol>
+    <div class="note warn">
+      <strong>Sin horario, no hay turno</strong>
+      Un paramédico <em>no puede iniciar turno</em> en el celular si su institución no le configuró al menos un día de horario. El sistema lo hace cumplir automáticamente: si intenta entrar fuera de su horario asignado, se lo rechaza y le muestra cuál es su horario correcto.
+    </div>
+  </section>
+
+  <!-- ===================== 10. FLUJO COMPLETO ===================== -->
+  <section id="flujo">
+    <div class="eyebrow">Capítulo 10</div>
+    <h2 class="sec-title">Flujo completo ilustrado</h2>
+    <p class="sec-sub">El ciclo de vida completo de una emergencia, desde que se registra hasta que se cierra sola y la ambulancia vuelve a quedar libre.</p>
+
+    <div class="flow">
+      <div class="flow-step actor-desp"><div class="num">1</div><div class="t">Se registra la emergencia</div><div class="d">Despachador — tipo, triage, ubicación</div></div>
+      <div class="flow-step actor-desp"><div class="num">2</div><div class="t">Se asigna una ambulancia</div><div class="d">Propia (directa) o externa (con solicitud)</div></div>
+      <div class="flow-step actor-para"><div class="num">3</div><div class="t">"En camino" → "En escena"</div><div class="d">Paramédico, solo a &lt;300m de la escena</div></div>
+      <div class="flow-step actor-para"><div class="num">4</div><div class="t">Registra al paciente</div><div class="d">Elige hospital destino</div></div>
+      <div class="flow-step actor-hosp"><div class="num">5</div><div class="t">Hospital acepta al paciente</div><div class="d">Reserva cama por especialidad</div></div>
+      <div class="flow-step actor-para"><div class="num">6</div><div class="t">"Trasladando" → Concluir traslado</div><div class="d">Solo a &lt;300m del hospital</div></div>
+      <div class="flow-step actor-hosp"><div class="num">7</div><div class="t">Hospital confirma llegada física</div><div class="d">La emergencia se cierra sola si no queda nada pendiente</div></div>
+      <div class="flow-step actor-para"><div class="num">8</div><div class="t">Paramédico marca "Disponible"</div><div class="d">Solo cuando 6 y 7 ya pasaron para TODOS sus pacientes</div></div>
+    </div>
+    <div class="flow-legend">
+      <span><i style="background:#C0272D"></i> Acción del despachador</span>
+      <span><i style="background:#2E7D32"></i> Acción del paramédico (celular)</span>
+      <span><i style="background:#1565C0"></i> Acción del hospital</span>
+    </div>
+
+    <div class="note tip">
+      <strong>Por qué el paso 8 es tan estricto</strong>
+      Ninguna otra persona del sistema sabe con certeza si una ambulancia ya quedó libre de verdad, físicamente — solo el paramédico que está ahí. El despachador ve el mapa, pero no ve el interior de la unidad; el hospital ve al paciente, pero no sabe si el paramédico ya terminó el papeleo o sigue ahí. Por eso el "Disponible" final siempre depende de su confirmación explícita, nunca es automático, sin importar cuántas otras condiciones ya se cumplieron.
+    </div>
+  </section>
+
+  <!-- ===================== 11. CASOS ESPECIALES ===================== -->
+  <section id="casos">
+    <div class="eyebrow">Capítulo 11</div>
+    <h2 class="sec-title">Casos especiales</h2>
+    <p class="sec-sub">Situaciones que no son el camino "perfecto" pero pasan seguido en la operación real, y cómo las maneja el sistema.</p>
+
+    <div class="case-card">
+      <div class="ct">Una emergencia con dos o más pacientes, cada uno a un hospital distinto</div>
+      <p>Es totalmente normal — por ejemplo, un accidente vial con varios lesionados. Registras el número de pacientes al crear la emergencia, y cada paciente se registra por separado (normalmente el paramédico lo hace desde el celular), cada uno con <em>su propio</em> hospital destino si hace falta. La emergencia no se cierra hasta que <strong>todos</strong> los pacientes con destino asignado hayan sido entregados físicamente.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Un hospital rechaza a un paciente</div>
+      <p>El paciente queda marcado "Rechazada" con el motivo que dio el hospital, visible en el detalle de la emergencia. El paramédico recibe el aviso de inmediato en su celular. Desde aquí puedes <strong>reasignar</strong> ese paciente a otro hospital destino sin necesidad de volver a registrarlo desde cero.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Se necesita más de una ambulancia para la misma emergencia</div>
+      <p>Puedes asignar varias unidades al mismo caso desde el detalle de la emergencia — cada una avanza sus propios estados de forma independiente, y cada una puede llevar a un paciente distinto con su propio hospital destino.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">El turno de un paramédico vence mientras sigue atendiendo un caso</div>
+      <p>El sistema revisa periódicamente los horarios vencidos, pero nunca corta a un paramédico que sigue con una emergencia sin cerrar — su turno y su sesión se quedan activos hasta que termine, sin importar que ya haya pasado su hora de salida. Solo se cierra el turno automáticamente si <em>no</em> tiene nada pendiente en ese momento.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Necesitas asignar una ambulancia que ya está ocupada</div>
+      <p>El sistema lo bloquea con un error explícito, mostrando qué otra emergencia tiene ocupada a esa unidad. Tendrás que esperar a que se libere (cuando su paramédico confirme "Disponible") o elegir otra ambulancia distinta.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 12. FAQ ===================== -->
+  <section id="faq">
+    <div class="eyebrow">Capítulo 12</div>
+    <h2 class="sec-title">Preguntas frecuentes</h2>
+
+    <div class="faq-item">
+      <div class="faq-q">Asigné una ambulancia y me dice que "ya está atendiendo otra emergencia sin cerrar" ¿qué hago?</div>
+      <div class="faq-a">Esa unidad tiene un caso abierto en otro lado. Ciérralo primero (o espera a que su paramédico termine), o elige otra ambulancia disponible.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">¿Por qué no veo cierta ambulancia externa en la lista de "más cercana"?</div>
+      <div class="faq-a">Revisa que la casilla "Recomendar unidades de otras instituciones" esté activada en el formulario de nueva emergencia — sin eso, la recomendación solo considera tus unidades propias o de tu red CRUM.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Rechacé una solicitud interinstitucional por error, ¿se puede deshacer?</div>
+      <div class="faq-a">No directamente — el despachador que la pidió tendría que mandar una solicitud nueva si la unidad sigue disponible en ese momento.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Una emergencia lleva mucho tiempo sin cerrarse, ¿por qué?</div>
+      <div class="faq-a">Revisa el detalle: seguramente hay un paciente sin confirmación de llegada física, o una ambulancia que sigue "Trasladando" esperando que su paramédico concluya el traslado. Si el caso quedó abandonado de verdad (por ejemplo, la ambulancia se canceló a medio camino), un administrador puede usar el cierre forzado.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">¿Puedo editar los datos de una emergencia ya registrada?</div>
+      <div class="faq-a">La descripción, tipo y ubicación se capturan una sola vez al registrar. Lo que sí puedes ajustar después es la asignación de ambulancias y el hospital destino de cada paciente.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">¿Qué pasa si me equivoco de nivel de triage al registrar?</div>
+      <div class="faq-a">El paramédico también captura su propio nivel de triage en la nota de urgencia una vez que evalúa al paciente en persona — ese dato puede terminar siendo distinto al que tú registraste inicialmente por teléfono, y es normal: el tuyo es una primera estimación, el suyo es la evaluación real en sitio.</div>
+    </div>
+  </section>
+
+  <!-- ===================== 13. GLOSARIO ===================== -->
+  <section id="glosario">
+    <div class="eyebrow">Capítulo 13</div>
+    <h2 class="sec-title">Glosario de términos</h2>
+    <dl class="gloss">
+      <dt>CRUM</dt><dd>Centro Regulador de Urgencias Médicas — coordina el despacho de ambulancias de una red de instituciones.</dd>
+      <dt>Institución CRUM</dt><dd>Institución cuyas ambulancias se comparten como "propias" entre todas las demás instituciones CRUM, sin necesitar solicitud interinstitucional.</dd>
+      <dt>Triage</dt><dd>Nivel de urgencia médica del paciente (I a V), cada uno con un tiempo máximo de espera tolerable antes de considerarse "vencido" en la bandeja del hospital.</dd>
+      <dt>Solicitud interinstitucional</dt><dd>Petición formal para usar una ambulancia que pertenece a otra institución (fuera de tu red CRUM), que esa institución debe aceptar o rechazar explícitamente.</dd>
+      <dt>Estados de ambulancia</dt><dd>Disponible → En camino → En escena → Trasladando → (de vuelta a) Disponible. También existen Fuera de servicio, En mantenimiento y Reservada (mientras se responde una solicitud interinstitucional).</dd>
+      <dt>Concluir traslado</dt><dd>Aviso que manda el paramédico desde el celular cuando llega físicamente al hospital — le indica al hospital que ya puede confirmar la recepción; no cambia el estado de la ambulancia por sí solo.</dd>
+      <dt>Confirmar llegada física</dt><dd>Acción del hospital que certifica que el paciente ya está físicamente ahí (distinta de "aceptar", que es la decisión administrativa previa de reservar cama).</dd>
+      <dt>Cierre forzado</dt><dd>Cierre manual de una emergencia por parte de un administrador, ignorando pendientes — exige un motivo por escrito.</dd>
+      <dt>Nota de urgencia</dt><dd>Registro de signos vitales, diagnóstico y tratamiento que el paramédico captura para un paciente específico, ligado a la emergencia en curso.</dd>
+    </dl>
+  </section>
+
+  <div class="footer">SICEM — Sistema Integral de Coordinación de Emergencias Médicas · Manual de usuario, aplicación web · Tabasco, México</div>
+</div>
+</body>
+</html>

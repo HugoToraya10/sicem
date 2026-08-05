@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Usuario — SICEM Mobile (Paramédico)</title>
+<style>
+  :root {
+    --navy: #1a1a2e; --green: #2E7D32; --green-bg: #e8f5e9; --red: #C0272D; --red-bg: #fde8e8;
+    --orange: #E65100; --orange-bg: #fff3e0; --blue: #1565C0; --blue-bg: #e3f2fd;
+    --purple: #8E44AD; --purple-bg: #f3e8fb; --gray: #666; --gray-light: #999; --border: #e0e0e0; --bg: #f5f6f8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: #222; line-height: 1.65; font-size: 15px; }
+  .page { max-width: 880px; margin: 0 auto; background: white; }
+
+  .cover { background: linear-gradient(135deg, var(--navy) 0%, #2a2a4a 100%); color: white; padding: 90px 60px 70px; text-align: center; position: relative; overflow: hidden; }
+  .cover::after { content: ""; position: absolute; bottom: -40px; right: -40px; width: 220px; height: 220px; border-radius: 50%; background: rgba(46,125,50,0.2); }
+  .cover::before { content: ""; position: absolute; top: -60px; left: -60px; width: 260px; height: 260px; border-radius: 50%; background: rgba(21,101,192,0.15); }
+  .cover .badge { display: inline-block; background: var(--green); color: white; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 18px; border-radius: 20px; margin-bottom: 24px; position: relative; z-index: 1; }
+  .cover h1 { font-size: 38px; font-weight: 800; letter-spacing: -0.5px; position: relative; z-index: 1; }
+  .cover h2 { font-size: 18px; font-weight: 400; color: #c9c9d8; margin-top: 10px; position: relative; z-index: 1; }
+  .cover .meta { margin-top: 40px; font-size: 12px; color: #9999b3; position: relative; z-index: 1; }
+  .cover .roles { margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+  .role-pill { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 16px; font-size: 12px; }
+
+  .toc { padding: 40px 60px; border-bottom: 1px solid var(--border); }
+  .toc h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gray-light); margin-bottom: 16px; }
+  .toc ol { list-style: none; counter-reset: toc; columns: 2; column-gap: 40px; }
+  .toc li { counter-increment: toc; margin-bottom: 8px; break-inside: avoid; }
+  .toc li a { color: var(--navy); text-decoration: none; font-size: 13.5px; font-weight: 600; }
+  .toc li a::before { content: counter(toc) ". "; color: var(--green); font-weight: 700; }
+  .toc li a:hover { text-decoration: underline; }
+
+  section { padding: 46px 60px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); margin-bottom: 8px; }
+  h2.sec-title { font-size: 25px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+  .sec-sub { color: var(--gray); font-size: 14px; margin-bottom: 24px; }
+  h3.sub-title { font-size: 17px; font-weight: 700; color: var(--navy); margin: 30px 0 12px; padding-top: 6px; }
+  p { margin-bottom: 12px; color: #333; }
+  ul { margin: 10px 0 16px 22px; }
+  ul li { margin-bottom: 6px; color: #333; }
+  ol.steps { counter-reset: step; list-style: none; margin: 10px 0 16px 0; }
+  ol.steps li { counter-increment: step; position: relative; padding-left: 34px; margin-bottom: 12px; }
+  ol.steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--green); color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  strong { color: var(--navy); }
+  code { background: #f0f0f5; border-radius: 3px; padding: 1px 6px; font-size: 0.9em; font-family: Consolas, monospace; color: var(--green); }
+
+  .note { border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 13.5px; border-left: 4px solid; }
+  .note.tip { background: var(--blue-bg); border-color: var(--blue); }
+  .note.warn { background: var(--orange-bg); border-color: var(--orange); }
+  .note.danger { background: var(--red-bg); border-color: var(--red); }
+  .note.ok { background: var(--green-bg); border-color: var(--green); }
+  .note strong { display: block; margin-bottom: 3px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .note.tip strong { color: var(--blue); } .note.warn strong { color: var(--orange); }
+  .note.danger strong { color: var(--red); } .note.ok strong { color: var(--green); }
+
+  .phone-row { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; margin: 22px 0 10px; }
+  .phone { width: 250px; border: 6px solid var(--navy); border-radius: 26px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15); background: white; }
+  .phone .notch { background: var(--navy); height: 16px; position: relative; }
+  .phone .notch::after { content:""; position:absolute; top:4px; left:50%; transform:translateX(-50%); width:50px; height:7px; background:#000; border-radius:6px; }
+  .phone .top-header { background: white; border-bottom: 1px solid var(--border); padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--navy); text-align: center; }
+  .phone .content { padding: 10px 12px; min-height: 220px; font-size: 10.5px; background: #fff; }
+  .phone .tabbar { display: flex; border-top: 1px solid var(--border); background: white; }
+  .phone .tabbar .tab { flex: 1; text-align: center; padding: 7px 0; font-size: 8px; color: #999; }
+  .phone .tabbar .tab.active { color: var(--green); font-weight: 700; }
+  .phone .tabbar .tab .ic { font-size: 13px; display: block; }
+  .p-cap { font-size: 11px; color: var(--gray-light); text-align: center; margin-top: 8px; font-style: italic; }
+
+  .p-btn { display: block; text-align: center; border-radius: 6px; padding: 8px; font-size: 10.5px; font-weight: 700; color: white; margin-top: 8px; }
+  .p-btn.green { background: var(--green); } .p-btn.red { background: var(--red); }
+  .p-btn.blue { background: var(--blue); } .p-btn.ghost { background: white; color: #555; border: 1px solid var(--border); }
+  .p-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; background: #fafafb; }
+  .p-card.urgent { background: var(--red-bg); border: 2px solid var(--red); text-align: center; }
+  .p-field { margin-bottom: 6px; }
+  .p-field label { display: block; font-size: 8px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 2px; }
+  .p-field .box { border: 1px solid #dcdce4; border-radius: 4px; padding: 5px 7px; font-size: 9.5px; color: #444; background: white; }
+  .p-badge { display: inline-block; font-size: 7.5px; font-weight: 700; padding: 2px 6px; border-radius: 8px; }
+  .p-badge.green { background: var(--green-bg); color: var(--green); }
+  .p-badge.red { background: var(--red-bg); color: var(--red); }
+  .p-badge.purple { background: var(--purple-bg); color: var(--purple); }
+  .p-map { background: #e8edf2; border-radius: 6px; height: 90px; position: relative; margin-bottom: 8px; }
+  .p-map .dot { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); border: 2px solid white; top: 40px; left: 60px; }
+  .p-map .pin { position: absolute; font-size: 14px; top: 15px; left: 130px; }
+  .p-tag { display: inline-block; font-size: 8px; font-weight: 700; padding: 2px 7px; border-radius: 8px; margin: 2px; }
+  .p-tag.red { background: var(--red-bg); color: var(--red); }
+  .p-tag.orange { background: var(--orange-bg); color: var(--orange); }
+
+  .feat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0; }
+  .feat-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; background: #fafafb; }
+  .feat-card .icon { font-size: 20px; margin-bottom: 8px; }
+  .feat-card h5 { font-size: 13.5px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .feat-card p { font-size: 12.5px; color: var(--gray); margin-bottom: 0; }
+
+  .vitals-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin: 16px 0; }
+  .vital-chip { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: #fafafb; display: flex; gap: 10px; align-items: flex-start; }
+  .vital-chip .ic { font-size: 18px; }
+  .vital-chip .n { font-size: 12.5px; font-weight: 700; color: var(--navy); }
+  .vital-chip .d { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+  .flow { display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; margin: 20px 0; }
+  .flow-step { flex: 1; min-width: 140px; background: white; border: 1.5px solid var(--border); border-radius: 8px; padding: 12px 14px; position: relative; margin: 4px; border-top: 3px solid var(--green); }
+  .flow-step .num { font-size: 10px; font-weight: 800; color: white; background: var(--navy); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .flow-step .t { font-size: 12.5px; font-weight: 700; color: var(--navy); }
+  .flow-step .d { font-size: 11px; color: var(--gray); margin-top: 3px; }
+
+  .case-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; background: #fafafb; }
+  .case-card .ct { font-size: 13.5px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .case-card .ct::before { content: "⚙ "; color: var(--green); }
+  .case-card p { font-size: 13px; margin-bottom: 6px; }
+  .case-card p:last-child { margin-bottom: 0; }
+
+  .faq-item { border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; background: #fafafb; }
+  .faq-q { font-weight: 700; font-size: 13.5px; color: var(--navy); margin-bottom: 5px; }
+  .faq-q::before { content: "P· "; color: var(--green); }
+  .faq-a { font-size: 13px; color: #444; }
+  .faq-a::before { content: "R· "; color: var(--blue); font-weight: 700; }
+
+  .gloss { display: grid; grid-template-columns: 210px 1fr; gap: 4px 20px; font-size: 13px; }
+  .gloss dt { font-weight: 700; color: var(--navy); padding: 8px 0; border-top: 1px solid #eee; }
+  .gloss dd { padding: 8px 0; border-top: 1px solid #eee; color: #444; }
+
+  .footer { text-align: center; padding: 30px; font-size: 11px; color: var(--gray-light); }
+
+  @media print {
+    body { background: white; font-size: 12px; }
+    .page { max-width: 100%; }
+    .cover { page-break-after: always; }
+    section { page-break-inside: avoid; padding: 24px 30px; }
+    .toc { page-break-after: always; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @page { margin: 14mm; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover">
+    <div class="badge">Manual de usuario</div>
+    <h1>SICEM Mobile</h1>
+    <h2>Sistema Integral de Coordinación de Emergencias Médicas</h2>
+    <div class="roles"><div class="role-pill">🚑 Rol Paramédico (TAMP)</div></div>
+    <div class="meta">Aplicación móvil (Android) · Tabasco, México · Versión del manual: 2.0 — Agosto 2026</div>
+  </div>
+
+  <div class="toc">
+    <h3>Contenido</h3>
+    <ol>
+      <li><a href="#intro">Introducción</a></li>
+      <li><a href="#acceso">Instalación y acceso</a></li>
+      <li><a href="#alerta">Pestaña Alerta</a></li>
+      <li><a href="#mapa">Pestaña Mapa</a></li>
+      <li><a href="#paciente">Pestaña Paciente</a></li>
+      <li><a href="#expediente">Expediente clínico</a></li>
+      <li><a href="#nota">Nota de urgencia</a></li>
+      <li><a href="#stats">Pestaña Stats</a></li>
+      <li><a href="#perfil">Mi perfil</a></li>
+      <li><a href="#flujo">Flujo completo ilustrado</a></li>
+      <li><a href="#casos">Casos especiales</a></li>
+      <li><a href="#faq">Preguntas frecuentes</a></li>
+      <li><a href="#glosario">Glosario de términos</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 -->
+  <section id="intro">
+    <div class="eyebrow">Capítulo 1</div>
+    <h2 class="sec-title">Introducción</h2>
+    <p><strong>SICEM Mobile</strong> es la aplicación para el <strong>paramédico (TAMP — Técnico en Atención Médica Prehospitalaria)</strong> en campo: recibe la emergencia asignada, navega hacia ella, registra a sus pacientes, captura sus signos vitales, y avisa al hospital destino cuando entrega a cada uno — todo desde el celular, la mayor parte del tiempo en movimiento y con una sola mano libre.</p>
+    <p>Es la aplicación con más restricciones del sistema, y no por accidente: cada botón que aparece o desaparece según dónde estás parado, o según lo que ya confirmó otra persona, existe para que el sistema refleje con exactitud lo que de verdad está pasando en la calle, no lo que alguien <em>cree</em> que está pasando desde una oficina.</p>
+    <div class="note tip">
+      <strong>El paramédico ejecuta, el CRUM decide</strong>
+      Por diseño (y siguiendo la norma oficial NOM-034-SSA3-2013, que establece que el CRUM coordina el traslado y el TAMP ejecuta y reporta), el paramédico solo puede <em>avanzar</em> el estado de su unidad — nunca retroceder, saltar pasos, ni marcarse Disponible por su cuenta sin más. Cada candado que verás en este manual existe por esa misma razón: la autoridad de decidir la disponibilidad operativa de una unidad no es del paramédico solo, salvo en el único caso especial que se explica en el capítulo de Mapa.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="acceso">
+    <div class="eyebrow">Capítulo 2</div>
+    <h2 class="sec-title">Instalación y acceso</h2>
+    <ol class="steps">
+      <li>Instala el archivo APK que te compartió tu institución (no está en Play Store — es una app interna de uso exclusivo del personal autorizado).</li>
+      <li>Al abrir la app por primera vez, acepta el permiso de <strong>ubicación</strong> ("Permitir siempre" o al menos "mientras se usa la app") — es indispensable: sin él no puedes iniciar turno, el despachador no puede recomendarte como la unidad más cercana, y los candados de "En escena"/"Concluir traslado" (que dependen de tu posición real) nunca se van a habilitar.</li>
+      <li>Acepta también el permiso de <strong>notificaciones</strong> — así te llega el aviso de una emergencia nueva incluso con la app cerrada o el celular bloqueado.</li>
+      <li>Inicia sesión con el correo y contraseña que te dio tu institución.</li>
+    </ol>
+    <div class="note danger">
+      <strong>Una sesión, un dispositivo</strong>
+      Si inicias sesión en otro celular con la misma cuenta, la sesión de este se cierra sola de inmediato, con un aviso en pantalla. Es intencional: dos dispositivos reportando ubicación al mismo tiempo para la misma unidad generaría datos contradictorios en el mapa que ve el despachador, y nadie sabría cuál posición es la real.
+    </div>
+    <div class="note warn">
+      <strong>Batería y datos móviles</strong>
+      Mientras tienes turno activo, la app reporta tu ubicación cada pocos segundos (no solo cuando tienes una emergencia asignada) — esto consume más batería y datos de lo normal. Es a propósito: el sistema necesita saber en todo momento qué tan cerca está cada unidad disponible, no solo las que ya están ocupadas.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="alerta">
+    <div class="eyebrow">Capítulo 3</div>
+    <h2 class="sec-title">Pestaña Alerta</h2>
+    <p class="sec-sub">La pantalla principal — aquí controlas tu turno y aquí te avisa el sistema de una emergencia nueva.</p>
+
+    <div class="phone-row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="top-header">Alerta</div>
+        <div class="content">
+          <div style="text-align:center; margin-bottom:8px;">
+            <span class="p-badge green">● Conectado</span>
+          </div>
+          <div class="p-card" style="text-align:center;">
+            <div style="font-size:22px;">🚑</div>
+            <div style="font-weight:700; margin-top:4px;">Unidad asignada</div>
+            <div style="font-size:12px; font-weight:800;">IMSS46-1</div>
+            <span class="p-badge green" style="margin-top:6px;">En turno</span>
+          </div>
+          <div class="p-card" style="text-align:center; color:#888;">Esperando asignación de emergencia...<br><span class="p-badge">⏱ Termina en 3h 20min</span></div>
+          <div class="p-btn ghost">⚠ Reportar falla en la unidad</div>
+          <div class="p-btn ghost" style="border-color:#C0272D;color:#C0272D;">Terminar turno</div>
+        </div>
+        <div class="tabbar">
+          <div class="tab active"><span class="ic">🔔</span>Alerta</div>
+          <div class="tab"><span class="ic">🗺</span>Mapa</div>
+          <div class="tab"><span class="ic">👥</span>Paciente</div>
+          <div class="tab"><span class="ic">📊</span>Stats</div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="top-header" style="background:#C0272D; color:white;">¡Nueva emergencia!</div>
+        <div class="content" style="background:#fde8e8;">
+          <div style="text-align:center; padding: 14px 0;">
+            <div style="font-size:26px;">⚠️</div>
+            <div style="font-weight:800; color:#C0272D; letter-spacing:0.5px; margin-top:6px; font-size:11px;">NUEVA EMERGENCIA ASIGNADA</div>
+            <div style="font-weight:800; font-size:14px; margin-top:8px;">Trauma</div>
+            <div style="font-size:10px; color:#555; margin-top:4px;">Caída de altura, paciente consciente</div>
+            <div style="font-size:9px; color:#555; margin-top:8px;">Reportado por: Juan Pérez · 993 000 0000</div>
+          </div>
+          <div class="p-btn green">✓ Entendido — ir al mapa</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-cap">Izquierda: pantalla de turno en espera. Derecha: alerta de emergencia nueva, a pantalla completa a propósito.</div>
+
+    <h3 class="sub-title">Iniciar y terminar turno</h3>
+    <ol class="steps">
+      <li>Necesitas tener una <strong>ambulancia asignada</strong> por tu institución de antemano (lo hace un administrador desde SICEM Web) — sin unidad asignada, este paso ni siquiera aparece.</li>
+      <li>Solo puedes iniciar turno <strong>dentro de tu horario de trabajo</strong> configurado — el sistema lo revisa cada vez que intentas iniciar. Si intentas fuera de horario, se bloquea y te muestra exactamente cuál es tu horario del día en curso.</li>
+      <li>Pulsa <strong>Iniciar turno</strong> (con confirmación, para que no sea un toque accidental). Desde ese momento se reporta tu ubicación en tiempo real y puedes recibir emergencias asignadas a tu unidad.</li>
+      <li>Verás una tarjeta con tu <strong>unidad asignada</strong> y una cuenta regresiva de cuánto falta para que termine tu horario del día.</li>
+      <li>Al <strong>Terminar turno</strong> (también con confirmación), dejas de recibir emergencias y tu unidad se marca "Fuera de servicio" — a menos que sigas atendiendo un caso activo, ver el aviso siguiente.</li>
+    </ol>
+    <div class="note warn">
+      <strong>Tu turno no se cierra a medio caso</strong>
+      Si tu horario termina mientras sigues atendiendo una emergencia, el sistema <em>no</em> te saca de la app a la fuerza — se queda esperando a que termines. Solo se cierra solo por vencimiento de horario (con un aviso y cierre de sesión automático) si en ese momento ya no tienes ninguna emergencia pendiente.
+    </div>
+    <div class="note tip">
+      <strong>El indicador "Conectado / Sin conexión"</strong>
+      En la parte superior de la pantalla ves si tu celular está conectado al sistema en tiempo real. Si dice "Sin conexión", no puedes confiar en que "no me ha llegado nada" signifique que de verdad no hay nada — puede que un aviso se haya perdido por la falla de señal. En cuanto recuperas conexión, la app revisa sola si te perdiste algo mientras estabas desconectado.
+    </div>
+
+    <h3 class="sub-title">Recibir una emergencia</h3>
+    <p>Cuando el despachador te asigna una unidad, la pantalla cambia a una <strong>alerta roja de pantalla completa</strong> — con vibración insistente y repetida para que sea imposible no notarla, aunque el celular esté en el bolsillo. Pulsa <strong>"Entendido — ir al mapa"</strong> para reconocerla. No es un "aceptar o rechazar": tu institución ya decidió que tú vas a esa emergencia, este botón solo confirma que ya la viste y te lleva directo al mapa para empezar a navegar.</p>
+
+    <h3 class="sub-title">Reportar falla en la unidad</h3>
+    <p>Si algo le pasa a tu ambulancia (mecánica, equipo médico, lo que sea) mientras estás en turno, usa este botón para avisar de inmediato a tu despachador/hospital, con una nota describiendo qué pasó. Solo <strong>notifica</strong> — la decisión de qué hacer con la unidad (reasignarla a otra, sacarla de servicio, mandar apoyo) es de tu institución, no algo que tú decidas desde aquí.</p>
+  </section>
+
+  <!-- 4 -->
+  <section id="mapa">
+    <div class="eyebrow">Capítulo 4</div>
+    <h2 class="sec-title">Pestaña Mapa</h2>
+    <p class="sec-sub">Tu navegación en vivo, y el control del estado de tu unidad a lo largo de todo el traslado. Es, junto con Alerta, la pantalla que más usarás durante una emergencia activa.</p>
+
+    <div class="phone-row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="top-header">Mapa</div>
+        <div class="content">
+          <div class="p-map"><div class="dot"></div><div class="pin">📍</div></div>
+          <div style="font-weight:700; font-size:11px;">Trauma</div>
+          <div style="color:#888; font-size:9px;">Caída de altura</div>
+          <div style="display:flex; gap:14px; margin:6px 0;">
+            <div><div style="font-size:8px;color:#888;">TIEMPO</div><div style="font-weight:800;color:#C0272D;">4 min</div></div>
+            <div><div style="font-size:8px;color:#888;">DISTANCIA</div><div style="font-weight:800;">1.8 km</div></div>
+          </div>
+          <div style="font-size:8px; color:#888; text-transform:uppercase; font-weight:700; margin-top:4px;">Estado de la unidad</div>
+          <div class="p-btn green">Pasar a "En escena"</div>
+        </div>
+        <div class="tabbar"><div class="tab"><span class="ic">🔔</span>Alerta</div><div class="tab active"><span class="ic">🗺</span>Mapa</div><div class="tab"><span class="ic">👥</span>Paciente</div><div class="tab"><span class="ic">📊</span>Stats</div></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="top-header">Mapa</div>
+        <div class="content">
+          <div class="p-map"><div class="dot" style="background:#8E44AD;top:20px;left:100px;"></div><div class="pin" style="top:55px;left:40px;">🏥</div></div>
+          <div style="font-weight:700; font-size:11px; color:#8E44AD;">Hospital destino: Hospital 46 IMSS</div>
+          <div style="font-size:9px; color:#888; margin:4px 0 8px;">Trasladando al paciente. Te faltan 210 m para poder concluir el traslado.</div>
+          <div class="p-btn ghost" style="opacity:0.5;">Concluir traslado (avisar al hospital)</div>
+        </div>
+        <div class="tabbar"><div class="tab"><span class="ic">🔔</span>Alerta</div><div class="tab active"><span class="ic">🗺</span>Mapa</div><div class="tab"><span class="ic">👥</span>Paciente</div><div class="tab"><span class="ic">📊</span>Stats</div></div>
+      </div>
+    </div>
+    <div class="p-cap">Izquierda: rumbo a la escena, con el botón para avanzar estado ya habilitado. Derecha: camino al hospital, botón bloqueado hasta acercarte.</div>
+
+    <h3 class="sub-title">Qué ves en el mapa</h3>
+    <ul>
+      <li>Tu <strong>ubicación actual</strong> (el punto azul), que se mueve sola conforme avanzas — el mapa se recentra automáticamente contigo si tienes activado "Seguir".</li>
+      <li>Un <strong>marcador rojo</strong> en la ubicación reportada de la emergencia, mientras vas hacia allá.</li>
+      <li>Un <strong>marcador morado con "H"</strong> del hospital destino, una vez que ya registraste a tu paciente y sabes a dónde va.</li>
+      <li>La <strong>ruta real</strong> trazada por calles (no una línea recta), con el tiempo y distancia estimados, calculados igual que lo haría cualquier app de navegación.</li>
+      <li>Dos botones flotantes: uno para <strong>recentrar</strong> el mapa en tu posición sin perder el zoom que ya tenías, y otro para prender/apagar <strong>"Seguir"</strong> (el mapa se mueve solo contigo, como una navegación normal — apágalo si quieres explorar el mapa libremente sin que la vista se te mueva cada pocos segundos).</li>
+    </ul>
+
+    <h3 class="sub-title">Cómo avanza el estado de tu unidad</h3>
+    <p>Es una secuencia de un solo sentido — <strong>nunca puedes retroceder</strong> ni saltarte un paso, y el sistema lo hace cumplir tanto en la pantalla como del lado del servidor:</p>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="icon">🔴</div><h5>En camino</h5><p>Se activa solo, en cuanto el despachador te asigna la emergencia — no tienes que hacer nada para llegar a este estado.</p></div>
+      <div class="feat-card"><div class="icon">🟠</div><h5>En escena</h5><p>Tú la marcas — pero el botón <strong>solo aparece cuando estás a menos de 300 metros</strong> de la ubicación reportada de la emergencia. Mientras estés más lejos, en su lugar verás cuántos metros te faltan, actualizándose conforme te acercas.</p></div>
+      <div class="feat-card"><div class="icon">🟣</div><h5>Trasladando</h5><p>Tú la marcas cuando ya llevas al paciente rumbo al hospital, después de haberlo registrado. Desde aquí el mapa cambia solo y empieza a guiarte hacia el hospital destino, no hacia la escena original.</p></div>
+      <div class="feat-card"><div class="icon">🟢</div><h5>Disponible</h5><p>Ver el apartado siguiente — es el único paso de toda la secuencia que <em>no</em> puedes marcar de inmediato con un solo toque.</p></div>
+    </div>
+    <div class="note tip">
+      <strong>¿Por qué 300 metros y no menos?</strong>
+      Un margen así de amplio existe porque el GPS de un celular en movimiento, dentro de una ambulancia, no siempre es preciso al metro — un margen muy corto (como 100 metros, que se probó antes) generaba falsos negativos: el botón no aparecía aunque el paramédico ya estuviera prácticamente encima del punto. 300 metros da margen real sin dejar de exigir estar genuinamente cerca antes de marcar el paso.
+    </div>
+
+    <h3 class="sub-title">Concluir traslado y Marcar Disponible</h3>
+    <p>Este es el tramo más importante del manual — léelo con calma, porque es distinto a todo lo demás y es la parte que más dudas genera.</p>
+    <ol class="steps">
+      <li>Cuando llegas al hospital y estás a <strong>menos de 300 metros</strong>, aparece el botón <strong>"Concluir traslado"</strong> (piensa en él como el "terminar viaje" de una app de transporte). Tócalo — con confirmación — y esto avisa al hospital, destacado en rojo pulsante en su pantalla, de que ya llegaste y debe confirmar la recepción física de tu(s) paciente(s).</li>
+      <li><strong>Tu unidad NO cambia de estado todavía.</strong> Sigue mostrándose "Trasladando" mientras esperas — nada cambia visualmente en el mapa del despachador todavía.</li>
+      <li>El hospital debe <strong>confirmar la llegada física</strong> de <em>cada uno</em> de tus pacientes desde su propia aplicación (si llevas dos, tiene que confirmar a los dos, uno por uno).</li>
+      <li>Solo cuando <strong>ambas cosas</strong> ya pasaron — tú concluiste el traslado, y el hospital confirmó a todos tus pacientes — aparece el botón <strong>"Marcar unidad como Disponible"</strong>. Antes de eso, en su lugar verás un mensaje indicando qué sigue pendiente.</li>
+      <li>Tócalo tú mismo cuando de verdad estés libre y listo para otra emergencia. Nadie más puede hacerlo por ti desde ninguna otra aplicación, y el sistema no lo hace solo ni siquiera cuando la emergencia ya se cerró por completo del lado del despachador.</li>
+    </ol>
+    <div class="note danger">
+      <strong>Por qué es tan estricto</strong>
+      Ni el despachador ni el hospital saben con certeza si tu unidad ya quedó libre <em>de verdad</em> — solo tú, que estás ahí físicamente, sabes si terminaste el papeleo, si sigues acomodando material, o si de plano ya vas de regreso. Por eso, aunque la emergencia se cierre sola del lado del CRUM en cuanto se entregue al último paciente, <strong>tu unidad se queda "Trasladando" hasta que tú mismo confirmes</strong> — incluso si eso pasa varios minutos después de que la emergencia ya aparezca cerrada para todos los demás.
+    </div>
+    <div class="note ok">
+      <strong>Es la única excepción a "nunca decides tu disponibilidad"</strong>
+      En todo el resto del sistema, el paramédico nunca puede marcar su propia unidad como Disponible por su cuenta — eso normalmente lo decide el CRUM al cerrar o reasignar una emergencia. "Marcar Disponible" al final de un traslado es la única excepción, y solo porque exige la confirmación conjunta de dos partes (tú y el hospital) — nunca es una decisión unilateral tuya.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="paciente">
+    <div class="eyebrow">Capítulo 5</div>
+    <h2 class="sec-title">Pestaña Paciente</h2>
+    <p class="sec-sub">Registra y consulta a los pacientes de tu emergencia en curso.</p>
+
+    <div class="phone-row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="top-header">Pacientes</div>
+        <div class="content">
+          <div style="font-size:8px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:6px;">Pacientes de esta emergencia</div>
+          <div class="p-card">
+            <div style="font-weight:700;">Pepe López <span class="p-badge green">tu unidad</span></div>
+            <div style="font-size:8px;color:#666;">CURP: sin registrar</div>
+            <div style="font-size:8px;color:#666;">→ Hospital 46 IMSS · Pendiente</div>
+          </div>
+          <div class="p-btn ghost" style="color:#1565C0;border-color:#1565C0;">+ Registrar paciente nuevo</div>
+          <div style="font-size:8px;font-weight:700;color:#888;text-transform:uppercase;margin:10px 0 6px;">Buscar cualquier paciente por CURP</div>
+          <div class="p-field"><div class="box">CURP...</div></div>
+        </div>
+        <div class="tabbar"><div class="tab"><span class="ic">🔔</span>Alerta</div><div class="tab"><span class="ic">🗺</span>Mapa</div><div class="tab active"><span class="ic">👥</span>Paciente</div><div class="tab"><span class="ic">📊</span>Stats</div></div>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="top-header">Registrar paciente</div>
+        <div class="content">
+          <div class="p-field"><label>CURP</label><div class="box">Buscar 🔍</div></div>
+          <div class="p-field"><label>Nombre(s)</label><div class="box">—</div></div>
+          <div class="p-field"><label>Notas</label><div class="box">Descripción física si no hay ID</div></div>
+          <div style="font-size:8px;font-weight:700;color:#888;text-transform:uppercase;margin:6px 0;">Hospital destino</div>
+          <div class="p-card" style="background:#e8f5e9;border-color:#2E7D32;">Hospital 46 IMSS — 3 camas</div>
+          <div class="p-card">IMSS Villahermosa — 1 cama</div>
+          <div class="p-btn blue">Registrar paciente</div>
+        </div>
+        <div class="tabbar"><div class="tab"><span class="ic">🔔</span>Alerta</div><div class="tab"><span class="ic">🗺</span>Mapa</div><div class="tab active"><span class="ic">👥</span>Paciente</div><div class="tab"><span class="ic">📊</span>Stats</div></div>
+      </div>
+    </div>
+    <div class="p-cap">Izquierda: lista de pacientes de tu emergencia, con CURP visible. Derecha: formulario de registro de un paciente nuevo.</div>
+
+    <h3 class="sub-title">Registrar un paciente</h3>
+    <ol class="steps">
+      <li>Ve a la pestaña <strong>Paciente</strong> y pulsa <strong>"+ Registrar paciente nuevo en esta emergencia"</strong>.</li>
+      <li>Busca por <strong>CURP</strong> primero — si el paciente ya existe en el sistema (por una atención previa), se llenan solos su nombre y teléfono, ahorrándote la captura.</li>
+      <li>Si no aparece, llena los datos a mano — o solo una descripción física, si el paciente no está identificado y no tienes forma de saber quién es en ese momento.</li>
+      <li>Elige el <strong>hospital destino</strong> — verás cuántas camas disponibles tiene cada opción para ayudarte a decidir junto con tu criterio médico y el del CRUM.</li>
+      <li>Confirma. El paciente aparece de inmediato en tu lista y, al mismo tiempo, en la pantalla del hospital elegido.</li>
+    </ol>
+    <p>También puedes <strong>buscar cualquier paciente por CURP</strong> (no solo los de tu emergencia actual) para consultar o completar su expediente clínico, por ejemplo si ya lo atendiste antes en otra ocasión.</p>
+    <div class="note ok">
+      <strong>Se actualiza solo</strong>
+      Si otro paramédico, el despachador, o incluso el propio hospital registra o mueve un paciente de tu misma emergencia, tu lista se actualiza en tiempo real — no hace falta salir y volver a entrar a la pestaña para verlo reflejado.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="expediente">
+    <div class="eyebrow">Capítulo 6</div>
+    <h2 class="sec-title">Expediente clínico</h2>
+    <p class="sec-sub">Al tocar un paciente en la lista, entras a su expediente — datos que quedan guardados para siempre, no solo de esta emergencia en particular.</p>
+
+    <div class="feat-grid">
+      <div class="feat-card"><div class="icon">📋</div><h5>Datos básicos</h5><p>Peso, estatura, tipo de sangre, género, lugar de nacimiento, estado civil, ocupación, religión — se pueden capturar de una sola vez o completar poco a poco en distintas atenciones.</p></div>
+      <div class="feat-card"><div class="icon">🪪</div><h5>CURP editable</h5><p>Si llega vacía o mal capturada desde el registro inicial (por ejemplo, si vino de sicem-web como "No tiene"), puedes corregirla o agregarla tú mismo, ahí en el momento, sin depender de que alguien más lo haga después.</p></div>
+      <div class="feat-card"><div class="icon">⚠️</div><h5>Alergias</h5><p>Nombre y severidad de cada alergia conocida. Se pueden desactivar (nunca borrar) si ya no aplican — siempre con una confirmación antes de quitarlas.</p></div>
+      <div class="feat-card"><div class="icon">💊</div><h5>Condiciones y medicamentos</h5><p>Enfermedades crónicas y medicación que ya toma el paciente de forma regular, con las mismas reglas de alta/baja con confirmación que las alergias.</p></div>
+    </div>
+    <div class="note warn">
+      <strong>Nada se borra por accidente</strong>
+      Quitar una alergia, condición o medicamento siempre pide confirmar antes de aplicar el cambio — un toque accidental en la pantalla de un celular en movimiento no puede desaparecer un dato médico importante. Y aunque se "quite" de la vista activa, queda guardado en el historial permanentemente, nunca se elimina de la base de datos.
+    </div>
+    <p>Si entraste al expediente desde la lista de "Pacientes de esta emergencia" (en vez de una búsqueda genérica por CURP), también verás ahí mismo el <strong>historial de notas de urgencia</strong> capturadas para ese paciente específicamente en este caso — ver el siguiente capítulo para cómo se llenan.</p>
+  </section>
+
+  <!-- 7 -->
+  <section id="nota">
+    <div class="eyebrow">Capítulo 7</div>
+    <h2 class="sec-title">Nota de urgencia</h2>
+    <p class="sec-sub">Los signos vitales y la evaluación que capturas en campo, tal como los mediste — el registro clínico de esta atención en particular.</p>
+
+    <div class="vitals-grid">
+      <div class="vital-chip"><div class="ic">🩸</div><div><div class="n">Presión arterial</div><div class="d">Sistólica/diastólica, en mmHg</div></div></div>
+      <div class="vital-chip"><div class="ic">❤️</div><div><div class="n">Frecuencia cardiaca</div><div class="d">Latidos por minuto</div></div></div>
+      <div class="vital-chip"><div class="ic">🌡️</div><div><div class="n">Temperatura</div><div class="d">En grados Celsius</div></div></div>
+      <div class="vital-chip"><div class="ic">🫁</div><div><div class="n">Saturación de oxígeno</div><div class="d">Porcentaje, por oxímetro</div></div></div>
+      <div class="vital-chip"><div class="ic">💨</div><div><div class="n">Frecuencia respiratoria</div><div class="d">Respiraciones por minuto</div></div></div>
+      <div class="vital-chip"><div class="ic">🍬</div><div><div class="n">Glucosa</div><div class="d">En mg/dL, clave en pacientes con alteración de conciencia</div></div></div>
+      <div class="vital-chip"><div class="ic">🧠</div><div><div class="n">Nivel de conciencia</div><div class="d">Alerta, Verbal, Dolor, No responde (escala AVDI)</div></div></div>
+      <div class="vital-chip"><div class="ic">📈</div><div><div class="n">Escala de Glasgow</div><div class="d">De 3 a 15 — evaluación neurológica estándar</div></div></div>
+      <div class="vital-chip"><div class="ic">😖</div><div><div class="n">Escala de dolor</div><div class="d">De 0 a 10, referido por el paciente</div></div></div>
+      <div class="vital-chip"><div class="ic">👁️</div><div><div class="n">Pupilas</div><div class="d">Ej. "isocóricas y reactivas"</div></div></div>
+    </div>
+
+    <h3 class="sub-title">Cómo se llena</h3>
+    <ol class="steps">
+      <li>Entra desde <strong>Paciente → (elige al paciente) → Expediente clínico → "Registrar nueva nota de urgencia"</strong> — así llega ya con el paciente correcto elegido, sin tener que volver a buscarlo.</li>
+      <li>Elige el <strong>nivel de triage</strong> que corresponde según tu evaluación en sitio (puede ser distinto al que el despachador estimó por teléfono al registrar la emergencia — el tuyo es el que cuenta clínicamente).</li>
+      <li>Captura los signos vitales que hayas medido — ninguno es obligatorio salvo lo que de verdad tomaste; deja en blanco lo que no aplique o no hayas podido medir.</li>
+      <li>Escribe el <strong>diagnóstico inicial</strong>, el <strong>tratamiento aplicado</strong> (medicamentos, maniobras, inmovilización, etc.) y el <strong>estado del paciente</strong> al momento de la entrega.</li>
+      <li>Guarda — la nota queda en el historial permanente del paciente y también la puede ver de inmediato el hospital destino, incluso antes de que el paciente llegue físicamente.</li>
+    </ol>
+    <div class="note tip">
+      <strong>Puedes registrar varias notas para el mismo paciente</strong>
+      Si la atención dura mucho tiempo o los signos vitales cambian de forma importante durante el traslado, puedes registrar más de una nota de urgencia para el mismo paciente en la misma emergencia — todas quedan visibles en su historial, en orden.
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section id="stats">
+    <div class="eyebrow">Capítulo 8</div>
+    <h2 class="sec-title">Pestaña Stats</h2>
+    <p class="sec-sub">Tu propio desempeño del mes, solo tuyo — nadie más ve esta pantalla, ni tu institución ni otros paramédicos.</p>
+
+    <div class="phone-row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="top-header">Mis estadísticas</div>
+        <div class="content">
+          <div style="display:flex; gap:5px; margin-bottom:6px;">
+            <div class="p-card" style="flex:1;text-align:center;background:#e8f5e9;"><div style="font-size:16px;font-weight:800;color:#2E7D32;">14</div><div style="font-size:7px;">ATENCIONES MES</div></div>
+            <div class="p-card" style="flex:1;text-align:center;background:#e3f2fd;"><div style="font-size:16px;font-weight:800;color:#1565C0;">6.2</div><div style="font-size:7px;">MIN. PROMEDIO</div></div>
+          </div>
+          <div style="display:flex; gap:5px; margin-bottom:8px;">
+            <div class="p-card" style="flex:1;text-align:center;background:#fde8e8;"><div style="font-size:14px;font-weight:800;color:#C0272D;">21</div><div style="font-size:6.5px;">PACIENTES MES</div></div>
+            <div class="p-card" style="flex:1;text-align:center;background:#fff3e0;"><div style="font-size:14px;font-weight:800;color:#E65100;">18</div><div style="font-size:6.5px;">NOTAS</div></div>
+            <div class="p-card" style="flex:1;text-align:center;background:#f3e8fb;"><div style="font-size:14px;font-weight:800;color:#8E44AD;">62.5</div><div style="font-size:6.5px;">HORAS TURNO</div></div>
+          </div>
+          <div style="font-size:8px;font-weight:700;color:#888;text-transform:uppercase;">Actividad reciente</div>
+          <div class="p-card"><div style="font-weight:700;font-size:9px;">Trauma</div><div style="font-size:8px;color:#888;">Caída de altura · hoy</div></div>
+        </div>
+        <div class="tabbar"><div class="tab"><span class="ic">🔔</span>Alerta</div><div class="tab"><span class="ic">🗺</span>Mapa</div><div class="tab"><span class="ic">👥</span>Paciente</div><div class="tab active"><span class="ic">📊</span>Stats</div></div>
+      </div>
+    </div>
+    <div class="p-cap">Resumen del mes: atenciones, tiempo de respuesta, pacientes, notas registradas, horas de turno, y tu actividad más reciente.</div>
+    <p>También verás gráficas de <strong>emergencias por tipo</strong> (para saber a qué tipo de casos te ha tocado responder más este mes) y <strong>atenciones por semana</strong> del mes en curso, para tener una idea de tu ritmo de trabajo.</p>
+    <div class="note tip">
+      <strong>¿Cómo se calcula el "tiempo promedio"?</strong>
+      Es el tiempo transcurrido entre que se registró la emergencia y el momento en que se te asignó la unidad — un indicador de qué tan rápido responde tu institución, no de tu velocidad personal manejando.
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="perfil">
+    <div class="eyebrow">Capítulo 9</div>
+    <h2 class="sec-title">Mi perfil</h2>
+    <p>Se abre tocando tu nombre en la parte superior de la pestaña Alerta. Aquí ves y editas tus datos personales (nombre, teléfono, CURP propia, contacto de emergencia) y puedes cambiar tu contraseña. Tu <strong>ambulancia asignada</strong> y tu <strong>horario de trabajo</strong> no los puedes cambiar tú mismo desde aquí — eso lo controla exclusivamente tu institución desde SICEM Web, para que nadie pueda auto-asignarse un horario más conveniente.</p>
+  </section>
+
+  <!-- 10 -->
+  <section id="flujo">
+    <div class="eyebrow">Capítulo 10</div>
+    <h2 class="sec-title">Flujo completo ilustrado</h2>
+    <p class="sec-sub">Todo el recorrido de una emergencia, de principio a fin, desde tu celular.</p>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="t">Inicias turno</div><div class="d">Dentro de tu horario asignado</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="t">Recibes la alerta</div><div class="d">Pantalla roja completa, "Entendido"</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="t">"En escena"</div><div class="d">Botón habilitado a &lt;300m de la emergencia</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="t">Registras al paciente</div><div class="d">Eliges hospital destino</div></div>
+      <div class="flow-step"><div class="num">5</div><div class="t">Capturas la nota de urgencia</div><div class="d">Signos vitales y evaluación</div></div>
+      <div class="flow-step"><div class="num">6</div><div class="t">"Trasladando"</div><div class="d">El mapa te guía al hospital</div></div>
+      <div class="flow-step"><div class="num">7</div><div class="t">Concluyes el traslado</div><div class="d">Botón habilitado a &lt;300m del hospital</div></div>
+      <div class="flow-step"><div class="num">8</div><div class="t">Marcas Disponible</div><div class="d">Solo cuando el hospital ya confirmó a todos</div></div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section id="casos">
+    <div class="eyebrow">Capítulo 11</div>
+    <h2 class="sec-title">Casos especiales</h2>
+    <p class="sec-sub">Situaciones reales de campo que se salen del camino perfecto, y cómo las maneja la aplicación.</p>
+
+    <div class="case-card">
+      <div class="ct">Llevas dos pacientes a hospitales distintos</div>
+      <p>Registra a cada uno por separado desde la pestaña Paciente, cada uno con su propio hospital destino si hace falta. En el mapa, la ruta te guía hacia el destino de tu(s) paciente(s) — si van a dos hospitales distintos, el botón "Concluir traslado" solo se habilita cuando estás cerca del hospital correspondiente a cada entrega, y "Marcar Disponible" al final exige que <strong>ambos</strong> hospitales hayan confirmado la llegada física de sus respectivos pacientes.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Tu GPS no agarra señal o da una ubicación imprecisa</div>
+      <p>Verás un aviso en la parte superior del mapa avisando que no se pudo obtener tu ubicación. Mientras eso pase, los botones que dependen de distancia (Pasar a "En escena", "Concluir traslado") no van a habilitarse aunque físicamente ya estés cerca — espera a que el GPS recupere señal, normalmente basta con moverte a un lugar más despejado.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">El hospital rechaza a uno de tus pacientes</div>
+      <p>Recibes un aviso inmediato en el celular con el motivo del rechazo. El paciente sigue asignado a tu unidad, pero su despachador tendrá que reasignarlo a otro hospital destino desde SICEM Web — no hace falta que tú vuelvas a registrarlo desde cero.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Tu turno vence mientras sigues en una emergencia</div>
+      <p>No te preocupes por perder la sesión a medio caso — el sistema detecta que sigues con algo pendiente y no cierra tu turno ni tu sesión hasta que termines. Solo se cierra automáticamente si en ese momento ya no tienes ninguna emergencia activa.</p>
+    </div>
+
+    <div class="case-card">
+      <div class="ct">Se te cerró la sesión y no sabes por qué</div>
+      <p>Las tres causas posibles son: alguien inició sesión con tu misma cuenta en otro celular, tu turno venció por horario sin nada pendiente, o tu contraseña fue cambiada por un administrador. En cualquier caso, vuelve a entrar con tu correo y contraseña actuales.</p>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section id="faq">
+    <div class="eyebrow">Capítulo 12</div>
+    <h2 class="sec-title">Preguntas frecuentes</h2>
+    <div class="faq-item"><div class="faq-q">No me deja iniciar turno</div><div class="faq-a">Revisa que estés dentro de tu horario asignado (la app te dice cuál es exactamente), y que tu institución ya te haya asignado una ambulancia. Si nunca te pusieron horario, pide a tu institución que te lo configure desde SICEM Web.</div></div>
+    <div class="faq-item"><div class="faq-q">No aparece el botón para "Pasar a En escena" o "Concluir traslado"</div><div class="faq-a">Necesitas estar a menos de 300 metros del punto correspondiente (la escena o el hospital), y que tu GPS esté encendido con buena señal. La app te muestra en pantalla cuántos metros exactos te faltan, actualizándose mientras te acercas.</div></div>
+    <div class="faq-item"><div class="faq-q">No aparece el botón de "Marcar Disponible" aunque ya concluí el traslado</div><div class="faq-a">Falta que el hospital confirme la llegada física de <em>todos</em> tus pacientes — si llevas dos, de los dos. Pregunta directamente al hospital si ya lo hizo desde su aplicación.</div></div>
+    <div class="faq-item"><div class="faq-q">Mi sesión se cerró sola</div><div class="faq-a">Puede ser porque alguien inició sesión con tu cuenta en otro celular, porque tu turno venció por horario sin que tuvieras una emergencia activa, o porque tu contraseña fue restablecida. Vuelve a entrar con tu correo y contraseña.</div></div>
+    <div class="faq-item"><div class="faq-q">No me llegan las alertas de emergencia</div><div class="faq-a">Revisa el permiso de notificaciones del celular (la app te muestra un aviso propio si detecta que está desactivado) y que tengas datos móviles o WiFi activos y con buena señal.</div></div>
+    <div class="faq-item"><div class="faq-q">Toqué "Registrar nueva nota de urgencia" y no me deja elegir emergencia</div><div class="faq-a">No hace falta elegirla — la nota siempre es para la emergencia que tienes aceptada en este momento. Si no tienes ninguna en curso, primero acepta una desde la pestaña Alerta.</div></div>
+    <div class="faq-item"><div class="faq-q">¿Puedo editar una nota de urgencia después de guardarla?</div><div class="faq-a">No se edita — si algo cambió (los signos vitales evolucionaron, por ejemplo), registra una nota nueva. Así queda un historial real de la evolución del paciente durante el traslado, en vez de sobrescribir datos.</div></div>
+    <div class="faq-item"><div class="faq-q">¿Qué pasa si toco "Reportar falla" por error?</div><div class="faq-a">El aviso ya se manda a tu despachador/hospital en cuanto lo confirmas — avísales por otro medio (radio, teléfono) que fue un error, para que no reasignen tu unidad sin necesidad.</div></div>
+  </section>
+
+  <!-- 13 -->
+  <section id="glosario">
+    <div class="eyebrow">Capítulo 13</div>
+    <h2 class="sec-title">Glosario de términos</h2>
+    <dl class="gloss">
+      <dt>TAMP</dt><dd>Técnico en Atención Médica Prehospitalaria — el paramédico en campo, quien ejecuta y reporta según coordina el CRUM.</dd>
+      <dt>Turno</dt><dd>Periodo en el que estás activo en tu unidad: reportas ubicación en tiempo real y puedes recibir emergencias asignadas.</dd>
+      <dt>En camino / En escena / Trasladando</dt><dd>Los tres pasos que avanza tu unidad durante una emergencia, siempre hacia adelante y nunca hacia atrás.</dd>
+      <dt>Concluir traslado</dt><dd>Aviso al hospital de que ya llegaste físicamente — no cambia el estado de tu unidad todavía, solo notifica.</dd>
+      <dt>Marcar Disponible</dt><dd>La única forma en que tú mismo regresas tu unidad a "Disponible" — exige que ya concluiste el traslado Y el hospital confirmó a todos tus pacientes.</dd>
+      <dt>Expediente clínico</dt><dd>Datos médicos permanentes del paciente (alergias, condiciones, medicamentos, tipo de sangre), separados de la nota de una emergencia en particular.</dd>
+      <dt>Nota de urgencia</dt><dd>El registro de signos vitales y evaluación de un paciente, específico de una emergencia — puede haber más de una por paciente si la atención cambia con el tiempo.</dd>
+      <dt>Escala de Glasgow</dt><dd>Evaluación neurológica estándar de 3 a 15 puntos, según respuesta ocular, verbal y motora.</dd>
+      <dt>AVDI</dt><dd>Escala de nivel de conciencia: Alerta, respuesta Verbal, respuesta al Dolor, o Inconsciente/No responde.</dd>
+    </dl>
+  </section>
+
+  <div class="footer">SICEM — Sistema Integral de Coordinación de Emergencias Médicas · Manual de usuario, aplicación móvil · Tabasco, México</div>
+</div>
+</body>
+</html>
