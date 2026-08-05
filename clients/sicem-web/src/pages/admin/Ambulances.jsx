@@ -6,6 +6,7 @@ import { getNavLinks } from '../../utils/Navlinks';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
 import './Ambulances.css';
+import {API_BASE_URL} from '../../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -68,7 +69,7 @@ const Ambulances = () => {
     //---------------------------------consultar, gets--------------------------------------------------
 
     const fetchAmbulances = () => {
-        fetch('http://localhost:3000/unidades/ambulancias-todas', {
+        fetch(`${API_BASE_URL}/unidades/ambulancias-todas`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -78,7 +79,7 @@ const Ambulances = () => {
     useEffect(() => { fetchAmbulances() }, []);
 
     const fetchTypes = () => {
-        fetch('http://localhost:3000/unidades/tipos-ambulancia-todos', {
+        fetch(`${API_BASE_URL}/unidades/tipos-ambulancia-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -88,7 +89,7 @@ const Ambulances = () => {
     useEffect(() => { fetchTypes() }, []);
 
     const fetchStatuses = () => {
-        fetch('http://localhost:3000/unidades/estados-ambulancia-todos', {
+        fetch(`${API_BASE_URL}/unidades/estados-ambulancia-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -98,7 +99,7 @@ const Ambulances = () => {
     useEffect(() => { fetchStatuses() }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/hospitales/instituciones', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/hospitales/instituciones`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setInstitutions(data.map(i => toLowerCaseKeys(i))))
             .catch(error => console.error('Error consultando instituciones. ', error))
@@ -107,7 +108,7 @@ const Ambulances = () => {
     const toggleAmbulanceHistory = (amb) => {
         if (historyAmbulanceId === amb.ambulance_id) { setHistoryAmbulanceId(null); setAmbulanceHistory([]); return }
         setHistoryAmbulanceId(amb.ambulance_id)
-        fetch(`http://localhost:3000/emergencias/asignaciones-ambulancia/${amb.ambulance_id}`, {
+        fetch(`${API_BASE_URL}/emergencias/asignaciones-ambulancia/${amb.ambulance_id}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
@@ -123,7 +124,7 @@ const Ambulances = () => {
         e.preventDefault();
         if (blockIfDuplicate(ambulances, 'unit_number', form.unitNumber, 'número de unidad')) return
         if (blockIfDuplicate(ambulances, 'license_plate', form.licensePlate, 'placa')) return
-        fetch('http://localhost:3000/unidades/registrar-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/registrar-ambulancia`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -140,7 +141,7 @@ const Ambulances = () => {
     const handleToggleActive = (amb) => {
         const action = amb.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} la unidad ${amb.unit_number}?`)) return
-        fetch('http://localhost:3000/unidades/alternar-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/alternar-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ ambulanceId: amb.ambulance_id })
@@ -154,8 +155,8 @@ const Ambulances = () => {
         if (!searchQuery.trim()) { fetchAmbulances(); setSearchMode(null); return }
         setSearching(true)
         const endpoint = searchMode === 'licensePlate'
-            ? `http://localhost:3000/unidades/ambulancia/placa/${searchQuery}`
-            : `http://localhost:3000/unidades/ambulancia/numero/${searchQuery}`
+            ? `${API_BASE_URL}/unidades/ambulancia/placa/${searchQuery}`
+            : `${API_BASE_URL}/unidades/ambulancia/numero/${searchQuery}`
 
         fetch(endpoint, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
             .then(parseResponse)
@@ -186,7 +187,7 @@ const Ambulances = () => {
 
     const handleUpdateAmbulance = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/unidades/actualizar-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/actualizar-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editForm)
@@ -201,7 +202,7 @@ const Ambulances = () => {
     const handleCreateType = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(ambulanceTypes, 'ambulance_type', typeForm.ambulanceType, 'nombre de tipo')) return
-        fetch('http://localhost:3000/unidades/crear-tipo-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/crear-tipo-ambulancia`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ ambulanceType: typeForm.ambulanceType })
@@ -218,7 +219,7 @@ const Ambulances = () => {
 
     const handleUpdateType = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/unidades/actualizar-tipo-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/actualizar-tipo-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editTypeForm)
@@ -231,7 +232,7 @@ const Ambulances = () => {
     const handleToggleType = (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el tipo "${t.ambulance_type}"?`)) return
-        fetch('http://localhost:3000/unidades/alternar-tipo-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/alternar-tipo-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ ambulanceTypeId: t.ambulance_type_id })
@@ -246,7 +247,7 @@ const Ambulances = () => {
     const handleCreateStatus = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(ambulanceStatuses, 'name', statusForm.name, 'nombre')) return
-        fetch('http://localhost:3000/unidades/registrar-estado-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/registrar-estado-ambulancia`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ name: statusForm.name, description: statusForm.description })
@@ -263,7 +264,7 @@ const Ambulances = () => {
 
     const handleUpdateStatus = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/unidades/actualizar-estado-ambulancia-catalogo', {
+        fetch(`${API_BASE_URL}/unidades/actualizar-estado-ambulancia-catalogo`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editStatusForm)
@@ -276,7 +277,7 @@ const Ambulances = () => {
     const handleToggleStatus = (s) => {
         const action = s.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el estado "${s.name}"?`)) return
-        fetch('http://localhost:3000/unidades/alternar-estado-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/alternar-estado-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ ambulanceStatusId: s.ambulance_status_id })

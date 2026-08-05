@@ -7,6 +7,7 @@ import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
 import './Institutions.css';
 import './Patients.css';
+import {API_BASE_URL} from '../../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -118,14 +119,14 @@ const Patients = () => {
     //---------------------------------consultar, gets--------------------------------------------------
 
     useEffect(() => {
-        fetch('http://localhost:3000/pacientes/tipos-sangre', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/pacientes/tipos-sangre`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ bloodTypes }) => setBloodTypes((bloodTypes || []).map(b => toLowerCaseKeys(b))))
             .catch(error => console.error('Error consultando tipos de sangre. ', error))
     }, []);
 
     const fetchClinicalRecords = () => {
-        fetch('http://localhost:3000/pacientes/expedientes-todos', {
+        fetch(`${API_BASE_URL}/pacientes/expedientes-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -135,7 +136,7 @@ const Patients = () => {
     useEffect(() => { fetchClinicalRecords() }, []);
 
     const fetchAllergies = () => {
-        fetch('http://localhost:3000/pacientes/alergias-todas', {
+        fetch(`${API_BASE_URL}/pacientes/alergias-todas`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -145,7 +146,7 @@ const Patients = () => {
     useEffect(() => { fetchAllergies() }, []);
 
     const fetchConditions = () => {
-        fetch('http://localhost:3000/pacientes/condiciones-todas', {
+        fetch(`${API_BASE_URL}/pacientes/condiciones-todas`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -155,7 +156,7 @@ const Patients = () => {
     useEffect(() => { fetchConditions() }, []);
 
     const fetchMedications = () => {
-        fetch('http://localhost:3000/pacientes/medicamentos-todos', {
+        fetch(`${API_BASE_URL}/pacientes/medicamentos-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -167,7 +168,7 @@ const Patients = () => {
     const toggleAllergyHistory = (a) => {
         if (historyAllergyId === a.patient_allergy_id) { setHistoryAllergyId(null); setAllergyHistory([]); return }
         setHistoryAllergyId(a.patient_allergy_id)
-        fetch(`http://localhost:3000/pacientes/historial-alergia/${a.patient_allergy_id}`, {
+        fetch(`${API_BASE_URL}/pacientes/historial-alergia/${a.patient_allergy_id}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
@@ -178,7 +179,7 @@ const Patients = () => {
     const toggleConditionHistory = (c) => {
         if (historyConditionId === c.patient_condition_id) { setHistoryConditionId(null); setConditionHistory([]); return }
         setHistoryConditionId(c.patient_condition_id)
-        fetch(`http://localhost:3000/pacientes/historial-condicion/${c.patient_condition_id}`, {
+        fetch(`${API_BASE_URL}/pacientes/historial-condicion/${c.patient_condition_id}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
@@ -189,7 +190,7 @@ const Patients = () => {
     const toggleMedicationHistory = (m) => {
         if (historyMedicationId === m.patient_medication_id) { setHistoryMedicationId(null); setMedicationHistory([]); return }
         setHistoryMedicationId(m.patient_medication_id)
-        fetch(`http://localhost:3000/pacientes/historial-medicamento/${m.patient_medication_id}`, {
+        fetch(`${API_BASE_URL}/pacientes/historial-medicamento/${m.patient_medication_id}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
@@ -202,7 +203,7 @@ const Patients = () => {
     const handleResolveCurp = () => {
         if (!curpLookup.trim()) return
         setCurpLookupBusy(true)
-        fetch(`http://localhost:3000/usuarios/obtener-usuario-curp/${encodeURIComponent(curpLookup.trim())}`, {
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-curp/${encodeURIComponent(curpLookup.trim())}`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())
@@ -220,7 +221,7 @@ const Patients = () => {
         // El backend ya distingue este duplicado con un 409 amigable ("Este usuario ya tiene
         // un expediente."), a diferencia de los catálogos con nombre — no aplica blockIfDuplicate
         // aquí porque los expedientes no tienen concepto de "inactivo" que reactivar.
-        fetch('http://localhost:3000/pacientes/crear-ece', {
+        fetch(`${API_BASE_URL}/pacientes/crear-ece`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -249,7 +250,7 @@ const Patients = () => {
 
     const handleUpdateRecord = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/pacientes/actualizar-ece', {
+        fetch(`${API_BASE_URL}/pacientes/actualizar-ece`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editRecordForm)
@@ -265,7 +266,7 @@ const Patients = () => {
         e.preventDefault();
         const sameRecord = allergies.filter(a => String(a.clinical_record_id) === String(allergyForm.clinicalRecordId))
         if (blockIfDuplicate(sameRecord, 'name', allergyForm.name, 'nombre de alergia para este paciente')) return
-        fetch('http://localhost:3000/pacientes/registrar-alergia', {
+        fetch(`${API_BASE_URL}/pacientes/registrar-alergia`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ clinicalRecordId: allergyForm.clinicalRecordId, name: allergyForm.name, severity: allergyForm.severity })
@@ -282,7 +283,7 @@ const Patients = () => {
 
     const handleUpdateAllergy = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/pacientes/actualizar-alergia', {
+        fetch(`${API_BASE_URL}/pacientes/actualizar-alergia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editAllergyForm)
@@ -295,7 +296,7 @@ const Patients = () => {
     const handleToggleAllergy = (a) => {
         const action = a.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} la alergia "${a.name}" de ${patientLabel(a)}?`)) return
-        fetch('http://localhost:3000/pacientes/alternar-alergia', {
+        fetch(`${API_BASE_URL}/pacientes/alternar-alergia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ patientAllergyId: a.patient_allergy_id })
@@ -311,7 +312,7 @@ const Patients = () => {
         e.preventDefault();
         const sameRecord = conditions.filter(c => String(c.clinical_record_id) === String(conditionForm.clinicalRecordId))
         if (blockIfDuplicate(sameRecord, 'name', conditionForm.name, 'nombre de condición para este paciente')) return
-        fetch('http://localhost:3000/pacientes/registrar-condicion', {
+        fetch(`${API_BASE_URL}/pacientes/registrar-condicion`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -334,7 +335,7 @@ const Patients = () => {
 
     const handleUpdateCondition = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/pacientes/actualizar-condicion', {
+        fetch(`${API_BASE_URL}/pacientes/actualizar-condicion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editConditionForm)
@@ -347,7 +348,7 @@ const Patients = () => {
     const handleToggleCondition = (c) => {
         const action = c.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} la condición "${c.name}" de ${patientLabel(c)}?`)) return
-        fetch('http://localhost:3000/pacientes/alternar-condicion', {
+        fetch(`${API_BASE_URL}/pacientes/alternar-condicion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ patientConditionId: c.patient_condition_id })
@@ -363,7 +364,7 @@ const Patients = () => {
         e.preventDefault();
         const sameRecord = medications.filter(m => String(m.clinical_record_id) === String(medicationForm.clinicalRecordId))
         if (blockIfDuplicate(sameRecord, 'name', medicationForm.name, 'nombre de medicamento para este paciente')) return
-        fetch('http://localhost:3000/pacientes/registrar-medicacion', {
+        fetch(`${API_BASE_URL}/pacientes/registrar-medicacion`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -383,7 +384,7 @@ const Patients = () => {
 
     const handleUpdateMedication = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/pacientes/actualizar-medicacion', {
+        fetch(`${API_BASE_URL}/pacientes/actualizar-medicacion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editMedicationForm)
@@ -396,7 +397,7 @@ const Patients = () => {
     const handleToggleMedication = (m) => {
         const action = m.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el medicamento "${m.name}" de ${patientLabel(m)}?`)) return
-        fetch('http://localhost:3000/pacientes/alternar-medicacion', {
+        fetch(`${API_BASE_URL}/pacientes/alternar-medicacion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ patientMedicationId: m.patient_medication_id })

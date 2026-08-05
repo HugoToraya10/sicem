@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import SpecialtyCapacityCard from '../components/capacity/SpecialtyCapacityCard'
 import BedMatrixModal from '../components/capacity/BedMatrixModal'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import './Capacity.css'
@@ -16,8 +17,8 @@ const Capacity = () => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
 
         Promise.all([
-            fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/hospitales/especialidades', { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades-instituciones`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades`, { headers }).then(res => res.json()),
         ])
             .then(([institutionSpecialtiesRes, catalogRes]) => {
                 const myRows = institutionSpecialtiesRes.data
@@ -42,7 +43,7 @@ const Capacity = () => {
     // capacidad TOTAL sigue siendo exclusiva de is_institution_admin, desde
     // Administración de mi Hospital.
     useEffect(() => {
-        fetch('http://localhost:3000/hospitales/instituciones', {
+        fetch(`${API_BASE_URL}/hospitales/instituciones`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -59,7 +60,7 @@ const Capacity = () => {
     // registrada en SICEM que descuente la cama sola) y hay que reflejarlo a mano.
     const handleConfirmGeneralBeds = (newAvailable) => {
         setSavingGeneralBeds(true)
-        fetch('http://localhost:3000/hospitales/actualizar-camas-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/actualizar-camas-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ institutionId: user.institutionId, availableBeds: newAvailable })
@@ -80,7 +81,7 @@ const Capacity = () => {
     }
 
     const handleUpdate = (institutionSpecialityId, availableBeds) => {
-        return fetch('http://localhost:3000/hospitales/actualizar-camas-especialidad', {
+        return fetch(`${API_BASE_URL}/hospitales/actualizar-camas-especialidad`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ institutionSpecialityId, availableBeds })

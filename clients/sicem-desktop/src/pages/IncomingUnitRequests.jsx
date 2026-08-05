@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
@@ -34,7 +35,7 @@ const IncomingUnitRequests = () => {
     const [rejectingRequestId, setRejectingRequestId] = useState(null)
 
     const fetchRequests = useCallback(() => {
-        fetch(`http://localhost:3000/emergencias/solicitudes-pendientes-institucion/${user.institutionId}`, {
+        fetch(`${API_BASE_URL}/emergencias/solicitudes-pendientes-institucion/${user.institutionId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -65,7 +66,7 @@ const IncomingUnitRequests = () => {
     }, [token, user, fetchRequests])
 
     const respond = (interInstitutionalRequestId, requestStatusId, rejectionReason) => {
-        fetch('http://localhost:3000/emergencias/responder-solicitud', {
+        fetch(`${API_BASE_URL}/emergencias/responder-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ interInstitutionalRequestId, requestStatusId, rejectionReason: rejectionReason || null })

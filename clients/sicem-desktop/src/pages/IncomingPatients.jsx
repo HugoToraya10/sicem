@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import IncomingPatientCard from '../components/patients/IncomingPatientCard'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
@@ -37,7 +38,7 @@ const IncomingPatients = () => {
     const [rejectingPatientId, setRejectingPatientId] = useState(null)
 
     const fetchIncomingPatients = useCallback(() => {
-        fetch(`http://localhost:3000/emergencias/pacientes-en-camino/${user.institutionId}`, {
+        fetch(`${API_BASE_URL}/emergencias/pacientes-en-camino/${user.institutionId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -55,8 +56,8 @@ const IncomingPatients = () => {
     useEffect(() => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         Promise.all([
-            fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/hospitales/especialidades', { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades-instituciones`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades`, { headers }).then(res => res.json()),
         ])
             .then(([institutionSpecialtiesRes, catalogRes]) => {
                 const catalog = catalogRes.data.map(s => toLowerCaseKeys(s))
@@ -129,7 +130,7 @@ const IncomingPatients = () => {
     }, [token, user, fetchIncomingPatients])
 
     const handleAccept = (emergencyPatientId) => {
-        fetch('http://localhost:3000/emergencias/confirmar-recepcion-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/confirmar-recepcion-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId, accepted: true })
@@ -163,7 +164,7 @@ const IncomingPatients = () => {
 
     const handleConfirmReject = (rejectionReason) => {
         const emergencyPatientId = rejectingPatientId
-        fetch('http://localhost:3000/emergencias/confirmar-recepcion-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/confirmar-recepcion-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId, accepted: false, rejectionReason })

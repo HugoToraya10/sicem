@@ -6,6 +6,7 @@ import { getNavLinks } from '../../utils/Navlinks';
 import { parseResponse } from '../../utils/apiRequest';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import './Users.css';
+import {API_BASE_URL} from '../../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -82,7 +83,7 @@ const Users = () => {
     //---------------------------------consultar, gets--------------------------------------------------
 
     const fetchUsers = () => {
-        fetch('http://localhost:3000/usuarios/obtener-usuarios', {
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuarios`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -91,7 +92,7 @@ const Users = () => {
     }
 
     const fetchCredentialHistory = (userCredentialId) => {
-        fetch(`http://localhost:3000/usuarios/historial-cuenta/${userCredentialId}`, {
+        fetch(`${API_BASE_URL}/usuarios/historial-cuenta/${userCredentialId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
@@ -108,7 +109,7 @@ const Users = () => {
     useEffect(() => { fetchUsers() }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/usuarios/obtener-roles', {
+        fetch(`${API_BASE_URL}/usuarios/obtener-roles`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -117,7 +118,7 @@ const Users = () => {
     }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/usuarios/obtener-instituciones', {
+        fetch(`${API_BASE_URL}/usuarios/obtener-instituciones`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -130,7 +131,7 @@ const Users = () => {
     // instituciones CRUM (el backend también lo valida, esto es solo para
     // no mostrar opciones que de todos modos se van a rechazar).
     useEffect(() => {
-        fetch('http://localhost:3000/unidades/ambulancias-crum', {
+        fetch(`${API_BASE_URL}/unidades/ambulancias-crum`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -145,7 +146,7 @@ const Users = () => {
             return
         }
         setExpandedUserId(userProfileId)
-        fetch(`http://localhost:3000/usuarios/obtener-usuario-id/${userProfileId}`, {
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-id/${userProfileId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
@@ -218,7 +219,7 @@ const Users = () => {
         e.preventDefault();
 
         if (editingUserProfileId) {
-            fetch('http://localhost:3000/usuarios/actualizar-perfil', {
+            fetch(`${API_BASE_URL}/usuarios/actualizar-perfil`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({
@@ -243,7 +244,7 @@ const Users = () => {
         } else {
             if (blockIfDuplicate(users, 'email', form.email, 'correo')) return
             if (blockIfDuplicate(users, 'curp', form.cveUnicaRegistroPob, 'CURP')) return
-            fetch('http://localhost:3000/usuarios/registro', {
+            fetch(`${API_BASE_URL}/usuarios/registro`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({
@@ -273,7 +274,7 @@ const Users = () => {
         if (!u.user_credential_id) return
         const action = u.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} a ${u.first_name} ${u.first_surname || ''}?`)) return
-        fetch('http://localhost:3000/usuarios/invertir-estado-usuario', {
+        fetch(`${API_BASE_URL}/usuarios/invertir-estado-usuario`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ userCredentialId: u.user_credential_id })
@@ -287,7 +288,7 @@ const Users = () => {
         const nextValue = !u.is_institution_admin
         const action = nextValue ? 'otorgar' : 'quitar'
         if (!window.confirm(`¿Seguro que quieres ${action} el privilegio de administrador de institución a ${u.first_name} ${u.first_surname || ''}?`)) return
-        fetch('http://localhost:3000/usuarios/alternar-admin-institucion', {
+        fetch(`${API_BASE_URL}/usuarios/alternar-admin-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ userProfileId: u.user_profile_id, isInstitutionAdmin: nextValue })
@@ -331,7 +332,7 @@ const Users = () => {
             body.password = patientForm.password
         }
 
-        fetch('http://localhost:3000/usuarios/registro-paciente', {
+        fetch(`${API_BASE_URL}/usuarios/registro-paciente`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(body)
@@ -352,7 +353,7 @@ const Users = () => {
 
     const handleUpdateCredentials = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/usuarios/actualizar-credenciales', {
+        fetch(`${API_BASE_URL}/usuarios/actualizar-credenciales`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({

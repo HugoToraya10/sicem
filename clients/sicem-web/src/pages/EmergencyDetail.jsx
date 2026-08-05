@@ -9,6 +9,7 @@ import { parseResponse } from '../utils/apiRequest';
 import { connectEmergencySocket } from '../sockets/emergencySocket';
 import { connectUnitsSocket } from '../sockets/unitsSocket';
 import MapArea from '../components/map/MapArea';
+import {API_BASE_URL} from '../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -128,7 +129,7 @@ const EmergencyDetail = () => {
     //---------------------------------consultar, gets--------------------------------------------------
 
     const fetchEmergencyData = () => {
-        fetch(`http://localhost:3000/emergencias/emergencia/${emergencyId}`, {
+        fetch(`${API_BASE_URL}/emergencias/emergencia/${emergencyId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -138,14 +139,14 @@ const EmergencyDetail = () => {
     useEffect(() => { fetchEmergencyData() }, [emergencyId]);
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/estados-emergencia', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/emergencias/estados-emergencia`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setEmergencyStatuses((data || []).map(s => toLowerCaseKeys(s))))
             .catch(error => console.error('Error consultando estados de emergencia. ', error))
     }, []);
 
     const fetchPatients = () => {
-        fetch(`http://localhost:3000/emergencias/pacientes/${emergencyId}`, {
+        fetch(`${API_BASE_URL}/emergencias/pacientes/${emergencyId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -156,7 +157,7 @@ const EmergencyDetail = () => {
 
     useEffect(() => {
         patients.forEach((patient) => {
-            fetch(`http://localhost:3000/emergencias/notas/${patient.emergency_patient_id}`, {
+            fetch(`${API_BASE_URL}/emergencias/notas/${patient.emergency_patient_id}`, {
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
             })
                 .then(res => res.json())
@@ -175,7 +176,7 @@ const EmergencyDetail = () => {
     useEffect(() => {
         patients.forEach((patient) => {
             if (!patient.user_profile_id) return
-            fetch(`http://localhost:3000/pacientes/ece/${patient.user_profile_id}`, {
+            fetch(`${API_BASE_URL}/pacientes/ece/${patient.user_profile_id}`, {
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
             })
                 .then(res => res.json())
@@ -184,13 +185,13 @@ const EmergencyDetail = () => {
                     if (!record) return
                     const clinicalRecordId = toLowerCaseKeys(record).clinical_record_id
                     Promise.all([
-                        fetch(`http://localhost:3000/pacientes/alergias/${clinicalRecordId}`, {
+                        fetch(`${API_BASE_URL}/pacientes/alergias/${clinicalRecordId}`, {
                             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
                         }).then(res => res.json()),
-                        fetch(`http://localhost:3000/pacientes/condiciones/${clinicalRecordId}`, {
+                        fetch(`${API_BASE_URL}/pacientes/condiciones/${clinicalRecordId}`, {
                             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
                         }).then(res => res.json()),
-                        fetch(`http://localhost:3000/pacientes/medicamentos/${clinicalRecordId}`, {
+                        fetch(`${API_BASE_URL}/pacientes/medicamentos/${clinicalRecordId}`, {
                             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
                         }).then(res => res.json()),
                     ]).then(([allergiesRes, conditionsRes, medicationsRes]) => {
@@ -209,7 +210,7 @@ const EmergencyDetail = () => {
     }, [patients]);
 
     const fetchAssignments = () => {
-        fetch(`http://localhost:3000/emergencias/asignaciones/${emergencyId}`, {
+        fetch(`${API_BASE_URL}/emergencias/asignaciones/${emergencyId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -227,7 +228,7 @@ const EmergencyDetail = () => {
         // Solo admin/dispatcher tienen acceso a este endpoint — un hospital (rol 4)
         // que vea esta pantalla no necesita esta lista de todos modos.
         if (![1, 2].includes(parseInt(user?.roleId))) return
-        fetch('http://localhost:3000/emergencias/solicitudes', {
+        fetch(`${API_BASE_URL}/emergencias/solicitudes`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -254,7 +255,7 @@ const EmergencyDetail = () => {
         if (units.length === 0) { setAmbulanceLocations([]); return }
 
         Promise.all(units.map((u) =>
-            fetch(`http://localhost:3000/unidades/ubicacion/${u.ambulance_id}`, {
+            fetch(`${API_BASE_URL}/unidades/ubicacion/${u.ambulance_id}`, {
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
             })
                 .then((res) => res.ok ? res.json() : { data: null })
@@ -291,7 +292,7 @@ const EmergencyDetail = () => {
 
     // Mismo fetch que ya usa NewEmergency.jsx para el selector de hospital destino
     useEffect(() => {
-        fetch('http://localhost:3000/hospitales/instituciones-destino', {
+        fetch(`${API_BASE_URL}/hospitales/instituciones-destino`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())
@@ -303,8 +304,8 @@ const EmergencyDetail = () => {
     // listas una sola vez y filtra en el cliente por institución al renderizar.
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
-            fetch('http://localhost:3000/hospitales/especialidades', { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades-instituciones`, { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades`, { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
         ])
             .then(([institutionSpecialtiesRes, catalogRes]) => {
                 setInstitutionSpecialities((institutionSpecialtiesRes.data || []).map(row => toLowerCaseKeys(row)))
@@ -366,7 +367,7 @@ const EmergencyDetail = () => {
 
     const handleCloseEmergency = () => {
         if (!window.confirm('¿Seguro que quieres cerrar esta emergencia? Esta acción no se puede deshacer.')) return
-        fetch('http://localhost:3000/emergencias/cerrar-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/cerrar-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyId })
@@ -382,7 +383,7 @@ const EmergencyDetail = () => {
     const handleForceCloseEmergency = () => {
         const reason = window.prompt('Cierre forzado: ¿cuál es el motivo? (ambulancia cancelada, paciente rechazó traslado, etc.)')
         if (!reason || !reason.trim()) return
-        fetch('http://localhost:3000/emergencias/forzar-cierre-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/forzar-cierre-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyId, reason })
@@ -393,7 +394,7 @@ const EmergencyDetail = () => {
     }
 
     const handleAdvanceStatus = (emergencyStatusId) => {
-        fetch('http://localhost:3000/emergencias/actualizar-estado-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/actualizar-estado-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyId, emergencyStatusId })
@@ -405,7 +406,7 @@ const EmergencyDetail = () => {
 
     const handleUnassignAmbulance = (a) => {
         if (!window.confirm(`¿Seguro que quieres desasignar la unidad ${a.unit_number} de esta emergencia?`)) return
-        fetch('http://localhost:3000/emergencias/desasignar-ambulancia', {
+        fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ assignmentId: a.assignment_id, ambulanceIds: [a.ambulance_id] })
@@ -425,7 +426,7 @@ const EmergencyDetail = () => {
             ? `Esta unidad ya había sido aceptada por ${r.receiving_institution || 'la otra institución'}. ¿Seguro que ya no la necesitas? Se le avisará que se cancela.`
             : `¿Seguro que quieres cancelar la solicitud de la unidad ${r.unit_number}?`
         if (!window.confirm(msg)) return
-        fetch('http://localhost:3000/emergencias/cancelar-solicitud', {
+        fetch(`${API_BASE_URL}/emergencias/cancelar-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ interInstitutionalRequestId: r.inter_institutional_request_id })
@@ -441,14 +442,14 @@ const EmergencyDetail = () => {
         setShowAddAmbulanceForm(true)
         setSelectedUnitsToAdd([])
         setSelectedExternalUnitsToAdd([])
-        fetch(`http://localhost:3000/unidades/ambulancias-disponibles/${user.institutionId}`, {
+        fetch(`${API_BASE_URL}/unidades/ambulancias-disponibles/${user.institutionId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
             .then(({ data }) => setAvailableUnitsForAdd((data || []).map(u => toLowerCaseKeys(u))))
             .catch(error => { console.error('Error consultando unidades disponibles. ', error); alert(error.message) })
 
-        fetch(`http://localhost:3000/unidades/ambulancias-externas/${user.institutionId}`, {
+        fetch(`${API_BASE_URL}/unidades/ambulancias-externas/${user.institutionId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
@@ -465,7 +466,7 @@ const EmergencyDetail = () => {
         if (availableUnitsForAdd.length === 0 || !emergencyData?.latitude || !emergencyData?.longitude) { setAddUnitRoutes({}); setAddUnitLocations({}); return }
         setAddRoutesLoading(true)
         Promise.all(availableUnitsForAdd.map((u) =>
-            fetch(`http://localhost:3000/unidades/ubicacion/${u.ambulance_id}`, {
+            fetch(`${API_BASE_URL}/unidades/ubicacion/${u.ambulance_id}`, {
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
             })
                 .then((res) => res.ok ? res.json() : { data: null })
@@ -516,7 +517,7 @@ const EmergencyDetail = () => {
         if (selectedUnitsToAdd.length === 0 && selectedExternalUnitsToAdd.length === 0) { alert('Selecciona al menos una unidad.'); return }
 
         const ownPromise = selectedUnitsToAdd.length > 0
-            ? fetch('http://localhost:3000/emergencias/registrar-asignacion', {
+            ? fetch(`${API_BASE_URL}/emergencias/registrar-asignacion`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ emergencyId, ambulanceIds: selectedUnitsToAdd, userProfileId: user.profileId, notes: '' })
@@ -525,7 +526,7 @@ const EmergencyDetail = () => {
 
         const externalPromises = selectedExternalUnitsToAdd.map((ambulanceId) => {
             const externalUnit = externalUnitsForAdd.find(u => u.ambulance_id === ambulanceId)
-            return fetch('http://localhost:3000/emergencias/registrar-solicitud', {
+            return fetch(`${API_BASE_URL}/emergencias/registrar-solicitud`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({
@@ -556,7 +557,7 @@ const EmergencyDetail = () => {
 
     const handleIdentifyPatient = (e, patient) => {
         e.preventDefault();
-        fetch('http://localhost:3000/hospitales/identificar-paciente', {
+        fetch(`${API_BASE_URL}/hospitales/identificar-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -580,7 +581,7 @@ const EmergencyDetail = () => {
         const curp = addPatientForm.curp.trim()
         if (!curp) return
         setAddPatientCurpBusy(true)
-        fetch(`http://localhost:3000/usuarios/obtener-usuario-curp/${curp}`, {
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-curp/${curp}`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())
@@ -602,7 +603,7 @@ const EmergencyDetail = () => {
     }
 
     const linkPatientToEmergency = (userProfileId) => {
-        return fetch('http://localhost:3000/emergencias/registrar-paciente', {
+        return fetch(`${API_BASE_URL}/emergencias/registrar-paciente`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyId, userProfileId, notes: addPatientForm.notes })
@@ -625,7 +626,7 @@ const EmergencyDetail = () => {
             return
         }
 
-        fetch('http://localhost:3000/usuarios/registro-paciente', {
+        fetch(`${API_BASE_URL}/usuarios/registro-paciente`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -675,7 +676,7 @@ const EmergencyDetail = () => {
 
     const handleReassignPatient = (patient) => {
         if (!reassignInstitutionId) return
-        fetch('http://localhost:3000/emergencias/reasignar-destino-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/reasignar-destino-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -754,7 +755,7 @@ const EmergencyDetail = () => {
 
     const handleConfirmAmbulanceChange = (patient) => {
         const ambulanceId = pendingAmbulanceByPatient[patient.emergency_patient_id]
-        fetch('http://localhost:3000/emergencias/asignar-ambulancia-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/asignar-ambulancia-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId: patient.emergency_patient_id, ambulanceId: ambulanceId || null })

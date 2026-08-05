@@ -1,16 +1,16 @@
-# Graph Report - SICEM  (2026-08-04)
+# Graph Report - SICEM  (2026-08-05)
 
 ## Corpus Check
-- 144 files · ~299,712 words
+- 146 files · ~327,130 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1193 nodes · 1730 edges · 77 communities (49 shown, 28 thin omitted)
-- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 403 edges (avg confidence: 0.51)
+- 1203 nodes · 1796 edges · 77 communities (49 shown, 28 thin omitted)
+- Extraction: 78% EXTRACTED · 22% INFERRED · 0% AMBIGUOUS · INFERRED: 403 edges (avg confidence: 0.51)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e88b87c8`
+- Built from commit: `8ec065db`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -35,10 +35,10 @@
 - controllers/user.js
 - models/user.js
 - usuarios/package.json
-- Users.jsx
+- Institutions.jsx
 - gateway/package.json
 - dependencies
-- Institutions.jsx
+- EmergencyCatalogs.jsx
 - /graphify Command Pipeline
 - Gateway Service (port 3000)
 - sicem-web/src/App.jsx
@@ -46,7 +46,7 @@
 - Patients.jsx
 - hospitales/index.js
 - pacientes/index.js
-- getNavLinks
+- toLowerCaseKeys
 - unidades/index.js
 - usuarios/index.js
 - Dashboard.jsx
@@ -99,7 +99,7 @@
 7. `parseResponse()` - 19 edges
 8. `toLowerCaseKeys()` - 15 edges
 9. `Navbar()` - 15 edges
-10. `API_BASE_URL` - 13 edges
+10. `API_BASE_URL` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Expo Version Warning (read versioned docs before coding)` --conceptually_related_to--> `sicem-mobile (Paramedico, React Native + Expo, planned)`  [EXTRACTED]
@@ -110,8 +110,8 @@
   clients/sicem-web/src/pages/NewEmergency.jsx → clients/sicem-web/src/utils/apiRequest.js
 - `Requests()` --indirect_call--> `parseResponse()`  [INFERRED]
   clients/sicem-web/src/pages/Requests.jsx → clients/sicem-web/src/utils/apiRequest.js
-- `Patients()` --indirect_call--> `parseResponse()`  [INFERRED]
-  clients/sicem-web/src/pages/admin/Patients.jsx → clients/sicem-web/src/utils/apiRequest.js
+- `Ambulances()` --indirect_call--> `parseResponse()`  [INFERRED]
+  clients/sicem-web/src/pages/admin/Ambulances.jsx → clients/sicem-web/src/utils/apiRequest.js
 
 ## Import Cycles
 - None detected.
@@ -124,8 +124,8 @@
 ## Communities (77 total, 28 thin omitted)
 
 ### Community 0 - "useAuth"
-Cohesion: 0.06
-Nodes (56): App(), RootRedirect(), AmbulanceStatusCard(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), SpecialityAdminCard() (+48 more)
+Cohesion: 0.07
+Nodes (59): App(), RootRedirect(), AmbulanceStatusCard(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), SpecialityAdminCard() (+51 more)
 
 ### Community 2 - "controllers/emergency.js"
 Cohesion: 0.03
@@ -183,9 +183,9 @@ Nodes (11): bcrypt, createUserWithCredentials(), editUserProfile(), getAllUsers(
 Cohesion: 0.09
 Nodes (22): dependencies, bcrypt, cors, dotenv, express, jsonwebtoken, mysql2, devDependencies (+14 more)
 
-### Community 20 - "Users.jsx"
-Cohesion: 0.29
-Nodes (7): emptyCredentialsForm, emptyForm, emptyPatientForm, emptyShiftWindows(), roleLabels, Users(), WEEKDAYS
+### Community 20 - "Institutions.jsx"
+Cohesion: 0.20
+Nodes (9): emptyEditInstitutionForm, emptyEditSpecialityForm, emptyEditTypeForm, emptyForm, emptyNewSpecialityForm, emptyNewTypeForm, emptySpecialityForm, roleLabels (+1 more)
 
 ### Community 21 - "gateway/package.json"
 Cohesion: 0.11
@@ -195,9 +195,9 @@ Nodes (18): dependencies, cors, dotenv, express, http-proxy-middleware, devDepen
 Cohesion: 0.11
 Nodes (17): dependencies, cors, dotenv, express, jsonwebtoken, mysql2, nodemon, socket.io (+9 more)
 
-### Community 23 - "Institutions.jsx"
-Cohesion: 0.12
-Nodes (25): Ambulances(), EmergencyCatalogs(), emptyEditNameForm, emptyEditTriageForm, emptyNameForm, emptyTriageForm, roleLabels, TABS (+17 more)
+### Community 23 - "EmergencyCatalogs.jsx"
+Cohesion: 0.19
+Nodes (11): EmergencyCatalogs(), emptyEditNameForm, emptyEditTriageForm, emptyNameForm, emptyTriageForm, roleLabels, TABS, emptyForm (+3 more)
 
 ### Community 24 - "/graphify Command Pipeline"
 Cohesion: 0.13
@@ -208,12 +208,12 @@ Cohesion: 0.16
 Nodes (15): Expo Version Warning (read versioned docs before coding), sicem-mobile CLAUDE.md (includes AGENTS.md), Emergencias Service (port 3005 - core + socket.io), Expo Go for Dev, EAS Build APK for Demo, Expo Router as Likely Navigation Choice (open decision), Gateway Service (port 3000), Hospitales Service (port 3002), OSRM Real Street Routing (distance/time + polylines) (+7 more)
 
 ### Community 26 - "sicem-web/src/App.jsx"
-Cohesion: 0.22
-Nodes (13): App(), Navbar(), AuthContext, AuthProvider(), useAuth(), formatDateTime(), formatDuration(), History() (+5 more)
+Cohesion: 0.19
+Nodes (15): App(), Navbar(), API_BASE_URL, AuthContext, AuthProvider(), useAuth(), formatDateTime(), formatDuration() (+7 more)
 
 ### Community 27 - "EmergencyDetail.jsx"
-Cohesion: 0.27
-Nodes (9): buildTimeline(), EmergencyDetail(), formatDateTime(), roleLabels, STATUS_SEQUENCE, Requests(), roleLabels, statusClass (+1 more)
+Cohesion: 0.25
+Nodes (11): SOCKET_URL, UNITS_SOCKET_URL, buildTimeline(), EmergencyDetail(), formatDateTime(), roleLabels, STATUS_SEQUENCE, fetchRouteDistance() (+3 more)
 
 ### Community 28 - "Patients.jsx"
 Cohesion: 0.16
@@ -227,9 +227,9 @@ Nodes (11): setIo(), app, cors, db, express, hospitalRoutes, http, io (+3 more)
 Cohesion: 0.22
 Nodes (7): connection, mysql, app, cors, db, express, patientRoutes
 
-### Community 31 - "getNavLinks"
-Cohesion: 0.24
-Nodes (8): BAR_COLORS, Charts(), monthLabel, PIE_COLORS, roleLabels, adminDropdown, baseNavLinks, getNavLinks()
+### Community 31 - "toLowerCaseKeys"
+Cohesion: 0.15
+Nodes (18): emptyCredentialsForm, emptyForm, emptyPatientForm, emptyShiftWindows(), roleLabels, Users(), WEEKDAYS, BAR_COLORS (+10 more)
 
 ### Community 32 - "unidades/index.js"
 Cohesion: 0.15
@@ -240,12 +240,12 @@ Cohesion: 0.18
 Nodes (9): app, cors, db, express, userRoutes, express, middleware, router (+1 more)
 
 ### Community 34 - "Dashboard.jsx"
-Cohesion: 0.13
-Nodes (17): EmergencyCard(), severityColor, createAmbulanceIcon(), DEFAULT_CENTER, emergencyIcon, hospitalIcon, MapArea(), statusColors (+9 more)
+Cohesion: 0.15
+Nodes (14): EmergencyCard(), severityColor, createAmbulanceIcon(), DEFAULT_CENTER, emergencyIcon, hospitalIcon, MapArea(), statusColors (+6 more)
 
 ### Community 35 - "Ambulances.jsx"
-Cohesion: 0.22
-Nodes (8): emptyEditForm, emptyEditStatusForm, emptyEditTypeForm, emptyForm, emptyStatusForm, emptyTypeForm, roleLabels, TABS
+Cohesion: 0.18
+Nodes (12): Ambulances(), emptyEditForm, emptyEditStatusForm, emptyEditTypeForm, emptyForm, emptyStatusForm, emptyTypeForm, roleLabels (+4 more)
 
 ### Community 36 - "hospitales/config/db.js"
 Cohesion: 0.29
@@ -288,8 +288,8 @@ Cohesion: 0.67
 Nodes (3): getIo(), updateAvailableBedsI(), updateAvailableBedsIS()
 
 ### Community 48 - "firebase.js"
-Cohesion: 0.33
-Nodes (5): fs, { getMessaging }, { initializeApp, cert }, path, SERVICE_ACCOUNT_PATH
+Cohesion: 0.25
+Nodes (6): fs, { getMessaging }, { initializeApp, cert }, path, SERVICE_ACCOUNT_PATH, serviceAccount
 
 ### Community 72 - "useAuth"
 Cohesion: 0.07
@@ -304,7 +304,7 @@ Cohesion: 0.50
 Nodes (4): computeScheduledEnd(), isWithinSchedule(), parseTimeToMinutes(), startShift()
 
 ## Knowledge Gaps
-- **393 isolated node(s):** `__dirname`, `name`, `private`, `version`, `type` (+388 more)
+- **394 isolated node(s):** `__dirname`, `name`, `private`, `version`, `type` (+389 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -314,11 +314,11 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `plugins` connect `useAuth` to `expo`?**
   _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **Why does `expo` connect `expo` to `useAuth`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
+  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `__dirname`, `name`, `private` to the rest of the system?**
-  _393 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _394 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useAuth` be split into smaller, more focused modules?**
-  _Cohesion score 0.06415396952686447 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06568986568986569 - nodes in this community are weakly interconnected._
 - **Should `models/emergency.js` be split into smaller, more focused modules?**
   _Cohesion score 0.024691358024691357 - nodes in this community are weakly interconnected._
 - **Should `controllers/emergency.js` be split into smaller, more focused modules?**

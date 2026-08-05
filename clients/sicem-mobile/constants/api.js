@@ -33,16 +33,26 @@ const isAndroidEmulator = Platform.OS === 'android' && !Device.isDevice
 // producción). Si no, se detecta solo según dónde esté corriendo.
 const HOST = process.env.EXPO_PUBLIC_HOST || (isAndroidEmulator ? ANDROID_EMULATOR_HOST : detectHostFromMetro()) || 'localhost'
 
+// Un backend en la nube (p. ej. GitHub Codespaces) no vive en "un host y
+// varios puertos" — cada puerto reenviado sale como su propia URL completa
+// (https://xxx-3000.app.github.dev, https://xxx-3005.app.github.dev, cada
+// una con su propio subdominio), así que pegarle ":3005" a un HOST no
+// funciona ahí. Si estas variables están seteadas, ganan tal cual sobre la
+// construcción HOST:puerto de abajo.
+const ENV_API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL
+const ENV_SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL
+const ENV_UNITS_SOCKET_URL = process.env.EXPO_PUBLIC_UNITS_SOCKET_URL
+
 // Todo lo REST pasa por el gateway (puerto 3000).
-export const API_BASE_URL = `http://${HOST}:3000`
+export const API_BASE_URL = ENV_API_BASE_URL || `http://${HOST}:3000`
 
 // Los sockets son la excepción — se conectan directo al servicio de
 // emergencias (puerto 3005), sin pasar por el gateway. Mismo patrón que
 // sicem-web/sicem-desktop.
-export const SOCKET_URL = `http://${HOST}:3005`
+export const SOCKET_URL = ENV_SOCKET_URL || `http://${HOST}:3005`
 
 // El servicio de unidades tiene su PROPIO servidor de Socket.IO (puerto
 // 3003), separado del de emergencias — hace falta esta conexión aparte para
 // recibir eventForceLogout (turno cerrado solo por vencimiento de horario,
 // ver startShiftExpirySweep en el backend).
-export const UNITS_SOCKET_URL = `http://${HOST}:3003`
+export const UNITS_SOCKET_URL = ENV_UNITS_SOCKET_URL || `http://${HOST}:3003`

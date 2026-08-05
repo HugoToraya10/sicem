@@ -6,6 +6,7 @@ import Navbar from '../components/layout/Navbar';
 import { getNavLinks } from '../utils/Navlinks';
 import '../pages/admin/Institutions.css';
 import './History.css';
+import {API_BASE_URL} from '../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -63,7 +64,7 @@ const History = () => {
         })
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/emergencias-cerradas', {
+        fetch(`${API_BASE_URL}/emergencias/emergencias-cerradas`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => {
@@ -82,7 +83,7 @@ const History = () => {
     // deriva de las emergencias ya cargadas, porque eso solo mostraría los
     // niveles que ya aparecieron, no todos los que existen.
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/niveles-triage', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/emergencias/niveles-triage`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setTriageCatalog((data || []).map(t => toLowerCaseKeys(t))))
             .catch(error => console.error('Error recuperando catálogo de triage. ', error))

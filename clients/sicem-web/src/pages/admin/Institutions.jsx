@@ -6,6 +6,7 @@ import { getNavLinks } from '../../utils/Navlinks';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
 import './Institutions.css';
+import {API_BASE_URL} from '../../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -88,7 +89,7 @@ const Institutions = () => {
     //---------------------------------consultar, gets--------------------------------------------------
 
     const fetchInstitutions = () => {
-        fetch('http://localhost:3000/hospitales/instituciones-todos', {
+        fetch(`${API_BASE_URL}/hospitales/instituciones-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -98,7 +99,7 @@ const Institutions = () => {
     useEffect(() => { fetchInstitutions() }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/usuarios/estados', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/usuarios/estados`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setStates((data || []).map(s => toLowerCaseKeys(s))))
             .catch(error => console.error('Error consultando estados. ', error))
@@ -106,14 +107,14 @@ const Institutions = () => {
 
     useEffect(() => {
         if (!selectedStateId) { setCities([]); return }
-        fetch(`http://localhost:3000/usuarios/ciudades/${selectedStateId}`, { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/usuarios/ciudades/${selectedStateId}`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setCities((data || []).map(c => toLowerCaseKeys(c))))
             .catch(error => console.error('Error consultando ciudades. ', error))
     }, [selectedStateId]);
 
     const fetchInstitutionTypes = () => {
-        fetch('http://localhost:3000/hospitales/tipos-institucion-todos', {
+        fetch(`${API_BASE_URL}/hospitales/tipos-institucion-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -123,7 +124,7 @@ const Institutions = () => {
     useEffect(() => { fetchInstitutionTypes() }, []);
 
     const fetchSpecialities = () => {
-        fetch('http://localhost:3000/hospitales/especialidades-todos', {
+        fetch(`${API_BASE_URL}/hospitales/especialidades-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -133,7 +134,7 @@ const Institutions = () => {
     useEffect(() => { fetchSpecialities() }, []);
 
     const fetchInstitutionSpecialities = () => {
-        fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/hospitales/especialidades-instituciones`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setInstitutionSpecialities(data.map(s => toLowerCaseKeys(s))))
             .catch(error => console.error('Error consultando especialidades por institución. ', error))
@@ -141,7 +142,7 @@ const Institutions = () => {
     useEffect(() => { fetchInstitutionSpecialities() }, []);
 
     const fetchNotifications = () => {
-        fetch('http://localhost:3000/hospitales/notificaciones', {
+        fetch(`${API_BASE_URL}/hospitales/notificaciones`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -152,7 +153,7 @@ const Institutions = () => {
 
     useEffect(() => {
         if (activeTab !== 'Notificaciones') return
-        fetch('http://localhost:3000/emergencias/emergencias-activas', {
+        fetch(`${API_BASE_URL}/emergencias/emergencias-activas`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -162,7 +163,7 @@ const Institutions = () => {
 
     const handleCreateNotification = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/hospitales/crear-notificacion', {
+        fetch(`${API_BASE_URL}/hospitales/crear-notificacion`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -223,7 +224,7 @@ const Institutions = () => {
         e.preventDefault();
         if (blockIfDuplicate(institutions, 'name', form.name, 'nombre')) return
         if (!validateBeds(form.availableBeds, form.bedCapacity)) return
-        fetch('http://localhost:3000/hospitales/registrar-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/registrar-institucion`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -241,7 +242,7 @@ const Institutions = () => {
     const handleToggleActive = (inst) => {
         const action = inst.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} la institución "${inst.name}"?`)) return
-        fetch('http://localhost:3000/hospitales/alternar-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/alternar-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ institutionId: inst.institution_id })
@@ -254,7 +255,7 @@ const Institutions = () => {
     const handleToggleCrum = (inst) => {
         const action = inst.is_crum_institution ? 'quitar de la red CRUM' : 'marcar como institución CRUM'
         if (!window.confirm(`¿Seguro que quieres ${action} a "${inst.name}"?`)) return
-        fetch('http://localhost:3000/hospitales/alternar-crum-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/alternar-crum-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ institutionId: inst.institution_id })
@@ -274,12 +275,12 @@ const Institutions = () => {
         e.preventDefault();
         if (!validateBeds(bedsValue, capacityValue)) return
         Promise.all([
-            fetch('http://localhost:3000/hospitales/actualizar-camas-institucion', {
+            fetch(`${API_BASE_URL}/hospitales/actualizar-camas-institucion`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ institutionId, availableBeds: bedsValue })
             }).then(parseResponse),
-            fetch('http://localhost:3000/hospitales/actualizar-capacidad-institucion', {
+            fetch(`${API_BASE_URL}/hospitales/actualizar-capacidad-institucion`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ institutionId, bedCapacity: capacityValue })
@@ -305,7 +306,7 @@ const Institutions = () => {
 
     const handleUpdateInstitution = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/hospitales/actualizar-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/actualizar-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editInstitutionForm)
@@ -327,12 +328,12 @@ const Institutions = () => {
         const currentRow = institutionSpecialities.find(s => s.institution_speciality_id === institutionSpecialityId)
         if (currentRow && !confirmSpecialityBedsOverlap(currentRow.institution_id, specialityCapacityValue, institutionSpecialityId)) return
         Promise.all([
-            fetch('http://localhost:3000/hospitales/actualizar-camas-especialidad', {
+            fetch(`${API_BASE_URL}/hospitales/actualizar-camas-especialidad`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ institutionSpecialityId, availableBeds: specialityBedsValue })
             }).then(parseResponse),
-            fetch('http://localhost:3000/hospitales/actualizar-capacidad-especialidad', {
+            fetch(`${API_BASE_URL}/hospitales/actualizar-capacidad-especialidad`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ institutionSpecialityId, totalBeds: specialityCapacityValue })
@@ -353,7 +354,7 @@ const Institutions = () => {
     const handleCreateSpeciality = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(specialities, 'name', newSpecialityForm.name, 'nombre')) return
-        fetch('http://localhost:3000/hospitales/crear-especialidad', {
+        fetch(`${API_BASE_URL}/hospitales/crear-especialidad`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ name: newSpecialityForm.name, description: newSpecialityForm.description })
@@ -370,7 +371,7 @@ const Institutions = () => {
 
     const handleUpdateSpeciality = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/hospitales/actualizar-especialidad', {
+        fetch(`${API_BASE_URL}/hospitales/actualizar-especialidad`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editSpecialityForm)
@@ -383,7 +384,7 @@ const Institutions = () => {
     const handleToggleSpeciality = (sp) => {
         const action = sp.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} la especialidad "${sp.name}"?`)) return
-        fetch('http://localhost:3000/hospitales/alternar-especialidad', {
+        fetch(`${API_BASE_URL}/hospitales/alternar-especialidad`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ specialityId: sp.speciality_id })
@@ -405,7 +406,7 @@ const Institutions = () => {
         }
         if (!validateBeds(specialityForm.availableBeds, specialityForm.totalBeds)) return
         if (!confirmSpecialityBedsOverlap(specialityForm.institutionId, specialityForm.totalBeds, null)) return
-        fetch('http://localhost:3000/hospitales/asignar-especialidad', {
+        fetch(`${API_BASE_URL}/hospitales/asignar-especialidad`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -422,7 +423,7 @@ const Institutions = () => {
 
     const handleToggleInstitutionSpeciality = (institutionSpecialityId) => {
         if (!window.confirm('¿Seguro que quieres cambiar el estado de esta especialidad asignada?')) return
-        fetch('http://localhost:3000/hospitales/alternar-especialidad-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/alternar-especialidad-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ institutionSpecialityId })
@@ -437,7 +438,7 @@ const Institutions = () => {
     const handleCreateType = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(institutionTypes, 'institution_type', newTypeForm.institutionType, 'nombre de tipo')) return
-        fetch('http://localhost:3000/hospitales/crear-tipo-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/crear-tipo-institucion`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ institutionType: newTypeForm.institutionType })
@@ -454,7 +455,7 @@ const Institutions = () => {
 
     const handleUpdateType = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/hospitales/actualizar-tipo-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/actualizar-tipo-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify(editTypeForm)
@@ -467,7 +468,7 @@ const Institutions = () => {
     const handleToggleType = (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el tipo "${t.institution_type}"?`)) return
-        fetch('http://localhost:3000/hospitales/alternar-tipo-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/alternar-tipo-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ institutionTypeId: t.institution_type_id })

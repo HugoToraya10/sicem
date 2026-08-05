@@ -4,6 +4,7 @@ import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
 import './Hospitals.css';
 import { getNavLinks } from '../utils/Navlinks';
+import {API_BASE_URL} from '../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -13,7 +14,7 @@ const Hospitals = () => {
     const [institutions, setInstitutions] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:3000/hospitales/instituciones-destino', {
+        fetch(`${API_BASE_URL}/hospitales/instituciones-destino`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())

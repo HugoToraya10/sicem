@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import MapArea from '../map/MapArea'
+import { API_BASE_URL } from '../../config/api'
 import { toLowerCaseKeys } from '../../utils/formatData'
 import '../patients/PatientDetailModal.css'
 
@@ -10,7 +11,7 @@ const UnitRequestDetailModal = ({ request, token, onClose, onAccept, onReject })
 
     useEffect(() => {
         if (!request.ambulance_id) { setAmbulanceLocation(null); return }
-        fetch(`http://localhost:3000/unidades/ubicacion/${request.ambulance_id}`, {
+        fetch(`${API_BASE_URL}/unidades/ubicacion/${request.ambulance_id}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.ok ? res.json() : { data: null })

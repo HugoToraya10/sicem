@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import AmbulanceStatusCard from '../components/ambulances/AmbulanceStatusCard'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
@@ -14,9 +15,9 @@ const MyAmbulances = () => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
 
         Promise.all([
-            fetch(`http://localhost:3000/unidades/ambulancias-disponibles/${user.institutionId}`, { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/unidades/tipos-ambulancia', { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/unidades/estados-ambulancia', { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/ambulancias-disponibles/${user.institutionId}`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/tipos-ambulancia`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/estados-ambulancia`, { headers }).then(res => res.json()),
         ])
             .then(([ambulancesRes, typesRes, statusesRes]) => {
                 const typeCatalog = (typesRes.data || []).map(t => toLowerCaseKeys(t))
@@ -50,7 +51,7 @@ const MyAmbulances = () => {
     }, [token, fetchAmbulances])
 
     const handleUpdateStatus = (ambulanceId, ambulanceStatusId) => {
-        return fetch('http://localhost:3000/unidades/actualizar-estado-ambulancia', {
+        return fetch(`${API_BASE_URL}/unidades/actualizar-estado-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ ambulanceId, ambulanceStatusId })

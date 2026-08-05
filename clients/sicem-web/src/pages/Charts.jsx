@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import './Charts.css';
 import { getNavLinks } from '../utils/Navlinks';
+import {API_BASE_URL} from '../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -25,7 +26,7 @@ const Charts = () => {
     const [byInstitution, setByInstitution] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/analiticas/emergencias-por-tipo', {
+        fetch(`${API_BASE_URL}/emergencias/analiticas/emergencias-por-tipo`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -34,7 +35,7 @@ const Charts = () => {
     }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/analiticas/solicitudes-por-estado', {
+        fetch(`${API_BASE_URL}/emergencias/analiticas/solicitudes-por-estado`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -43,7 +44,7 @@ const Charts = () => {
     }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/analiticas/tiempo-respuesta', {
+        fetch(`${API_BASE_URL}/emergencias/analiticas/tiempo-respuesta`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -52,7 +53,7 @@ const Charts = () => {
     }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/analiticas/emergencias-por-institucion', {
+        fetch(`${API_BASE_URL}/emergencias/analiticas/emergencias-por-institucion`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())

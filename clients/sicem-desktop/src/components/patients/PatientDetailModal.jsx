@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_BASE_URL } from '../../config/api'
 import { useAuth } from '../../context/AuthContext'
 import { toLowerCaseKeys } from '../../utils/formatData'
 import MapArea from '../map/MapArea'
@@ -21,7 +22,7 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
 
     useEffect(() => {
-        fetch(`http://localhost:3000/emergencias/notas/${patient.emergency_patient_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/emergencias/notas/${patient.emergency_patient_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
             .then(res => res.json())
             .then(({ data }) => setNotes(data.map(n => toLowerCaseKeys(n))))
             .catch(error => console.error('Error recuperando notas de urgencia. ', error))
@@ -33,7 +34,7 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     // apunta a la ambulancia concreta de este paciente.
     useEffect(() => {
         if (!patient.ambulance_id) { setAmbulanceLocation(null); return }
-        fetch(`http://localhost:3000/unidades/ubicacion/${patient.ambulance_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/unidades/ubicacion/${patient.ambulance_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
             .then(res => res.ok ? res.json() : { data: null })
             .then(({ data }) => setAmbulanceLocation(data ? toLowerCaseKeys(data) : null))
             .catch(error => console.error('Error recuperando ubicación de la ambulancia. ', error))
@@ -61,7 +62,7 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     // cliente (mismo patrón que el resto de la app con catálogos pequeños).
     useEffect(() => {
         if (!user?.institutionId) return
-        fetch('http://localhost:3000/hospitales/notificaciones', { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/hospitales/notificaciones`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
             .then(res => res.json())
             .then(({ data }) => {
                 const mine = (data || []).map(n => toLowerCaseKeys(n)).find(n =>
@@ -77,7 +78,7 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     // muestra a los demás — puede que vayan a otras instituciones.
     useEffect(() => {
         if (!patient.num_patients || parseInt(patient.num_patients) <= 1) { setOtherPatients([]); return }
-        fetch(`http://localhost:3000/emergencias/pacientes/${patient.emergency_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/emergencias/pacientes/${patient.emergency_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
             .then(res => res.json())
             .then(({ data }) => {
                 const others = (data || [])
@@ -92,7 +93,7 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     // hasta ahora en ningún frontend.
     useEffect(() => {
         if (!patient.user_profile_id) { setHistory([]); return }
-        fetch(`http://localhost:3000/emergencias/emergencias-paciente/${patient.user_profile_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/emergencias/emergencias-paciente/${patient.user_profile_id}`, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
             .then(res => res.json())
             .then(({ data }) => {
                 const past = (data || [])
@@ -126,7 +127,7 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     const handleConfirmDelivery = () => {
         if (!window.confirm('¿Confirmas que este paciente ya llegó físicamente a tu institución?')) return
         setConfirmingDelivery(true)
-        fetch('http://localhost:3000/emergencias/confirmar-llegada-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/confirmar-llegada-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId: patient.emergency_patient_id })
@@ -155,7 +156,7 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     const handleDischarge = () => {
         if (!window.confirm('¿Confirmas el alta de este paciente? Esto libera la cama que tenía reservada.')) return
         setDischarging(true)
-        fetch('http://localhost:3000/emergencias/dar-alta-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/dar-alta-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId: patient.emergency_patient_id })

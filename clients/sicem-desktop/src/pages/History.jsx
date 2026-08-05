@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import PatientDetailModal from '../components/patients/PatientDetailModal'
@@ -41,7 +42,7 @@ const History = () => {
     const [triageCatalog, setTriageCatalog] = useState([])
 
     const fetchHistory = useCallback(() => {
-        fetch(`http://localhost:3000/emergencias/historial-institucion/${user.institutionId}`, {
+        fetch(`${API_BASE_URL}/emergencias/historial-institucion/${user.institutionId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -57,14 +58,14 @@ const History = () => {
     // que esta institución ya había tenido — un filtro que no muestra todas
     // las opciones reales no sirve como filtro.
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/niveles-triage', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/emergencias/niveles-triage`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setTriageCatalog((data || []).map(t => toLowerCaseKeys(t))))
             .catch(error => console.error('Error recuperando catálogo de triage. ', error))
     }, [])
 
     const handleAccept = (emergencyPatientId) => {
-        fetch('http://localhost:3000/emergencias/confirmar-recepcion-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/confirmar-recepcion-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId, accepted: true })
@@ -80,7 +81,7 @@ const History = () => {
 
     const handleConfirmReject = (rejectionReason) => {
         const emergencyPatientId = rejectingPatientId
-        fetch('http://localhost:3000/emergencias/confirmar-recepcion-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/confirmar-recepcion-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId, accepted: false, rejectionReason })

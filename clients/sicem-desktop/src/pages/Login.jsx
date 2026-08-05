@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL } from '../config/api';
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import './Login.css';
@@ -15,7 +16,7 @@ const Login = () => {
         e.preventDefault();
         setError('');
         setLoading(true);
-        fetch('http://localhost:3000/usuarios/login', {
+        fetch(`${API_BASE_URL}/usuarios/login`, {
             method: 'POST',
             headers: {
                 'Content-type': 'application/json'

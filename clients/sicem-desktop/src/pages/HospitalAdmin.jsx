@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react'
 import SpecialityAdminCard from '../components/hospitalAdmin/SpecialityAdminCard'
 import AmbulanceAdminCard from '../components/hospitalAdmin/AmbulanceAdminCard'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import './HospitalAdmin.css'
@@ -41,8 +42,8 @@ const HospitalAdmin = () => {
 
     const fetchSpecialities = useCallback(() => {
         Promise.all([
-            fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/hospitales/especialidades', { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades-instituciones`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades`, { headers }).then(res => res.json()),
         ])
             .then(([institutionSpecialtiesRes, catalogRes]) => {
                 const myRows = institutionSpecialtiesRes.data
@@ -78,7 +79,7 @@ const HospitalAdmin = () => {
         }
         // No se manda institutionId — el backend lo fuerza a la propia del usuario
         // logueado sin importar qué se mande.
-        fetch('http://localhost:3000/hospitales/asignar-especialidad', {
+        fetch(`${API_BASE_URL}/hospitales/asignar-especialidad`, {
             method: "POST", headers,
             body: JSON.stringify({
                 specialityId: assignSpecialityForm.specialityId,
@@ -92,7 +93,7 @@ const HospitalAdmin = () => {
     }
 
     const handleUpdateCapacity = (institutionSpecialityId, totalBeds) => {
-        return fetch('http://localhost:3000/hospitales/actualizar-capacidad-especialidad', {
+        return fetch(`${API_BASE_URL}/hospitales/actualizar-capacidad-especialidad`, {
             method: "PATCH", headers,
             body: JSON.stringify({ institutionSpecialityId, totalBeds })
         })
@@ -104,7 +105,7 @@ const HospitalAdmin = () => {
     const handleToggleSpeciality = (speciality) => {
         const action = speciality.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} "${speciality.name}"?`)) return
-        fetch('http://localhost:3000/hospitales/alternar-especialidad-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/alternar-especialidad-institucion`, {
             method: "PATCH", headers,
             body: JSON.stringify({ institutionSpecialityId: speciality.institution_speciality_id })
         })
@@ -122,9 +123,9 @@ const HospitalAdmin = () => {
 
     const fetchAmbulances = useCallback(() => {
         Promise.all([
-            fetch(`http://localhost:3000/unidades/ambulancias-disponibles/${user.institutionId}`, { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/unidades/tipos-ambulancia', { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/unidades/estados-ambulancia', { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/ambulancias-disponibles/${user.institutionId}`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/tipos-ambulancia`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/estados-ambulancia`, { headers }).then(res => res.json()),
         ])
             .then(([ambulancesRes, typesRes, statusesRes]) => {
                 const typeCatalog = (typesRes.data || []).map(t => toLowerCaseKeys(t))
@@ -147,7 +148,7 @@ const HospitalAdmin = () => {
         e.preventDefault()
         // institutionId siempre es la propia del usuario logueado — nunca editable
         // desde este formulario, ni se manda otra.
-        fetch('http://localhost:3000/unidades/registrar-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/registrar-ambulancia`, {
             method: "POST", headers,
             body: JSON.stringify({
                 unitNumber: ambulanceForm.unitNumber,
@@ -163,7 +164,7 @@ const HospitalAdmin = () => {
     }
 
     const handleUpdateAmbulance = (ambulanceId, form) => {
-        return fetch('http://localhost:3000/unidades/actualizar-ambulancia', {
+        return fetch(`${API_BASE_URL}/unidades/actualizar-ambulancia`, {
             method: "PATCH", headers,
             body: JSON.stringify({
                 ambulanceId,
@@ -181,7 +182,7 @@ const HospitalAdmin = () => {
     const handleToggleAmbulance = (ambulance) => {
         const action = ambulance.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} la unidad "${ambulance.unit_number}"?`)) return
-        fetch('http://localhost:3000/unidades/alternar-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/alternar-ambulancia`, {
             method: "PATCH", headers,
             body: JSON.stringify({ ambulanceId: ambulance.ambulance_id })
         })
@@ -200,7 +201,7 @@ const HospitalAdmin = () => {
     const [credentialsForm, setCredentialsForm] = useState({ email: '', password: '' })
 
     const fetchInstitutionAdmins = useCallback(() => {
-        fetch('http://localhost:3000/usuarios/obtener-usuarios', { headers })
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuarios`, { headers })
             .then(res => res.json())
             .then(({ data }) => {
                 // Antes solo listaba rol 4 (empleados administrativos) — ahora
@@ -245,7 +246,7 @@ const HospitalAdmin = () => {
         // institución sin importar qué se intente mandar. roleId sí se manda
         // (3 = paramédico, 4 = empleado administrativo); el backend valida que
         // solo se puedan crear esos dos desde aquí, nunca otro.
-        fetch('http://localhost:3000/usuarios/registro', {
+        fetch(`${API_BASE_URL}/usuarios/registro`, {
             method: "POST", headers,
             body: JSON.stringify({
                 roleId: employeeForm.roleId,
@@ -280,7 +281,7 @@ const HospitalAdmin = () => {
         const nextValue = !u.is_institution_admin
         const action = nextValue ? 'otorgar' : 'quitar'
         if (!window.confirm(`¿Seguro que quieres ${action} el privilegio de administrador a ${u.first_name} ${u.first_surname || ''}?`)) return
-        fetch('http://localhost:3000/usuarios/alternar-admin-institucion', {
+        fetch(`${API_BASE_URL}/usuarios/alternar-admin-institucion`, {
             method: "PATCH", headers,
             body: JSON.stringify({ userProfileId: u.user_profile_id, isInstitutionAdmin: nextValue })
         })
@@ -292,7 +293,7 @@ const HospitalAdmin = () => {
     const handleToggleEmployeeActive = (u) => {
         const action = u.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} a ${u.first_name} ${u.first_surname || ''}?`)) return
-        fetch('http://localhost:3000/usuarios/invertir-estado-usuario', {
+        fetch(`${API_BASE_URL}/usuarios/invertir-estado-usuario`, {
             method: "PATCH", headers,
             body: JSON.stringify({ userCredentialId: u.user_credential_id })
         })
@@ -326,7 +327,7 @@ const HospitalAdmin = () => {
         // No se manda institutionId — el backend lo preserva tal cual para este
         // caso (admin editando a OTRO empleado propio). roleId SÍ se manda ahora
         // — permite pasar de empleado administrativo a paramédico o viceversa.
-        fetch('http://localhost:3000/usuarios/actualizar-perfil', {
+        fetch(`${API_BASE_URL}/usuarios/actualizar-perfil`, {
             method: "PATCH", headers,
             body: JSON.stringify({
                 userProfileId: editingEmployeeId,
@@ -356,7 +357,7 @@ const HospitalAdmin = () => {
 
     const handleUpdateEmployeeCredentials = (e, u) => {
         e.preventDefault()
-        fetch('http://localhost:3000/usuarios/actualizar-credenciales', {
+        fetch(`${API_BASE_URL}/usuarios/actualizar-credenciales`, {
             method: "PATCH", headers,
             body: JSON.stringify({
                 userCredentialId: u.user_credential_id,
@@ -381,7 +382,7 @@ const HospitalAdmin = () => {
         // propia, mismo patrón de fetch-y-cruzar ya usado en el resto de la app.
         // Se usa tanto en "Mi Institución" (dirección) como en "Camas y
         // Especialidades" (camas generales), así que se pide siempre al montar.
-        fetch('http://localhost:3000/hospitales/instituciones', { headers })
+        fetch(`${API_BASE_URL}/hospitales/instituciones`, { headers })
             .then(res => res.json())
             .then(({ data }) => {
                 const mine = (data || []).map(i => toLowerCaseKeys(i)).find(i => parseInt(i.institution_id) === parseInt(user.institutionId))
@@ -395,7 +396,7 @@ const HospitalAdmin = () => {
                     // esto, aunque cityId ya esté guardado, ambos combos se ven vacíos
                     // porque nunca se resuelve a qué estado pertenece esa ciudad.
                     if (mine.city_id) {
-                        fetch(`http://localhost:3000/usuarios/ciudad/${mine.city_id}`, { headers: { "Content-Type": "application/json" } })
+                        fetch(`${API_BASE_URL}/usuarios/ciudad/${mine.city_id}`, { headers: { "Content-Type": "application/json" } })
                             .then(res => res.json())
                             .then(({ data: cityRows }) => {
                                 const cityRow = (cityRows || []).map(c => toLowerCaseKeys(c))[0]
@@ -417,11 +418,11 @@ const HospitalAdmin = () => {
             return
         }
         Promise.all([
-            fetch('http://localhost:3000/hospitales/actualizar-capacidad-institucion', {
+            fetch(`${API_BASE_URL}/hospitales/actualizar-capacidad-institucion`, {
                 method: "PATCH", headers,
                 body: JSON.stringify({ institutionId: user.institutionId, bedCapacity: generalBedsForm.bedCapacity })
             }),
-            fetch('http://localhost:3000/hospitales/actualizar-camas-institucion', {
+            fetch(`${API_BASE_URL}/hospitales/actualizar-camas-institucion`, {
                 method: "PATCH", headers,
                 body: JSON.stringify({ institutionId: user.institutionId, availableBeds: generalBedsForm.availableBeds })
             }),
@@ -432,7 +433,7 @@ const HospitalAdmin = () => {
     }
 
     useEffect(() => {
-        fetch('http://localhost:3000/usuarios/estados', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/usuarios/estados`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setStates((data || []).map(s => toLowerCaseKeys(s))))
             .catch(error => console.error('Error consultando estados. ', error))
@@ -440,7 +441,7 @@ const HospitalAdmin = () => {
 
     useEffect(() => {
         if (!selectedStateId) { setCities([]); return }
-        fetch(`http://localhost:3000/usuarios/ciudades/${selectedStateId}`, { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/usuarios/ciudades/${selectedStateId}`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setCities((data || []).map(c => toLowerCaseKeys(c))))
             .catch(error => console.error('Error consultando ciudades. ', error))
@@ -450,7 +451,7 @@ const HospitalAdmin = () => {
         e.preventDefault()
         // No se manda name ni institutionTypeId — el backend los preserva tal cual
         // están para rol 4, e institutionId se fuerza server-side a la propia.
-        fetch('http://localhost:3000/hospitales/actualizar-institucion', {
+        fetch(`${API_BASE_URL}/hospitales/actualizar-institucion`, {
             method: "PATCH", headers,
             body: JSON.stringify({
                 streetAddress: editAddressForm.streetAddress,

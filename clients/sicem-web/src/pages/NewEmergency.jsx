@@ -8,6 +8,7 @@ import { getNavLinks } from "../utils/Navlinks";
 import { parseResponse } from '../utils/apiRequest';
 import { connectUnitsSocket } from '../sockets/unitsSocket';
 import './NewEmergency.css';
+import {API_BASE_URL} from '../config/api'
 
 // Ruta real por calle (no línea recta) vía OSRM — mismo ecosistema OpenStreetMap
 // que ya usa esta pantalla para geocodificar direcciones (Nominatim) y pintar
@@ -109,7 +110,7 @@ const NewEmergency = () => {
     //---------------------------------consultar, gets--------------------------------------------------
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/tipos-emergencia',
+        fetch(`${API_BASE_URL}/emergencias/tipos-emergencia`,
             { headers: { "Content-Type": "application/json" } })
             .then((res) => res.json())
             .then(({data}) => setEmergencyTypes(data.map(t => toLowerCaseKeys(t))))
@@ -117,7 +118,7 @@ const NewEmergency = () => {
     }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/niveles-triage',
+        fetch(`${API_BASE_URL}/emergencias/niveles-triage`,
             { headers: { "Content-Type": "application/json" } })
             .then((res) => res.json())
             .then(({data}) => setTriageLevels((data || []).map(t => toLowerCaseKeys(t))))
@@ -130,7 +131,7 @@ const NewEmergency = () => {
     // despachador tenga que recargar la pantalla (una unidad puede aparecer o
     // desaparecer de aquí según inicien/terminen turno en sicem-mobile).
     const fetchAvailableUnits = () => {
-        fetch(`http://localhost:3000/unidades/ambulancias-disponibles/${user.institutionId}`,
+        fetch(`${API_BASE_URL}/unidades/ambulancias-disponibles/${user.institutionId}`,
             { headers: { "Content-Type": "application/json", "Authorization":`Bearer ${token}` } })
             .then(res => res.json())
             .then(({data}) => {
@@ -148,7 +149,7 @@ const NewEmergency = () => {
     useEffect(() => {
         if (availableUnits.length === 0) { setUnitLocations({}); return }
         Promise.all(availableUnits.map((u) =>
-            fetch(`http://localhost:3000/unidades/ubicacion/${u.ambulance_id}`, {
+            fetch(`${API_BASE_URL}/unidades/ubicacion/${u.ambulance_id}`, {
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
             })
                 .then((res) => res.ok ? res.json() : { data: null })
@@ -198,7 +199,7 @@ const NewEmergency = () => {
     }, [latitude, longitude, availableUnits, unitLocations])
 
     const fetchExternalUnits = () => {
-        fetch(`http://localhost:3000/unidades/ambulancias-externas/${user.institutionId}`,
+        fetch(`${API_BASE_URL}/unidades/ambulancias-externas/${user.institutionId}`,
             { headers: { "Content-Type": "application/json", "Authorization":`Bearer ${token}` } })
             .then(res => res.json())
             .then(({data}) => {
@@ -250,7 +251,7 @@ const NewEmergency = () => {
     useEffect(() => {
         if (externalUnits.length === 0) { setExternalUnitLocations({}); return }
         Promise.all(externalUnits.map((u) =>
-            fetch(`http://localhost:3000/unidades/ubicacion/${u.ambulance_id}`, {
+            fetch(`${API_BASE_URL}/unidades/ubicacion/${u.ambulance_id}`, {
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
             })
                 .then((res) => res.ok ? res.json() : { data: null })
@@ -290,7 +291,7 @@ const NewEmergency = () => {
     }, [recommendExternalUnits, latitude, longitude, externalUnits, externalUnitLocations])
 
     useEffect(() =>{
-        fetch('http://localhost:3000/unidades/tipos-ambulancia', {
+        fetch(`${API_BASE_URL}/unidades/tipos-ambulancia`, {
             headers: { "Content-Type":"application/json" }
         })
         .then(res => res.json())
@@ -299,7 +300,7 @@ const NewEmergency = () => {
     }, []);
 
     useEffect(() => {
-        fetch('http://localhost:3000/hospitales/instituciones-destino', {
+        fetch(`${API_BASE_URL}/hospitales/instituciones-destino`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())
@@ -312,8 +313,8 @@ const NewEmergency = () => {
     // el select de especialidad de cada paciente.
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
-            fetch('http://localhost:3000/hospitales/especialidades', { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades-instituciones`, { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades`, { headers: { "Content-Type": "application/json" } }).then(res => res.json()),
         ])
             .then(([institutionSpecialtiesRes, catalogRes]) => {
                 setInstitutionSpecialities((institutionSpecialtiesRes.data || []).map(row => toLowerCaseKeys(row)))
@@ -326,7 +327,7 @@ const NewEmergency = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/emergencias/registrar-emergencia',
+        fetch(`${API_BASE_URL}/emergencias/registrar-emergencia`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -354,7 +355,7 @@ const NewEmergency = () => {
                     // despachador reintente el formulario y duplique la emergencia) — solo
                     // avisamos qué parte específica no se pudo completar.
                     const assignPromise = selectedUnits.length !== 0
-                        ? fetch('http://localhost:3000/emergencias/registrar-asignacion', {
+                        ? fetch(`${API_BASE_URL}/emergencias/registrar-asignacion`, {
                             method: "POST",
                             headers: { "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
                             body: JSON.stringify({
@@ -371,7 +372,7 @@ const NewEmergency = () => {
 
                     const requestPromises = selectedExternalUnits.map((ambulanceId) => {
                         const externalUnit = externalUnits.find(u => u.ambulance_id === ambulanceId)
-                        return fetch('http://localhost:3000/emergencias/registrar-solicitud', {
+                        return fetch(`${API_BASE_URL}/emergencias/registrar-solicitud`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                             body: JSON.stringify({
@@ -472,7 +473,7 @@ const NewEmergency = () => {
         const curp = patientForms[index].curp.trim()
         if (!curp) return
         setSearchingCurpIndex(index)
-        fetch(`http://localhost:3000/usuarios/obtener-usuario-curp/${curp}`, {
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-curp/${curp}`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())
@@ -516,7 +517,7 @@ const handleConfirmPatients = () => {
         .filter(p => p.curp.trim() && p.curp.trim() !== p.searchedCurp)
 
     const lookups = needsLookup.map(({ curp, index }) =>
-        fetch(`http://localhost:3000/usuarios/obtener-usuario-curp/${curp.trim()}`, {
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-curp/${curp.trim()}`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())
@@ -618,7 +619,7 @@ const proceedWithConfirmation = (forms) => {
     // el resto es idéntico a lo que ya tenías, solo cambia patientForms por forms:
     const promises = forms.map((patient) => {
         if (patient.userProfileId) {
-            return fetch('http://localhost:3000/emergencias/registrar-paciente', {
+            return fetch(`${API_BASE_URL}/emergencias/registrar-paciente`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({
@@ -631,7 +632,7 @@ const proceedWithConfirmation = (forms) => {
                 })
             }).then(parseResponse)
         }
-        return fetch('http://localhost:3000/usuarios/registro-paciente', {
+        return fetch(`${API_BASE_URL}/usuarios/registro-paciente`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -648,7 +649,7 @@ const proceedWithConfirmation = (forms) => {
         })
             .then(parseResponse)
             .then((newProfile) => {
-                return fetch('http://localhost:3000/emergencias/registrar-paciente', {
+                return fetch(`${API_BASE_URL}/emergencias/registrar-paciente`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                     body: JSON.stringify({
@@ -692,7 +693,7 @@ const proceedWithConfirmation = (forms) => {
         setAddingUnits(true)
 
         const ownPromise = newOwnIds.length > 0
-            ? fetch('http://localhost:3000/emergencias/registrar-asignacion', {
+            ? fetch(`${API_BASE_URL}/emergencias/registrar-asignacion`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({
@@ -706,7 +707,7 @@ const proceedWithConfirmation = (forms) => {
 
         const externalPromises = newExternalIds.map((ambulanceId) => {
             const externalUnit = externalUnits.find(u => u.ambulance_id === ambulanceId)
-            return fetch('http://localhost:3000/emergencias/registrar-solicitud', {
+            return fetch(`${API_BASE_URL}/emergencias/registrar-solicitud`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({

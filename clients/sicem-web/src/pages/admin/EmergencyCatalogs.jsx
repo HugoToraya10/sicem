@@ -7,6 +7,7 @@ import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
 import './Institutions.css';
 import './EmergencyCatalogs.css';
+import {API_BASE_URL} from '../../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -65,7 +66,7 @@ const EmergencyCatalogs = () => {
     //---------------------------------consultar, gets--------------------------------------------------
 
     const fetchTypes = () => {
-        fetch('http://localhost:3000/emergencias/tipos-emergencia-todos', {
+        fetch(`${API_BASE_URL}/emergencias/tipos-emergencia-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -75,7 +76,7 @@ const EmergencyCatalogs = () => {
     useEffect(() => { fetchTypes() }, []);
 
     const fetchStatuses = () => {
-        fetch('http://localhost:3000/emergencias/estados-emergencia-todos', {
+        fetch(`${API_BASE_URL}/emergencias/estados-emergencia-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -85,7 +86,7 @@ const EmergencyCatalogs = () => {
     useEffect(() => { fetchStatuses() }, []);
 
     const fetchRequestStatuses = () => {
-        fetch('http://localhost:3000/emergencias/estados-solicitud-todos', {
+        fetch(`${API_BASE_URL}/emergencias/estados-solicitud-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -95,7 +96,7 @@ const EmergencyCatalogs = () => {
     useEffect(() => { fetchRequestStatuses() }, []);
 
     const fetchTriageLevels = () => {
-        fetch('http://localhost:3000/emergencias/niveles-triage-todos', {
+        fetch(`${API_BASE_URL}/emergencias/niveles-triage-todos`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -109,7 +110,7 @@ const EmergencyCatalogs = () => {
     const handleCreateType = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(types, 'name', typeForm.name, 'nombre de tipo')) return
-        fetch('http://localhost:3000/emergencias/crear-tipo-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/crear-tipo-emergencia`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ name: typeForm.name, description: typeForm.description })
@@ -126,7 +127,7 @@ const EmergencyCatalogs = () => {
 
     const handleUpdateType = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/emergencias/actualizar-tipo-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/actualizar-tipo-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyTypeId: editTypeForm.id, name: editTypeForm.name, description: editTypeForm.description })
@@ -139,7 +140,7 @@ const EmergencyCatalogs = () => {
     const handleToggleType = (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el tipo "${t.name}"?`)) return
-        fetch('http://localhost:3000/emergencias/alternar-tipo-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/alternar-tipo-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyTypeId: t.emergency_type_id })
@@ -154,7 +155,7 @@ const EmergencyCatalogs = () => {
     const handleCreateStatus = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(statuses, 'name', statusForm.name, 'nombre de estado')) return
-        fetch('http://localhost:3000/emergencias/crear-estado-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/crear-estado-emergencia`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ name: statusForm.name, description: statusForm.description })
@@ -171,7 +172,7 @@ const EmergencyCatalogs = () => {
 
     const handleUpdateStatus = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/emergencias/actualizar-estado-emergencia-catalogo', {
+        fetch(`${API_BASE_URL}/emergencias/actualizar-estado-emergencia-catalogo`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyStatusId: editStatusForm.id, name: editStatusForm.name, description: editStatusForm.description })
@@ -184,7 +185,7 @@ const EmergencyCatalogs = () => {
     const handleToggleStatus = (s) => {
         const action = s.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el estado "${s.name}"?`)) return
-        fetch('http://localhost:3000/emergencias/alternar-estado-emergencia', {
+        fetch(`${API_BASE_URL}/emergencias/alternar-estado-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyStatusId: s.emergency_status_id })
@@ -199,7 +200,7 @@ const EmergencyCatalogs = () => {
     const handleCreateRequestStatus = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(requestStatuses, 'name', requestStatusForm.name, 'nombre de estado')) return
-        fetch('http://localhost:3000/emergencias/crear-estado-solicitud', {
+        fetch(`${API_BASE_URL}/emergencias/crear-estado-solicitud`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ name: requestStatusForm.name, description: requestStatusForm.description })
@@ -216,7 +217,7 @@ const EmergencyCatalogs = () => {
 
     const handleUpdateRequestStatus = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/emergencias/actualizar-estado-solicitud', {
+        fetch(`${API_BASE_URL}/emergencias/actualizar-estado-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ requestStatusId: editRequestStatusForm.id, name: editRequestStatusForm.name, description: editRequestStatusForm.description })
@@ -229,7 +230,7 @@ const EmergencyCatalogs = () => {
     const handleToggleRequestStatus = (s) => {
         const action = s.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el estado "${s.name}"?`)) return
-        fetch('http://localhost:3000/emergencias/alternar-estado-solicitud', {
+        fetch(`${API_BASE_URL}/emergencias/alternar-estado-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ requestStatusId: s.request_status_id })
@@ -244,7 +245,7 @@ const EmergencyCatalogs = () => {
     const handleCreateTriage = (e) => {
         e.preventDefault();
         if (blockIfDuplicate(triageLevels, 'level', triageForm.level, 'nivel')) return
-        fetch('http://localhost:3000/emergencias/crear-nivel-triage', {
+        fetch(`${API_BASE_URL}/emergencias/crear-nivel-triage`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -268,7 +269,7 @@ const EmergencyCatalogs = () => {
 
     const handleUpdateTriage = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/emergencias/actualizar-nivel-triage', {
+        fetch(`${API_BASE_URL}/emergencias/actualizar-nivel-triage`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -285,7 +286,7 @@ const EmergencyCatalogs = () => {
     const handleToggleTriage = (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
         if (!window.confirm(`¿Seguro que quieres ${action} el nivel "${t.level}"?`)) return
-        fetch('http://localhost:3000/emergencias/alternar-nivel-triage', {
+        fetch(`${API_BASE_URL}/emergencias/alternar-nivel-triage`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ triageLevelId: t.triage_level_id })

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
@@ -26,7 +27,7 @@ const Tracking = () => {
     const [selectedPatient, setSelectedPatient] = useState(null)
 
     const fetchPatients = useCallback(() => {
-        fetch(`http://localhost:3000/emergencias/historial-institucion/${user.institutionId}`, {
+        fetch(`${API_BASE_URL}/emergencias/historial-institucion/${user.institutionId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -84,7 +85,7 @@ const Tracking = () => {
     // pantalla.
     const handleConfirmDelivery = (emergencyPatientId) => {
         if (!window.confirm('¿Confirmas que este paciente ya llegó físicamente a tu institución?')) return
-        fetch('http://localhost:3000/emergencias/confirmar-llegada-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/confirmar-llegada-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId })
@@ -96,7 +97,7 @@ const Tracking = () => {
 
     const handleDischarge = (emergencyPatientId) => {
         if (!window.confirm('¿Confirmas el alta de este paciente? Esto libera la cama que tenía reservada.')) return
-        fetch('http://localhost:3000/emergencias/dar-alta-paciente', {
+        fetch(`${API_BASE_URL}/emergencias/dar-alta-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId })

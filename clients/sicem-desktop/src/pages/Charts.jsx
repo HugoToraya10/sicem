@@ -3,6 +3,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
 } from 'recharts'
+import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import './Charts.css'
@@ -20,17 +21,17 @@ const Charts = () => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         const institutionId = user.institutionId
 
-        fetch(`http://localhost:3000/emergencias/analiticas/pacientes-por-tipo/${institutionId}`, { headers })
+        fetch(`${API_BASE_URL}/emergencias/analiticas/pacientes-por-tipo/${institutionId}`, { headers })
             .then(res => res.json())
             .then(({ data }) => setByType(data.map(row => toLowerCaseKeys(row))))
             .catch(error => console.error('Error recuperando pacientes por tipo. ', error))
 
-        fetch(`http://localhost:3000/emergencias/analiticas/pacientes-por-mes/${institutionId}`, { headers })
+        fetch(`${API_BASE_URL}/emergencias/analiticas/pacientes-por-mes/${institutionId}`, { headers })
             .then(res => res.json())
             .then(({ data }) => setByMonth(data.map(row => toLowerCaseKeys(row))))
             .catch(error => console.error('Error recuperando pacientes por mes. ', error))
 
-        fetch(`http://localhost:3000/emergencias/analiticas/tiempo-traslado/${institutionId}`, { headers })
+        fetch(`${API_BASE_URL}/emergencias/analiticas/tiempo-traslado/${institutionId}`, { headers })
             .then(res => res.json())
             .then(({ data }) => setAvgTransferMinutes(data?.[0]?.avg_minutes ?? null))
             .catch(error => console.error('Error recuperando tiempo de traslado. ', error))
@@ -38,8 +39,8 @@ const Charts = () => {
         // Ocupación por especialidad: mismos 2 endpoints que ya usa Capacity.jsx,
         // solo que aquí los convertimos a porcentaje en vez de mostrar el número crudo.
         Promise.all([
-            fetch('http://localhost:3000/hospitales/especialidades-instituciones', { headers }).then(res => res.json()),
-            fetch('http://localhost:3000/hospitales/especialidades', { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades-instituciones`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/hospitales/especialidades`, { headers }).then(res => res.json()),
         ])
             .then(([institutionSpecialtiesRes, catalogRes]) => {
                 const myRows = institutionSpecialtiesRes.data

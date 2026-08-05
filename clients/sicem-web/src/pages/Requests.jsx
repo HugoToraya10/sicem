@@ -6,6 +6,7 @@ import './Requests.css';
 import { getNavLinks } from '../utils/Navlinks';
 import { parseResponse } from '../utils/apiRequest';
 import { connectEmergencySocket } from '../sockets/emergencySocket';
+import {API_BASE_URL} from '../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -25,7 +26,7 @@ const Requests = () => {
     const [statusFilter, setStatusFilter] = useState('all');
 
     const fetchRequests = () => {
-        fetch('http://localhost:3000/emergencias/solicitudes', {
+        fetch(`${API_BASE_URL}/emergencias/solicitudes`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -54,7 +55,7 @@ const Requests = () => {
 
     const handleCancelRequest = (req) => {
         if (!window.confirm('¿Seguro que quieres cancelar esta solicitud interinstitucional?')) return
-        fetch('http://localhost:3000/emergencias/cancelar-solicitud', {
+        fetch(`${API_BASE_URL}/emergencias/cancelar-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ interInstitutionalRequestId: req.inter_institutional_request_id })

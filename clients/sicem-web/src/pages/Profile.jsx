@@ -6,6 +6,7 @@ import { getNavLinks } from '../utils/Navlinks';
 import '../pages/admin/Institutions.css';
 import { parseResponse } from '../utils/apiRequest';
 import './Profile.css';
+import {API_BASE_URL} from '../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -31,7 +32,7 @@ const Profile = () => {
 
     const fetchProfile = () => {
         if (!user?.profileId) return
-        fetch(`http://localhost:3000/usuarios/obtener-usuario-id/${user.profileId}`, {
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-id/${user.profileId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -46,7 +47,7 @@ const Profile = () => {
 
     useEffect(() => {
         if (!user?.profileId || parseInt(user?.roleId) !== 5) return
-        fetch(`http://localhost:3000/emergencias/emergencias-paciente/${user.profileId}`, {
+        fetch(`${API_BASE_URL}/emergencias/emergencias-paciente/${user.profileId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -71,7 +72,7 @@ const Profile = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/usuarios/actualizar-perfil', {
+        fetch(`${API_BASE_URL}/usuarios/actualizar-perfil`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({
@@ -101,7 +102,7 @@ const Profile = () => {
 
     const handleChangePassword = (e) => {
         e.preventDefault();
-        fetch('http://localhost:3000/usuarios/actualizar-credenciales', {
+        fetch(`${API_BASE_URL}/usuarios/actualizar-credenciales`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({

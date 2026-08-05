@@ -1,7 +1,8 @@
 import {io} from 'socket.io-client'
+import {SOCKET_URL} from '../config/api'
 
 const connectEmergencySocket = (token) => {
-    return io('http://localhost:3005', {
+    return io(SOCKET_URL, {
         auth: {
             token: token
         }

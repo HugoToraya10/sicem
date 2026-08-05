@@ -9,6 +9,7 @@ import { connectEmergencySocket } from '../sockets/emergencySocket'
 import { connectUnitsSocket } from '../sockets/unitsSocket'
 import './Dashboard.css'
 import { getNavLinks } from '../utils/Navlinks';
+import {API_BASE_URL} from '../config/api'
 
 const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
@@ -106,7 +107,7 @@ console.log('navLinks calculados:', navLinks)
 
     // Emergencias activas
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/emergencias-activas', {
+        fetch(`${API_BASE_URL}/emergencias/emergencias-activas`, {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
@@ -122,7 +123,7 @@ console.log('navLinks calculados:', navLinks)
     // ayuda a esa decisión de un vistazo. Camas disponibles no cambia tan
     // seguido como para necesitar socket — un fetch al montar alcanza.
     useEffect(() => {
-        fetch('http://localhost:3000/hospitales/instituciones-destino', {
+        fetch(`${API_BASE_URL}/hospitales/instituciones-destino`, {
             headers: { "Content-Type": "application/json" }
         })
             .then(res => res.json())
@@ -132,7 +133,7 @@ console.log('navLinks calculados:', navLinks)
 
     // Ambulancias con su última ubicación conocida, para pintarlas en el mapa
     useEffect(() => {
-        fetch('http://localhost:3000/unidades/ambulancias', {
+        fetch(`${API_BASE_URL}/unidades/ambulancias`, {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
@@ -144,7 +145,7 @@ console.log('navLinks calculados:', navLinks)
 
                 // Por cada ambulancia, pedimos su última ubicación conocida
                 const locationPromises = ambulancesLower.map((amb) =>
-                    fetch(`http://localhost:3000/unidades/ubicacion/${amb.ambulance_id}`, {
+                    fetch(`${API_BASE_URL}/unidades/ubicacion/${amb.ambulance_id}`, {
                         headers: {
                             "Content-Type": "application/json",
                             "Authorization": `Bearer ${token}`
@@ -169,7 +170,7 @@ console.log('navLinks calculados:', navLinks)
     // Catálogo real de niveles de triage, para el filtro — mismo fix que ya se
     // hizo en sicem-desktop: no se deriva de las emergencias ya cargadas.
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/niveles-triage', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/emergencias/niveles-triage`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setTriageCatalog((data || []).map(t => toLowerCaseKeys(t))))
             .catch(error => console.error('Error recuperando catálogo de triage. ', error))
@@ -180,7 +181,7 @@ console.log('navLinks calculados:', navLinks)
     // manual de cambio de estado todavía no lo manda, a diferencia de los
     // nuevos que sí sincronizan el estado desde la ambulancia).
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/estados-emergencia', { headers: { "Content-Type": "application/json" } })
+        fetch(`${API_BASE_URL}/emergencias/estados-emergencia`, { headers: { "Content-Type": "application/json" } })
             .then(res => res.json())
             .then(({ data }) => setEmergencyStatusCatalog((data || []).map(s => toLowerCaseKeys(s))))
             .catch(error => console.error('Error recuperando catálogo de estados de emergencia. ', error))
@@ -188,7 +189,7 @@ console.log('navLinks calculados:', navLinks)
 
     // Tiempo promedio de respuesta de hoy (KPI)
     useEffect(() => {
-        fetch('http://localhost:3000/emergencias/analiticas/tiempo-respuesta-hoy', {
+        fetch(`${API_BASE_URL}/emergencias/analiticas/tiempo-respuesta-hoy`, {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
