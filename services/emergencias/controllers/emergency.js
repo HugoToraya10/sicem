@@ -362,26 +362,77 @@ const forceCloseEmergency = (req, res) => {
 }
 
 // Desasignar ambulancia y notificar al dispatcher
+// Rol 4 (hospital) puede desasignar SOLO sus propias unidades — pensado
+// para cuando un paramédico reporta una falla (ver eventAmbulanceFailureReported
+// en services/unidades) y el hospital dueño de esa unidad decide, de una vez,
+// sacarla de la emergencia sin tener que esperar al despachador. Roles 1/2
+// (admin/despachador) conservan la autoridad general, sin restricción de
+// institución — ver fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt.
 const unassignAmbulance = (req, res) => {
     const io = configSocket.getIo();
-    if (!(parseInt(req.decoded.roleId) === 2 || parseInt(req.decoded.roleId) === 1)) {
+    const roleId = parseInt(req.decoded.roleId);
+    if (![1, 2, 4].includes(roleId)) {
         return res.status(403).json({message: "Acceso denegado."});
-    } else {
-        const {assignmentId} = req.body;
+    }
+    let {assignmentId, ambulanceIds} = req.body;
+    // La campana de fallas reportadas (sicem-web/desktop) solo conoce
+    // ambulanceId + emergencyId (lo que trae el propio reporte de falla),
+    // nunca el assignmentId interno — se resuelve aquí antes de continuar.
+    const { ambulanceId, emergencyId } = req.body;
+    if (!assignmentId && ambulanceId && emergencyId) {
+        ambulanceIds = [ambulanceId];
+    }
+
+    const resolveAssignmentIdIfNeeded = (callback) => {
+        if (assignmentId) return callback(null);
+        if (!ambulanceId || !emergencyId) {
+            return callback(new Error('Falta assignmentId, o ambulanceId + emergencyId.'));
+        }
+        emergencyModel.getOpenAssignmentId(ambulanceId, emergencyId, (e, r) => {
+            if (e || r.length === 0) return callback(new Error('No se encontró una asignación abierta para esa unidad y emergencia.'));
+            assignmentId = r[0].assignment_id;
+            callback(null);
+        });
+    }
+
+    const doUnassign = () => {
         emergencyModel.unassignAmbulance(assignmentId, (e, r) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
-                emergencyModel.updateAmbulanceStatus(req.body.ambulanceIds, 1, (e2, r2) => {
+                emergencyModel.updateAmbulanceStatus(ambulanceIds, 1, (e2, r2) => {
                     if (e2) console.error('Error actualizando estado ambulancia:', e2);
                 });
                 // Faltaba 'hospital' — MyAmbulances.jsx (sicem-desktop) nunca se
                 // enteraba de que su propia unidad volvió a estar disponible.
-                io.to('admin').to('dispatcher').to('hospital').emit('eventAmbulanceUnassigned', { assignmentId, ambulanceIds: req.body.ambulanceIds });
+                io.to('admin').to('dispatcher').to('hospital').emit('eventAmbulanceUnassigned', { assignmentId, ambulanceIds });
                 res.status(200).json({message: "Ambulancia desasignada."});
             }
         });
     }
+
+    resolveAssignmentIdIfNeeded((resolveError) => {
+        if (resolveError) return res.status(400).json({message: resolveError.message});
+
+        if (roleId !== 4) {
+            return doUnassign();
+        }
+
+        emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (eInfo, rInfo) => {
+            if (eInfo || rInfo.length === 0) {
+                return res.status(500).json({message: "Error del servidor."});
+            }
+            const myInstitutionId = rInfo[0].institution_id;
+            emergencyModel.getAmbulanceInstitutionIds(ambulanceIds, (eAmb, rAmb) => {
+                if (eAmb) return res.status(500).json({message: "Error del servidor."});
+                const allOwn = rAmb.length > 0 && rAmb.every((a) => parseInt(a.institution_id) === parseInt(myInstitutionId));
+                if (!allOwn) {
+                    return res.status(403).json({message: "Solo puedes desasignar unidades de tu propia institución."});
+                }
+                doUnassign();
+            });
+        });
+    });
 }
 
 // Cancela una solicitud interinstitucional. A diferencia de respondInterInstitutionalRequest

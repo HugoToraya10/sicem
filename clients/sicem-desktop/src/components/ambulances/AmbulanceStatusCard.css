@@ -1,5 +1,5 @@
 .ambulance-card {
-    border: 1px solid #e4e4ec; border-radius: 10px; padding: 18px; background: white;
+    border: 1px solid #e4e4ec; border-left: 4px solid #ccc; border-radius: 10px; padding: 18px; background: white;
     box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04); transition: box-shadow 0.15s ease;
 }
 .ambulance-card:hover { box-shadow: 0 4px 12px rgba(20, 20, 40, 0.08); }
@@ -8,7 +8,35 @@
     text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
 }
 .ambulance-detail { font-size: 12.5px; color: #666; margin-bottom: 4px; }
-.ambulance-current-status { font-weight: 700; color: #1565C0; }
+
+/* ── Distinción visual por estado — franja izquierda de la tarjeta + badge ── */
+.ambulance-status-badge {
+    font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11.5px;
+}
+
+.ambulance-card.status-available { border-left-color: #2E7D32; }
+.ambulance-status-badge.status-available { background: #E8F5E9; color: #2E7D32; }
+
+.ambulance-card.status-enroute { border-left-color: #1565C0; }
+.ambulance-status-badge.status-enroute { background: #E3F2FD; color: #1565C0; }
+
+.ambulance-card.status-onscene { border-left-color: #E67E22; }
+.ambulance-status-badge.status-onscene { background: #FDF2E3; color: #E67E22; }
+
+.ambulance-card.status-transporting { border-left-color: #E65100; }
+.ambulance-status-badge.status-transporting { background: #FBE9E7; color: #E65100; }
+
+.ambulance-card.status-outofservice { border-left-color: #757575; }
+.ambulance-status-badge.status-outofservice { background: #F0F0F0; color: #757575; }
+
+.ambulance-card.status-maintenance { border-left-color: #757575; }
+.ambulance-status-badge.status-maintenance { background: #F0F0F0; color: #757575; }
+
+.ambulance-card.status-reserved { border-left-color: #7B1FA2; }
+.ambulance-status-badge.status-reserved { background: #F3E5F5; color: #7B1FA2; }
+
+.ambulance-card.status-unknown { border-left-color: #ccc; }
+.ambulance-status-badge.status-unknown { background: #F0F0F0; color: #666; }
 
 .ambulance-status-row { display: flex; gap: 6px; margin-top: 12px; }
 .ambulance-status-row select {

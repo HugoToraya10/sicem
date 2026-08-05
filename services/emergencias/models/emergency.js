@@ -354,6 +354,17 @@ const unassignAmbulance = (assignmentId, callback) => {
     db.query(sql, [assignmentId], callback);
 }
 
+// Resuelve el assignment_id abierto de una ambulancia en una emergencia —
+// para cuando quien llama (p. ej. el hospital, desde la campana de fallas
+// reportadas) solo conoce ambulanceId + emergencyId, no el assignmentId
+// interno.
+const getOpenAssignmentId = (ambulanceId, emergencyId, callback) => {
+    const sql = `SELECT assignment_id FROM assignments
+                WHERE ambulance_id = ? AND emergency_id = ? AND unassigned_at IS NULL
+                LIMIT 1`;
+    db.query(sql, [ambulanceId, emergencyId], callback);
+}
+
 // Cancela una solicitud interinstitucional. El WHERE exige que quien cancela sea
 // quien la creó (user_profile_id, tomado del JWT, nunca del body) y que siga pendiente
 // — así el UPDATE mismo hace de guardia de permisos, sin necesitar un SELECT previo.
@@ -424,6 +435,15 @@ const respondInterInstitutionalRequest = (data, callback) => {
 const getInstitutionIdByUserProfile = (userProfileId, callback) => {
     const sql = `SELECT institution_id FROM user_profiles WHERE user_profile_id = ?`;
     db.query(sql, [userProfileId], callback);
+}
+
+// Institución dueña de cada ambulancia de la lista — para validar que un
+// hospital (rol 4) solo desasigne unidades de su propia institución, nunca
+// las de otra (ver unassignAmbulance en el controller).
+const getAmbulanceInstitutionIds = (ambulanceIds, callback) => {
+    if (!ambulanceIds || ambulanceIds.length === 0) return callback(null, []);
+    const sql = `SELECT ambulance_id, institution_id FROM ambulances WHERE ambulance_id IN (?)`;
+    db.query(sql, [ambulanceIds], callback);
 }
 
 // ID de un estado del catálogo request_statuses por nombre, para no hardcodear
@@ -1168,7 +1188,7 @@ module.exports = {
     toggleEmergencyType, toggleEmergencyStatus, toggleRequestStatus, toggleTriageLevel,
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
     // Confirmación de recepción / reasignación de destino / entrega física
-    getInstitutionIdByUserProfile, getRequestStatusIdByName, getEmergencyPatientById,
+    getInstitutionIdByUserProfile, getAmbulanceInstitutionIds, getOpenAssignmentId, getRequestStatusIdByName, getEmergencyPatientById,
     updatePatientReceptionStatus, reassignPatientDestination, assignAmbulanceToPatient,
     confirmPatientDelivery, dischargePatient, getUndeliveredPendingCount, closeEmergencyRaw,
     decrementInstitutionBeds, incrementInstitutionBeds, decrementSpecialityBeds, incrementSpecialityBeds, getAcceptedUndeliveredPatients,

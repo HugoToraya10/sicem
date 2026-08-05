@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../config/api'
 import { connectUnitsSocket } from '../../sockets/unitsSocket'
+import { connectEmergencySocket } from '../../sockets/emergencySocket'
 import './Navbar.css'
 
 const LAST_SEEN_KEY_PREFIX = 'sicem_failure_reports_last_seen_'
@@ -56,6 +57,8 @@ const Navbar = ({ userName, roleLabel, links }) => {
         unitsSocket.on('eventAmbulanceFailureReported', (data) => {
             setFailureReports((current) => [{
                 ambulance_failure_report_id: `live-${Date.now()}`,
+                ambulance_id: data.ambulanceId,
+                emergency_id: data.emergencyId,
                 unit_number: data.unitNumber,
                 first_name: (data.paramedicName || '').split(' ')[0] || '',
                 first_surname: (data.paramedicName || '').split(' ').slice(1).join(' '),
@@ -63,8 +66,40 @@ const Navbar = ({ userName, roleLabel, links }) => {
                 reported_at: data.reportedAt || new Date().toISOString(),
             }, ...current])
         })
-        return () => unitsSocket.disconnect()
+        // Si el despachador desasigna la unidad desde aquí mismo (o alguien más
+        // lo hace desde EmergencyDetail), ya no tiene caso seguir ofreciendo el
+        // botón "Desasignar" para ese reporte — se marca sin tener que recargar.
+        const emergencySocket = connectEmergencySocket(token)
+        emergencySocket.on('eventAmbulanceUnassigned', ({ ambulanceIds }) => {
+            setFailureReports((current) => current.map((r) =>
+                (ambulanceIds || []).some((id) => parseInt(id) === parseInt(r.ambulance_id))
+                    ? { ...r, unassigned: true }
+                    : r
+            ))
+        })
+        return () => { unitsSocket.disconnect(); emergencySocket.disconnect() }
     }, [token])
+
+    const [unassigningId, setUnassigningId] = useState(null)
+
+    const handleUnassign = (report) => {
+        if (!report.ambulance_id || !report.emergency_id) return
+        setUnassigningId(report.ambulance_failure_report_id)
+        fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ ambulanceId: report.ambulance_id, emergencyId: report.emergency_id }),
+        })
+            .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
+            .then(({ ok, body }) => {
+                if (!ok) return alert(body.message || 'No se pudo desasignar la unidad.')
+                setFailureReports((current) => current.map((r) =>
+                    r.ambulance_failure_report_id === report.ambulance_failure_report_id ? { ...r, unassigned: true } : r
+                ))
+            })
+            .catch(() => alert('No se pudo desasignar la unidad. Intenta de nuevo.'))
+            .finally(() => setUnassigningId(null))
+    }
 
     const unreadCount = failureReports.filter((r) => new Date(r.reported_at) > lastSeen).length
 
@@ -150,6 +185,28 @@ const Navbar = ({ userName, roleLabel, links }) => {
                                     </div>
                                     <div className="navbar-bell-item-who">{r.first_name} {r.first_surname}</div>
                                     <div className="navbar-bell-item-note">{r.note}</div>
+                                    {r.emergency_id && (
+                                        <div className="navbar-bell-item-actions">
+                                            {r.unassigned ? (
+                                                <span className="navbar-bell-item-done">✓ Unidad desasignada</span>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => { navigate(`/emergencias/${r.emergency_id}`); setBellOpen(false) }}
+                                                    >
+                                                        Ver emergencia
+                                                    </button>
+                                                    <button
+                                                        className="danger"
+                                                        onClick={() => handleUnassign(r)}
+                                                        disabled={unassigningId === r.ambulance_failure_report_id}
+                                                    >
+                                                        {unassigningId === r.ambulance_failure_report_id ? 'Desasignando…' : 'Desasignar unidad'}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>

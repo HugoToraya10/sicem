@@ -15,7 +15,7 @@ const MyAmbulances = () => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
 
         Promise.all([
-            fetch(`${API_BASE_URL}/unidades/ambulancias-disponibles/${user.institutionId}`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/mis-ambulancias`, { headers }).then(res => res.json()),
             fetch(`${API_BASE_URL}/unidades/tipos-ambulancia`, { headers }).then(res => res.json()),
             fetch(`${API_BASE_URL}/unidades/estados-ambulancia`, { headers }).then(res => res.json()),
         ])

@@ -41,6 +41,7 @@ router.get('/ubicacion/:ambulanceId', middleware.verifyToken, unitController.get
 router.get('/mi-turno-activo', middleware.verifyToken, unitController.getMyActiveShift); // ✅ sicem-mobile
 router.get('/mi-traslado-actual', middleware.verifyToken, unitController.getMyActiveTransfer); // ✅ sicem-mobile
 router.get('/reportes-falla', middleware.verifyToken, unitController.getFailureReports); // ✅ sicem-web / sicem-desktop (panel de fallas)
+router.get('/mis-ambulancias', middleware.verifyToken, unitController.getMyInstitutionAmbulances); // ✅ sicem-desktop (MyAmbulances.jsx)
 
 // gets de administración (incluyen activos e inactivos)
 router.get('/ambulancias-todas', middleware.verifyToken, unitController.getAllAmbulancesAdmin);

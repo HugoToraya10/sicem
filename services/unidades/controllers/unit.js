@@ -878,6 +878,32 @@ const reportAmbulanceFailure = (req, res) => {
 // abierta en ese momento; esto es lo que permite consultarlas después.
 // Roles 1/2 (admin/despachador) ven de cualquier institución; rol 4
 // (hospital) solo ve las de su propia institución.
+// Flota completa de la PROPIA institución del que llama, sin importar
+// estado — para "Mis Ambulancias" en sicem-desktop, que antes usaba por
+// error el endpoint de "disponibles" (ambulancias-disponibles) y por eso
+// solo mostraba las que estaban libres en ese momento, escondiendo el
+// resto de la flota. Institución siempre se saca del token (nunca de un
+// parámetro de URL) para que un hospital no pueda consultar la flota de
+// otra institución cambiando un ID a mano.
+const getMyInstitutionAmbulances = (req, res) => {
+    if (![1, 4].includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    unitModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+        if (e || r.length === 0) {
+            return res.status(500).json({message: "Error del servidor."});
+        }
+        const institutionId = r[0].institution_id;
+        if (!institutionId) {
+            return res.json({message: "Ambulancias", data: []});
+        }
+        unitModel.getAmbulancesByInstitution(institutionId, (eAmb, ambulances) => {
+            if (eAmb) return res.status(500).json({message: "Error del servidor."});
+            res.json({message: "Ambulancias", data: ambulances});
+        });
+    });
+}
+
 const getFailureReports = (req, res) => {
     const roleId = parseInt(req.decoded.roleId);
     if (![1, 2, 4].includes(roleId)) {
@@ -1078,5 +1104,5 @@ module.exports = {
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
     startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep, notifyForceLogout,
-    reportAmbulanceFailure, getFailureReports, concludeTransfer, markAvailableAfterTransfer, getMyActiveTransfer
+    reportAmbulanceFailure, getFailureReports, getMyInstitutionAmbulances, concludeTransfer, markAvailableAfterTransfer, getMyActiveTransfer
 }

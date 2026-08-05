@@ -317,6 +317,16 @@ const getAvailableAmbulances = (institutionId, callback) => {
     });
 }
 
+// Todas las ambulancias activas de UNA institución puntual, sin filtrar por
+// estado — a diferencia de getAvailableAmbulances (que solo trae las
+// "Disponibles"), esto es para la pantalla "Mis Ambulancias" de sicem-desktop,
+// donde el hospital necesita ver TODA su flota (incluyendo las que están
+// trasladando, fuera de servicio, etc.), no solo las libres en este momento.
+const getAmbulancesByInstitution = (institutionId, callback) => {
+    const sql = `SELECT * FROM ambulances WHERE is_active = 1 AND institution_id = ?`;
+    db.query(sql, [institutionId], callback);
+}
+
 // Todas las ambulancias activas de instituciones CRUM, sin filtrar por
 // estado — a diferencia de getAvailableAmbulances (que solo trae las
 // "Disponibles" para asignar a una emergencia), esto es para elegir a qué
@@ -496,7 +506,7 @@ module.exports = {
     advanceEmergencyStatusForAmbulance,
     getActiveTransferByAmbulance, markTransferConcluded, getTransferPatients, releaseAmbulanceAfterTransfer, getConcludeTransferContext,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
-    getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
+    getAllAmbulances, getAvailableAmbulances, getAmbulancesByInstitution, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
     startShift, endShift, getActiveShiftByAmbulance, getActiveShiftByUser, getCrumAmbulances, getUserSchedule,
     getUserBasicName, getExpiredActiveShifts, STALE_GRACE_MINUTES

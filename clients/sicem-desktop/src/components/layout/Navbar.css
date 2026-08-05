@@ -258,3 +258,49 @@
     color: #d0d0e0;
     line-height: 1.4;
 }
+
+.navbar-bell-item-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.navbar-bell-item-actions button {
+    flex: 1;
+    background: #12121f;
+    color: #d0d0e0;
+    border: 1px solid #2a2a45;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.navbar-bell-item-actions button:hover:not(:disabled) {
+    background: #23233a;
+}
+
+.navbar-bell-item-actions button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.navbar-bell-item-actions button.danger {
+    color: var(--role-accent, #C0272D);
+    border-color: var(--role-accent, #C0272D);
+}
+
+.navbar-bell-item-actions button.danger:hover:not(:disabled) {
+    background: var(--role-accent, #C0272D);
+    color: white;
+}
+
+.navbar-bell-item-done {
+    display: block;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #2E7D32;
+    font-weight: 600;
+}
