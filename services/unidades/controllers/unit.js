@@ -330,10 +330,18 @@ const updateAmbulance = (req, res) => {
 // fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt.
 // 2=En camino (ya lo pone registerAssignment al asignar, en emergencias) ->
 // 3=En escena -> 4=Trasladando. De ahí no hay más avance posible por este
-// endpoint: el regreso a 1=Disponible solo ocurre cuando el CRUM/hospital
-// cierra o desasigna la emergencia (closeEmergency/unassignAmbulance, del
-// lado de emergencias), nunca aquí.
-const PARAMEDIC_FORWARD_TRANSITIONS = { 2: 3, 3: 4 };
+// endpoint hacia el resto de la secuencia de despacho.
+//
+// 5=Fuera de servicio -> 1=Disponible es la ÚNICA excepción real: cuando el
+// despachador/hospital desasigna una unidad por una falla reportada (ver
+// unassignAmbulance en services/emergencias), la unidad queda Fuera de
+// servicio a propósito — nadie más que el propio paramédico, que es quien
+// la tiene físicamente enfrente, puede confirmar que ya se resolvió y
+// volver a ponerla en servicio. Fuera de este caso puntual, el resto de la
+// disponibilidad (1=Disponible por cierre/desasignación normal) la sigue
+// decidiendo el CRUM/hospital, nunca el paramédico — ver
+// fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt.
+const PARAMEDIC_FORWARD_TRANSITIONS = { 2: 3, 3: 4, 5: 1 };
 
 // Con qué estado de EMERGENCIA corresponde cada avance de AMBULANCIA — 2 (En
 // camino) no está aquí porque esa transición no pasa por este endpoint (la
@@ -398,7 +406,7 @@ const updateAmbulanceStatus = (req, res) => {
                     const currentStatusId = parseInt(r[0].ambulance_status_id);
                     const requestedStatusId = parseInt(ambulanceStatusId);
                     if (PARAMEDIC_FORWARD_TRANSITIONS[currentStatusId] !== requestedStatusId) {
-                        return res.status(403).json({message: "No puedes cambiar el estado de la unidad a ese valor. Solo puedes avanzar la secuencia (En camino → En escena → Trasladando); el resto lo decide tu CRUM/institución."});
+                        return res.status(403).json({message: "No puedes cambiar el estado de la unidad a ese valor. Solo puedes avanzar la secuencia (En camino → En escena → Trasladando) o, si tu unidad está Fuera de servicio, marcarla Disponible de nuevo; el resto lo decide tu CRUM/institución."});
                     }
                     proceed();
                 }

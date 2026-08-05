@@ -411,9 +411,28 @@ const unassignAmbulance = (req, res) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
-                emergencyModel.updateAmbulanceStatus(ambulanceIds, 1, (e2, r2) => {
+                // Una unidad desasignada por una falla reportada NO vuelve a
+                // "Disponible" sola — queda "Fuera de servicio" hasta que el
+                // propio paramédico (quien la tiene físicamente enfrente, no el
+                // despachador/hospital desde una pantalla) confirme que ya se
+                // resolvió y la reactive él mismo (ver PARAMEDIC_FORWARD_TRANSITIONS
+                // en services/unidades — 5->1 es la única transición que se le
+                // permite hacer por su cuenta). Una desasignación normal (sin
+                // falla de por medio, p. ej. el despachador solo quiere mandar
+                // otra unidad) sigue regresando a Disponible de inmediato, como
+                // siempre — no tiene sentido bloquear una unidad que no tiene
+                // nada malo.
+                const newAmbulanceStatusId = reason === 'ambulance_failure' ? 5 : 1;
+                emergencyModel.updateAmbulanceStatus(ambulanceIds, newAmbulanceStatusId, (e2, r2) => {
                     if (e2) console.error('Error actualizando estado ambulancia:', e2);
                 });
+                // Antes no se avisaba de este cambio de estado en absoluto —
+                // MyAmbulances.jsx (sicem-desktop) y el mapa de Dashboard/
+                // EmergencyDetail (sicem-web) se quedaban mostrando el estado
+                // viejo de la unidad hasta recargar.
+                io.to('admin').to('dispatcher').to('hospital')
+                    .emit('eventAmbulanceStatusChanged', { ambulanceId: ambulanceIds?.[0], ambulanceStatusId: newAmbulanceStatusId });
+
                 // Faltaba 'hospital' — MyAmbulances.jsx (sicem-desktop) nunca se
                 // enteraba de que su propia unidad volvió a estar disponible.
                 // Faltaba 'paramedic' también — sicem-mobile nunca se enteraba de
@@ -421,7 +440,7 @@ const unassignAmbulance = (req, res) => {
                 // iniciar sesión de nuevo (mi-emergencia-actual solo se reconcilia
                 // al reconectar el socket).
                 io.to('admin').to('dispatcher').to('hospital').to('paramedic')
-                    .emit('eventAmbulanceUnassigned', { assignmentId, ambulanceIds, emergencyId, reason: reason || null });
+                    .emit('eventAmbulanceUnassigned', { assignmentId, ambulanceIds, emergencyId, reason: reason || null, newAmbulanceStatusId });
 
                 // Si esa era la ÚLTIMA unidad activa de la emergencia, regresa a
                 // "Registrada" para que el despachador la vuelva a ver como

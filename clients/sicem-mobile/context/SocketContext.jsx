@@ -163,7 +163,7 @@ const SocketProvider = ({ children }) => {
             Alert.alert(
                 'Unidad desasignada',
                 reason === 'ambulance_failure'
-                    ? 'Tu unidad fue desasignada de esta emergencia debido a la falla reportada.'
+                    ? 'Tu unidad fue desasignada de esta emergencia debido a la falla reportada. Quedó marcada "Fuera de servicio" — tú mismo debes ponerla "Disponible" otra vez cuando esté lista.'
                     : 'Tu unidad fue desasignada de esta emergencia.'
             )
         })

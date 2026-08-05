@@ -87,7 +87,7 @@ const Navbar = ({ userName, roleLabel, links }) => {
 
     const handleUnassign = (report) => {
         if (!report.ambulance_id || !report.emergency_id) return
-        if (!window.confirm(`¿Seguro que quieres desasignar la unidad ${report.unit_number || ''} de la emergencia?`)) return
+        if (!window.confirm(`¿Seguro que quieres desasignar la unidad ${report.unit_number || ''} de la emergencia? Quedará marcada "Fuera de servicio" hasta que el propio paramédico la reactive.`)) return
         setUnassigningId(report.ambulance_failure_report_id)
         fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
             method: 'PATCH',
