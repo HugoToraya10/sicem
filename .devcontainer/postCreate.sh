@@ -23,10 +23,14 @@ echo "== MariaDB =="
   sudo apt-get update -qq
   sudo apt-get install -y mariadb-server
   sudo service mariadb start
-  sudo mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';" 2>/dev/null || true
+  # IDENTIFIED BY a secas, sin "WITH mysql_native_password" — esa forma
+  # combinada es sintaxis de MySQL, no de MariaDB (aquí truena con error
+  # de sintaxis). IDENTIFIED BY sola es válida en ambos motores y usa el
+  # plugin de autenticación por default del servidor.
+  sudo mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'root';" 2>/dev/null || true
   sudo mariadb -uroot -proot -e "CREATE DATABASE IF NOT EXISTS sicem;"
-  sudo mariadb -uroot -proot -e "CREATE USER IF NOT EXISTS 'sicem_app'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD:-changeme}';"
-  sudo mariadb -uroot -proot -e "ALTER USER 'sicem_app'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_PASSWORD:-changeme}';"
+  sudo mariadb -uroot -proot -e "CREATE USER IF NOT EXISTS 'sicem_app'@'localhost' IDENTIFIED BY '${DB_PASSWORD:-changeme}';"
+  sudo mariadb -uroot -proot -e "ALTER USER 'sicem_app'@'localhost' IDENTIFIED BY '${DB_PASSWORD:-changeme}';"
   sudo mariadb -uroot -proot -e "GRANT ALL PRIVILEGES ON sicem.* TO 'sicem_app'@'localhost';"
   sudo mariadb -uroot -proot -e "FLUSH PRIVILEGES;"
 
