@@ -10,6 +10,7 @@ router.post('/registro-paciente', userController.registerPatient); // TODO
 //updates
 router.patch('/actualizar-credenciales', middleware.verifyToken, userController.editUserCredentials); // TODO
 router.patch('/actualizar-perfil', middleware.verifyToken, userController.editUserProfile); // TODO
+router.patch('/actualizar-curp-paciente', middleware.verifyToken, userController.updatePatientCurp); // ✅ sicem-mobile
 
 //patches
 router.patch('/invertir-estado-usuario', middleware.verifyToken, userController.toggleActiveUser); // TODO

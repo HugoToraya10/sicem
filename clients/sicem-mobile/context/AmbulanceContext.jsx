@@ -53,6 +53,17 @@ const AmbulanceProvider = ({ children }) => {
     // no (lo cerró el barrido de vencimiento de horario, u otro dispositivo),
     // la pantalla se cancela YA (vuelve a "Iniciar turno") y se cierra la
     // sesión, igual que si hubiera llegado el aviso por socket.
+    //
+    // BUG REAL corregido: antes esto SOLO revisaba si el turno había
+    // terminado (if (!data)) y descartaba todo lo demás de la respuesta —
+    // ambulanceStatusId (que mapa.js usa para decidir qué botón mostrar) solo
+    // se actualizaba cuando el propio paramédico hacía una acción que llamara
+    // a refreshShift(). Si el estado de la unidad cambiaba desde AFUERA
+    // (sicem-web/desktop, u otra ambulancia asignándose a la misma
+    // emergencia), el celular se quedaba con un dato viejo hasta que el
+    // paramédico hiciera algo. Ahora, mientras haya turno activo, este mismo
+    // poll también sincroniza el turno completo cada 10s, no solo revisa si
+    // sigue existiendo.
     useEffect(() => {
         if (!activeAmbulanceId || !token) return
         const interval = setInterval(() => {
@@ -63,7 +74,14 @@ const AmbulanceProvider = ({ children }) => {
                         setActiveShift(null)
                         Alert.alert('Turno finalizado', 'Tu turno se cerró automáticamente porque terminó tu horario laboral.')
                         logout()
+                        return
                     }
+                    setActiveShift({
+                        ambulanceId: data.ambulance_id,
+                        unitNumber: data.unit_number,
+                        scheduledEnd: data.scheduled_end,
+                        ambulanceStatusId: data.ambulance_status_id,
+                    })
                 })
                 .catch((err) => console.error('Error revisando si el turno sigue activo. ', err))
         }, 10000)

@@ -25,6 +25,8 @@ router.patch('/actualizar-tipo-ambulancia', middleware.verifyToken, unitControll
 router.patch('/actualizar-estado-ambulancia-catalogo', middleware.verifyToken, unitController.updateAmbulanceStatusCatalog);
 router.patch('/actualizar-ambulancia', middleware.verifyToken, unitController.updateAmbulance);
 router.patch('/actualizar-estado-ambulancia', middleware.verifyToken, unitController.updateAmbulanceStatus);
+router.patch('/concluir-traslado', middleware.verifyToken, unitController.concludeTransfer); // ✅ sicem-mobile
+router.patch('/marcar-disponible', middleware.verifyToken, unitController.markAvailableAfterTransfer); // ✅ sicem-mobile
 
 // GET
 router.get('/ambulancias', middleware.verifyToken, unitController.getAllAmbulances); // ✅ Dashboard.jsx
@@ -37,6 +39,7 @@ router.get('/ambulancias-crum', unitController.getCrumAmbulances); // ✅ sicem-
 router.get('/estados-ambulancia', unitController.getAllAmbulanceStatuses); // TODO
 router.get('/ubicacion/:ambulanceId', middleware.verifyToken, unitController.getLocationsByAmbulance); // ✅ Dashboard.jsx
 router.get('/mi-turno-activo', middleware.verifyToken, unitController.getMyActiveShift); // ✅ sicem-mobile
+router.get('/mi-traslado-actual', middleware.verifyToken, unitController.getMyActiveTransfer); // ✅ sicem-mobile
 
 // gets de administración (incluyen activos e inactivos)
 router.get('/ambulancias-todas', middleware.verifyToken, unitController.getAllAmbulancesAdmin);

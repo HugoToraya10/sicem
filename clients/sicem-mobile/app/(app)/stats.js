@@ -45,6 +45,23 @@ const StatsScreen = () => {
                 </View>
             </View>
 
+            <View style={styles.summaryRow}>
+                <View style={[styles.summaryCard, { backgroundColor: '#fde8e8' }]}>
+                    <Text style={[styles.summaryNumber, { color: '#C0272D' }]}>{stats?.patientsThisMonth ?? 0}</Text>
+                    <Text style={styles.summaryLabel}>Pacientes mes</Text>
+                </View>
+                <View style={[styles.summaryCard, { backgroundColor: '#fff3e0' }]}>
+                    <Text style={[styles.summaryNumber, { color: '#E65100' }]}>{stats?.notesThisMonth ?? 0}</Text>
+                    <Text style={styles.summaryLabel}>Notas registradas</Text>
+                </View>
+                <View style={[styles.summaryCard, { backgroundColor: '#ede7f6' }]}>
+                    <Text style={[styles.summaryNumber, { color: '#6A1B9A' }]}>
+                        {stats?.shiftMinutesThisMonth ? (stats.shiftMinutesThisMonth / 60).toFixed(1) : '0'}
+                    </Text>
+                    <Text style={styles.summaryLabel}>Horas de turno</Text>
+                </View>
+            </View>
+
             <Text style={styles.sectionTitle}>Emergencias por tipo</Text>
             {(!stats?.byType || stats.byType.length === 0) ? (
                 <Text style={styles.hint}>Sin datos este mes todavía.</Text>
@@ -74,6 +91,23 @@ const StatsScreen = () => {
                     ))}
                 </View>
             )}
+
+            <Text style={styles.sectionTitle}>Actividad reciente</Text>
+            {(!stats?.recentActivity || stats.recentActivity.length === 0) ? (
+                <Text style={styles.hint}>Sin actividad registrada todavía.</Text>
+            ) : (
+                stats.recentActivity.map((a) => (
+                    <View key={a.emergency_id} style={styles.activityRow}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.activityType}>{a.type_name || 'Emergencia'}</Text>
+                            <Text style={styles.activityDesc}>{a.description || 'Sin descripción'}</Text>
+                        </View>
+                        <Text style={styles.activityDate}>
+                            {a.assigned_at ? new Date(a.assigned_at).toLocaleDateString() : ''}
+                        </Text>
+                    </View>
+                ))
+            )}
         </ScrollView>
     )
 }
@@ -93,6 +127,13 @@ const styles = StyleSheet.create({
     bar: { width: '100%', borderRadius: 3, maxWidth: 40 },
     barLabel: { fontSize: 9, color: '#888', marginTop: 4, textAlign: 'center' },
     barValue: { fontSize: 10, fontWeight: '700', color: '#333' },
+    activityRow: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        borderWidth: 1, borderColor: '#e4e4ec', borderRadius: 8, padding: 10, marginBottom: 8,
+    },
+    activityType: { fontSize: 12, fontWeight: '700', color: '#1a1a2e' },
+    activityDesc: { fontSize: 11, color: '#666', marginTop: 2 },
+    activityDate: { fontSize: 10, color: '#999', marginLeft: 8 },
 })
 
 export default StatsScreen

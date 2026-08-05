@@ -193,15 +193,34 @@ const getCityById = (cityId, callback) => {
 }
 
 const getUserByCURP = (curp, callback) => {
-    const sql = `SELECT user_profile_id, first_name, first_surname, second_surname, 
+    const sql = `SELECT user_profile_id, first_name, first_surname, second_surname,
                 phone_number, birth_date, curp
                 FROM user_profiles WHERE curp = ?`;
     db.query(sql, [curp], callback);
 }
 
+// Rol del usuario objetivo — para que el controller pueda validar que un
+// paramédico solo corrija la CURP de un PACIENTE (rol 5), nunca la de otro
+// tipo de usuario. Ver updatePatientCurp en el controller.
+const getUserRole = (userProfileId, callback) => {
+    const sql = `SELECT role_id FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Actualización MUY acotada — solo la columna curp, nada más — a diferencia
+// de editUserProfile (que edita el expediente administrativo completo y solo
+// lo puede hacer un admin o el propio dueño). El paramédico en campo necesita
+// poder corregir/llenar la CURP de un paciente que trae registrado (a veces
+// llega en blanco o como "No tiene" desde sicem-web), sin abrirle acceso a
+// ningún otro dato del perfil de esa persona.
+const updatePatientCurp = (userProfileId, curp, callback) => {
+    const sql = `UPDATE user_profiles SET curp = ?, updated_at = NOW() WHERE user_profile_id = ?`;
+    db.query(sql, [curp, userProfileId], callback);
+}
+
 module.exports = { getUserInstitutionInfo, getUserInstitutionInfoByCredentialId, toggleInstitutionAdmin, getInstitutionCrumFlag,
                 getAmbulanceInstitutionInfo,
                 createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
-                editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP,
+                editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP, getUserRole, updatePatientCurp,
                 getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
                 updatePushToken, updateActiveSession }

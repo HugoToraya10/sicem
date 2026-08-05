@@ -3,6 +3,7 @@ import IncomingPatientCard from '../components/patients/IncomingPatientCard'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
+import { connectUnitsSocket } from '../sockets/unitsSocket'
 import PatientDetailModal from '../components/patients/PatientDetailModal'
 import RejectReasonModal from '../components/patients/RejectReasonModal'
 import { ensureNotificationPermission, alertNewPatient } from '../utils/notify'
@@ -109,6 +110,22 @@ const IncomingPatients = () => {
         })
 
         return () => emergencySocket.disconnect()
+    }, [token, user, fetchIncomingPatients])
+
+    // "Concluir traslado" desde sicem-mobile — va en el socket de unidades
+    // (puerto 3003), no en el de emergencias. El resaltado en rojo se deriva
+    // directo de patient.paramedic_concluded_at (ya viene en la respuesta de
+    // fetchIncomingPatients, ver getIncomingPatientsByInstitution), así que
+    // aquí solo hace falta refrescar la lista para que ese dato llegue —
+    // nada de estado local aparte que se pueda perder al navegar entre
+    // pantallas.
+    useEffect(() => {
+        const unitsSocket = connectUnitsSocket(token)
+        unitsSocket.on('eventTransferConcluded', (data) => {
+            const mine = (data?.hospitalInstitutionIds || []).some((id) => parseInt(id) === parseInt(user.institutionId))
+            if (mine) fetchIncomingPatients()
+        })
+        return () => unitsSocket.disconnect()
     }, [token, user, fetchIncomingPatients])
 
     const handleAccept = (emergencyPatientId) => {

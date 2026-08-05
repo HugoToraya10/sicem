@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
+import { connectUnitsSocket } from '../sockets/unitsSocket'
 import PatientDetailModal from '../components/patients/PatientDetailModal'
 import './Tracking.css'
 
@@ -47,6 +48,23 @@ const Tracking = () => {
         return () => emergencySocket.disconnect()
     }, [token, fetchPatients])
 
+    // Aviso de "Concluir traslado" desde sicem-mobile — va en el socket de
+    // unidades (puerto 3003), no en el de emergencias, mismo criterio que
+    // eventAmbulanceFailureReported (PrivateRoute.jsx): ese servicio es dueño
+    // de esta información. El resaltado en rojo se deriva directo de
+    // p.paramedic_concluded_at (ya viene en getPatientHistoryByInstitution) —
+    // aquí solo hace falta refrescar la lista para que ese dato llegue, sin
+    // llevar un estado local aparte que se pudiera perder al navegar entre
+    // pantallas (Pacientes en Camino <-> Seguimiento).
+    useEffect(() => {
+        const unitsSocket = connectUnitsSocket(token)
+        unitsSocket.on('eventTransferConcluded', (data) => {
+            const mine = (data?.hospitalInstitutionIds || []).some((id) => parseInt(id) === parseInt(user.institutionId))
+            if (mine) fetchPatients()
+        })
+        return () => unitsSocket.disconnect()
+    }, [token, user, fetchPatients])
+
     const waitingArrival = sortByPriority(
         patients.filter((p) => p.reception_status_name === 'Aceptada' && !p.delivered_at && !p.closed_at)
     )
@@ -90,10 +108,17 @@ const Tracking = () => {
 
     const renderCard = (p, action) => {
         const fullName = [p.first_name, p.first_surname, p.second_surname].filter(Boolean).join(' ') || 'Paciente no identificado'
+        const isUrgent = Boolean(p.paramedic_concluded_at) && !p.delivered_at
         return (
-            <div key={p.emergency_patient_id} className="tracking-card" style={{ borderLeftColor: p.triage_hex_color || '#1565C0' }} onClick={() => setSelectedPatient(p)}>
+            <div
+                key={p.emergency_patient_id}
+                className={`tracking-card${isUrgent ? ' tc-urgent' : ''}`}
+                style={{ borderLeftColor: isUrgent ? '#C0272D' : (p.triage_hex_color || '#1565C0') }}
+                onClick={() => setSelectedPatient(p)}
+            >
                 <div className="tc-name-row">
                     <span className="tc-name">{fullName}</span>
+                    {isUrgent && <span className="tc-urgent-badge">🚑 Unidad ya llegó</span>}
                     {p.triage_level && (
                         <span className="tc-triage-badge" style={{ background: p.triage_hex_color || '#888' }}>
                             {p.triage_level} · {p.triage_color_name}

@@ -739,6 +739,44 @@ const getUserByCURP = (req, res) => {
     });
 }
 
+// Rol 3 (paramédico) corrigiendo/llenando la CURP de un paciente que trae
+// registrado — a veces llega vacía o como "No tiene" desde sicem-web/desktop,
+// y en escena es el paramédico quien puede leerla del documento físico o
+// preguntarle al paciente. Deliberadamente NO reutiliza editUserProfile: esa
+// función solo deja editar el perfil propio, el de un admin, o (rol 4) el
+// personal de la misma institución — nunca el de OTRO usuario tratado como
+// paciente. Esta ruta es angosta a propósito: solo toca la columna curp, y
+// solo si el objetivo es de verdad un paciente (rol 5).
+const updatePatientCurp = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 3) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    const { userProfileId, curp } = req.body;
+    if (!curp || !curp.trim()) {
+        return res.status(400).json({message: "La CURP no puede quedar vacía."});
+    }
+    if (curp.trim().length > 18) {
+        return res.status(400).json({message: "La CURP debe tener máximo 18 caracteres."});
+    }
+    userModel.getUserRole(userProfileId, (e, r) => {
+        if (e || r.length === 0) {
+            return res.status(404).json({message: "Paciente no encontrado."});
+        }
+        if (parseInt(r[0].role_id) !== 5) {
+            return res.status(403).json({message: "Solo puedes editar la CURP de un paciente."});
+        }
+        userModel.updatePatientCurp(userProfileId, curp.trim().toUpperCase(), (e2) => {
+            if (e2) {
+                if (e2.code === 'ER_DUP_ENTRY') {
+                    return res.status(409).json({message: "Ya existe otro paciente registrado con esa CURP."});
+                }
+                return res.status(500).json({message: "Error del servidor."});
+            }
+            res.status(200).json({message: "CURP actualizada."});
+        });
+    });
+}
+
 // Cualquier usuario autenticado puede registrar SU PROPIO token — nunca el
 // de otro (userProfileId siempre sale del JWT, nunca del body).
 const registerPushToken = (req, res) => {
@@ -756,6 +794,6 @@ const registerPushToken = (req, res) => {
 }
 
 
-module.exports = { register, login, registerPatient, toggleActiveUser, toggleInstitutionAdmin, editUserProfile, editUserCredentials, getUserByCURP,
+module.exports = { register, login, registerPatient, toggleActiveUser, toggleInstitutionAdmin, editUserProfile, editUserCredentials, getUserByCURP, updatePatientCurp,
                   getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
                   registerPushToken};

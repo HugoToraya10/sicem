@@ -57,18 +57,22 @@ const registerEmergencyNote = (data, callback) => {
         temperature,
         oxygenSaturation,
         respiratoryRate,
+        glucoseLevel,
         consciousnessLevel,
+        glasgowScale,
+        painScale,
+        pupils,
         initialDiagnosis,
         treatmentApplied,
         patientStatus
     } = data;
     const sql = `INSERT INTO emergency_notes (emergency_patient_id, user_profile_id, triage_level_id,
-                blood_pressure, heart_rate, temperature, oxygen_saturation, respiratory_rate,
-                consciousness_level, initial_diagnosis, treatment_applied, patient_status, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
+                blood_pressure, heart_rate, temperature, oxygen_saturation, respiratory_rate, glucose_level,
+                consciousness_level, glasgow_scale, pain_scale, pupils, initial_diagnosis, treatment_applied, patient_status, recorded_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`;
     db.query(sql, [emergencyPatientId, userProfileId, triageLevelId, bloodPressure, heartRate,
-                    temperature, oxygenSaturation, respiratoryRate, consciousnessLevel,
-                    initialDiagnosis, treatmentApplied, patientStatus], (e, r) => {
+                    temperature, oxygenSaturation, respiratoryRate, glucoseLevel, consciousnessLevel,
+                    glasgowScale, painScale, pupils, initialDiagnosis, treatmentApplied, patientStatus], (e, r) => {
         if (!e && triageLevelId) escalateEmergencyTriageLevel(emergencyPatientId, triageLevelId);
         callback(e, r);
     });
@@ -111,6 +115,26 @@ const registerAssignment = (data, callback) => {
     const values = ambulanceIds.flatMap(id => [emergencyId, id, userProfileId, notes]);
 
     db.query(sql, values, callback);
+}
+
+// Antes de asignar, revisa que ninguna de las unidades ya esté atada a OTRA
+// emergencia sin cerrar (assignments.unassigned_at IS NULL AND su emergencia
+// sigue con closed_at NULL) — sin esto una unidad podía terminar con DOS
+// asignaciones abiertas al mismo tiempo (encontrado en producción: la unidad
+// IMSS46-1 quedó "atendiendo" dos emergencias a la vez porque nada impedía
+// asignarla de nuevo mientras la primera seguía abierta). Excluye la MISMA
+// emergencyId a la que se está asignando ahora — reasignar la misma unidad a
+// la emergencia que ya trae no es un conflicto real.
+const getConflictingOpenAssignments = (ambulanceIds, emergencyId, callback) => {
+    if (!ambulanceIds || ambulanceIds.length === 0) return callback(null, []);
+    const placeholders = ambulanceIds.map(() => '?').join(',');
+    const sql = `SELECT a.ambulance_id, amb.unit_number
+                FROM assignments a
+                JOIN emergencies e ON e.emergency_id = a.emergency_id
+                LEFT JOIN ambulances amb ON amb.ambulance_id = a.ambulance_id
+                WHERE a.ambulance_id IN (${placeholders})
+                    AND a.unassigned_at IS NULL AND e.closed_at IS NULL AND a.emergency_id != ?`;
+    db.query(sql, [...ambulanceIds, emergencyId], callback);
 }
 
 const registerInterInstitutionalRequest = (data, callback) => {
@@ -218,7 +242,20 @@ const closeEmergencyRaw = (emergencyId, closeReason, callback) => {
         // services/unidades/controllers/unit.js), así que este es uno de los
         // pocos puntos donde eso puede pasar. Ver fundamentos-legales/
         // autoridad-crum-sobre-tamp-paramedico.txt.
-        db.query(`SELECT ambulance_id FROM assignments WHERE emergency_id = ? AND unassigned_at IS NULL`,
+        //
+        // EXCEPCIÓN: una unidad que sigue en estado 4 (Trasladando) NO se
+        // libera aquí — significa que todavía está físicamente en el hospital
+        // descargando pacientes (o a medio camino), y nadie más que el propio
+        // paramédico ahí presente puede saber si de verdad ya quedó libre.
+        // Esa unidad se queda como está — el ciclo concluir-traslado /
+        // marcar-disponible (services/unidades/controllers/unit.js) es la
+        // única vía por la que vuelve a Disponible en ese caso, sin importar
+        // que la emergencia que la trajo ya se haya cerrado (ver
+        // getActiveTransferByAmbulance, que a propósito NO exige que la
+        // emergencia siga abierta).
+        db.query(`SELECT a.ambulance_id FROM assignments a
+                    JOIN ambulances amb ON amb.ambulance_id = a.ambulance_id
+                    WHERE a.emergency_id = ? AND a.unassigned_at IS NULL AND amb.ambulance_status_id != 4`,
             [emergencyId], (e2, r2) => {
                 if (!e2 && r2.length > 0) {
                     const ids = r2.map((row) => row.ambulance_id);
@@ -400,7 +437,7 @@ const getRequestStatusIdByName = (name, callback) => {
 // antes de confirmar/rechazar su recepción, y para saber a quién avisar por socket.
 const getEmergencyPatientById = (emergencyPatientId, callback) => {
     const sql = `SELECT ep.emergency_id, ep.destination_institution_id, ep.destination_speciality_id,
-                ep.reception_status_id, ep.delivered_at, ep.discharged_at, e.closed_at, rs.name AS reception_status_name
+                ep.reception_status_id, ep.delivered_at, ep.discharged_at, ep.ambulance_id, e.closed_at, rs.name AS reception_status_name
                 FROM emergencies_patients ep
                 JOIN emergencies e ON ep.emergency_id = e.emergency_id
                 LEFT JOIN request_statuses rs ON ep.reception_status_id = rs.request_status_id
@@ -617,6 +654,7 @@ const getIncomingPatientsByInstitution = (institutionId, callback) => {
                 tl.level AS triage_level, tl.color AS triage_color_name, tl.hex_color AS triage_hex_color,
                 tl.description AS triage_description, tl.max_wait_minutes,
                 bt.blood_type, cr.weight, cr.height, cr.notes AS clinical_record_notes,
+                MAX(a.paramedic_concluded_at) AS paramedic_concluded_at,
                 GROUP_CONCAT(DISTINCT pa.name SEPARATOR ', ') AS allergies,
                 GROUP_CONCAT(DISTINCT pc.name SEPARATOR ', ') AS conditions,
                 GROUP_CONCAT(DISTINCT pm.name SEPARATOR ', ') AS medications
@@ -633,6 +671,14 @@ const getIncomingPatientsByInstitution = (institutionId, callback) => {
                 LEFT JOIN patient_allergies pa ON cr.clinical_record_id = pa.clinical_record_id AND pa.is_active = 1
                 LEFT JOIN patient_conditions pc ON cr.clinical_record_id = pc.clinical_record_id AND pc.is_active = 1
                 LEFT JOIN patient_medications pm ON cr.clinical_record_id = pm.clinical_record_id AND pm.is_active = 1
+                -- "Concluir traslado" (sicem-mobile, mapa.js) marca esto en la
+                -- asignación ABIERTA de la ambulancia que trae a este paciente —
+                -- se usa para resaltar en rojo la tarjeta aunque el paciente
+                -- siga "Pendiente" (todavía no aceptado): antes el aviso solo
+                -- se veía si el paciente ya estaba "Aceptada" (Seguimiento), y
+                -- en la práctica la ambulancia puede llegar sin que el hospital
+                -- lo haya aceptado todavía, dejando el aviso invisible.
+                LEFT JOIN assignments a ON a.ambulance_id = ep.ambulance_id AND a.emergency_id = ep.emergency_id AND a.unassigned_at IS NULL
                 WHERE ep.destination_institution_id = ? AND e.closed_at IS NULL
                 -- Un paciente "Rechazado" por este hospital ya no es su problema — el
                 -- despachador se encarga de reasignarlo (Parte 4). "Pendiente" y "Aceptada"
@@ -680,6 +726,7 @@ const getPatientHistoryByInstitution = (institutionId, callback) => {
                 tl.level AS triage_level, tl.color AS triage_color_name, tl.hex_color AS triage_hex_color,
                 tl.description AS triage_description, tl.max_wait_minutes,
                 bt.blood_type, cr.weight, cr.height, cr.notes AS clinical_record_notes,
+                MAX(a.paramedic_concluded_at) AS paramedic_concluded_at,
                 GROUP_CONCAT(DISTINCT pa.name SEPARATOR ', ') AS allergies,
                 GROUP_CONCAT(DISTINCT pc.name SEPARATOR ', ') AS conditions,
                 GROUP_CONCAT(DISTINCT pm.name SEPARATOR ', ') AS medications
@@ -696,6 +743,7 @@ const getPatientHistoryByInstitution = (institutionId, callback) => {
                 LEFT JOIN patient_allergies pa ON cr.clinical_record_id = pa.clinical_record_id AND pa.is_active = 1
                 LEFT JOIN patient_conditions pc ON cr.clinical_record_id = pc.clinical_record_id AND pc.is_active = 1
                 LEFT JOIN patient_medications pm ON cr.clinical_record_id = pm.clinical_record_id AND pm.is_active = 1
+                LEFT JOIN assignments a ON a.ambulance_id = ep.ambulance_id AND a.emergency_id = ep.emergency_id AND a.unassigned_at IS NULL
                 WHERE ep.destination_institution_id = ?
                 GROUP BY ep.emergency_patient_id
                 ORDER BY ep.created_at DESC`;
@@ -1060,11 +1108,59 @@ const getMyAssignmentsByWeekThisMonth = (userProfileId, callback) => {
     db.query(sql, [userProfileId], callback);
 }
 
+// Pacientes (no solo emergencias) atendidos este mes — una emergencia puede
+// traer más de un paciente, así que este número siempre es >= totalThisMonth.
+const getMyPatientCountThisMonth = (userProfileId, callback) => {
+    const sql = `SELECT COUNT(DISTINCT ep.emergency_patient_id) AS total
+                FROM assignments a
+                JOIN ambulance_shifts s ON a.ambulance_id = s.ambulance_id
+                    AND a.assigned_at BETWEEN s.shift_start AND COALESCE(s.shift_end, NOW())
+                JOIN emergencies_patients ep ON ep.emergency_id = a.emergency_id
+                WHERE s.user_profile_id = ?
+                    AND MONTH(a.assigned_at) = MONTH(CURDATE()) AND YEAR(a.assigned_at) = YEAR(CURDATE())`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Notas de urgencia (signos vitales/evaluación) que él mismo registró este
+// mes — directo, emergency_notes ya trae user_profile_id de quien la levantó.
+const getMyNoteCountThisMonth = (userProfileId, callback) => {
+    const sql = `SELECT COUNT(*) AS total FROM emergency_notes
+                WHERE user_profile_id = ?
+                    AND MONTH(recorded_at) = MONTH(CURDATE()) AND YEAR(recorded_at) = YEAR(CURDATE())`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Horas de turno trabajadas este mes — un turno sin cerrar (shift_end NULL,
+// sigue activo ahora mismo) cuenta hasta NOW(), no se descarta.
+const getMyShiftMinutesThisMonth = (userProfileId, callback) => {
+    const sql = `SELECT SUM(TIMESTAMPDIFF(MINUTE, shift_start, COALESCE(shift_end, NOW()))) AS total_minutes
+                FROM ambulance_shifts
+                WHERE user_profile_id = ?
+                    AND MONTH(shift_start) = MONTH(CURDATE()) AND YEAR(shift_start) = YEAR(CURDATE())`;
+    db.query(sql, [userProfileId], callback);
+}
+
+// Últimas 5 emergencias atendidas (sin restringir al mes — es un feed de
+// "lo más reciente", no una métrica del mes) — para que la pantalla de stats
+// no sea solo números sueltos, también dé contexto de qué fue cada cosa.
+const getMyRecentActivity = (userProfileId, callback) => {
+    const sql = `SELECT e.emergency_id, e.description, e.created_at, et.name AS type_name, a.assigned_at
+                FROM assignments a
+                JOIN ambulance_shifts s ON a.ambulance_id = s.ambulance_id
+                    AND a.assigned_at BETWEEN s.shift_start AND COALESCE(s.shift_end, NOW())
+                JOIN emergencies e ON a.emergency_id = e.emergency_id
+                LEFT JOIN emergency_types et ON e.emergency_type_id = et.emergency_type_id
+                WHERE s.user_profile_id = ?
+                ORDER BY a.assigned_at DESC
+                LIMIT 5`;
+    db.query(sql, [userProfileId], callback);
+}
+
 
 module.exports = {
     // POST
     registerEmergency, registerEmergencyPatient, registerEmergencyNote, getConflictingAmbulanceDestination,
-    registerAssignment, registerInterInstitutionalRequest,
+    registerAssignment, getConflictingOpenAssignments, registerInterInstitutionalRequest,
     createEmergencyType, createEmergencyStatus, createRequestStatus, createTriageLevel,
     // PATCH
     updateEmergencyStatus, advanceEmergencyStatus, closeEmergency, forceCloseEmergency,
@@ -1089,5 +1185,6 @@ module.exports = {
     //GETs de estadísticas filtradas por hospital
     getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution,
     getActiveShiftUserByAmbulance, getUserPushToken, getMyCurrentEmergency,
-    getMyAssignmentCountThisMonth, getMyAvgResponseTimeThisMonth, getMyAssignmentsByTypeThisMonth, getMyAssignmentsByWeekThisMonth
+    getMyAssignmentCountThisMonth, getMyAvgResponseTimeThisMonth, getMyAssignmentsByTypeThisMonth, getMyAssignmentsByWeekThisMonth,
+    getMyPatientCountThisMonth, getMyNoteCountThisMonth, getMyShiftMinutesThisMonth, getMyRecentActivity
 }

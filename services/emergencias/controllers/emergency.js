@@ -44,8 +44,12 @@ const registerEmergencyPatient = (req, res) => {
                 if (e) {
                     return res.status(500).json({message: "Error del servidor."});
                 } else {
-                    //se muestra la info del paciente al frontend inmediatamente se registra
-                    io.to('hospital').emit('eventPatientRegistered', { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId })
+                    // Se muestra la info del paciente al frontend inmediatamente se
+                    // registra — también a 'paramedic' (antes solo llegaba a
+                    // 'hospital'), para que sicem-mobile (paciente.js) vea al
+                    // paciente recién registrado sin tener que salir y volver a
+                    // entrar a la pestaña.
+                    io.to('hospital').to('paramedic').emit('eventPatientRegistered', { emergencyId, userProfileId, notes, destinationInstitutionId, ambulanceId })
                     res.status(201).json({message: "Paciente registrado en la emergencia.", emergencyPatientId: r.insertId});
                 }
             });
@@ -86,14 +90,19 @@ const registerEmergencyNote = (req, res) => {
             temperature,
             oxygenSaturation,
             respiratoryRate,
+            glucoseLevel,
             consciousnessLevel,
+            glasgowScale,
+            painScale,
+            pupils,
             initialDiagnosis,
             treatmentApplied,
             patientStatus
             } = req.body;
                 io.to('hospital').emit('eventEmergencyNoteRegistered', {
             emergencyPatientId, userProfileId, triageLevelId, bloodPressure, heartRate, temperature,
-            oxygenSaturation, respiratoryRate, consciousnessLevel, initialDiagnosis, treatmentApplied, patientStatus})
+            oxygenSaturation, respiratoryRate, glucoseLevel, consciousnessLevel, glasgowScale, painScale, pupils,
+            initialDiagnosis, treatmentApplied, patientStatus})
                 res.status(201).json({message: "Nota de urgencia registrada con éxito."});
             }
         });
@@ -106,6 +115,18 @@ const registerAssignment = (req, res) => {
     if (!(parseInt(req.decoded.roleId) === 2 || parseInt(req.decoded.roleId) === 1)) {
         return res.status(403).json({message: "Acceso denegado."});
     } else {
+        const { emergencyId: checkEmergencyId, ambulanceIds: checkAmbulanceIds } = req.body;
+        // Bloquea ANTES de insertar si alguna de las unidades ya está atada a
+        // otra emergencia sin cerrar — ver getConflictingOpenAssignments (el
+        // bug real que esto corrige: una unidad terminó "atendiendo" dos
+        // emergencias a la vez porque nada lo impedía).
+        emergencyModel.getConflictingOpenAssignments(checkAmbulanceIds, checkEmergencyId, (eConf, rConf) => {
+        if (eConf) {
+            return res.status(500).json({message: "Error del servidor."});
+        } else if (rConf && rConf.length > 0) {
+            const units = rConf.map((row) => row.unit_number || `#${row.ambulance_id}`).join(', ');
+            return res.status(409).json({message: `La unidad ${units} ya está atendiendo otra emergencia sin cerrar — desasígnala primero o espera a que termine.`});
+        }
         emergencyModel.registerAssignment(req.body, (e, r) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
@@ -166,6 +187,7 @@ const registerAssignment = (req, res) => {
 
                 res.status(201).json({message: "Ambulancia asignada con éxito."});
             }
+        });
         });
     }
 }
@@ -591,6 +613,22 @@ const confirmPatientReception = (req, res) => {
                                             // una pantalla abierta (p. ej. Seguimiento en otra pestaña), necesita
                                             // enterarse sin tener que salir y volver a entrar.
                                             io.to('dispatcher').to('admin').to('hospital').emit('eventPatientReceptionUpdated', { emergencyPatientId, emergencyId, receptionStatusId, accepted, rejectionReason: accepted ? null : rejectionReason });
+
+                                            // Rechazo — el paramédico que sigue con el paciente físicamente
+                                            // encima nunca se enteraba de esto (el evento de arriba solo
+                                            // llega a despachador/admin/hospital). Se avisa directo a SU
+                                            // celular (room 'user_<id>', igual que registerAssignment) — es
+                                            // la persona que en ese momento más necesita saberlo.
+                                            if (!accepted && r2[0].ambulance_id) {
+                                                emergencyModel.getActiveShiftUserByAmbulance(r2[0].ambulance_id, (e5, r5) => {
+                                                    if (!e5 && r5.length > 0) {
+                                                        io.to('user_' + r5[0].user_profile_id).emit('eventPatientReceptionUpdated', {
+                                                            emergencyPatientId, emergencyId, receptionStatusId, accepted, rejectionReason
+                                                        });
+                                                    }
+                                                });
+                                            }
+
                                             res.status(200).json({
                                                 message: accepted ? "Recepción confirmada." : "Recepción rechazada.",
                                                 data: { emergencyPatientId, receptionStatusId }
@@ -1376,14 +1414,30 @@ const getMyStatsThisMonth = (req, res) => {
                     if (e3) return res.status(500).json({message: "Error del servidor."});
                     emergencyModel.getMyAssignmentsByWeekThisMonth(userProfileId, (e4, r4) => {
                         if (e4) return res.status(500).json({message: "Error del servidor."});
-                        res.status(200).json({
-                            message: "Mis estadísticas",
-                            data: {
-                                totalThisMonth: r1[0]?.total || 0,
-                                avgResponseMinutes: r2[0]?.avg_minutes || null,
-                                byType: r3,
-                                byWeek: r4,
-                            }
+                        emergencyModel.getMyPatientCountThisMonth(userProfileId, (e5, r5) => {
+                            if (e5) return res.status(500).json({message: "Error del servidor."});
+                            emergencyModel.getMyNoteCountThisMonth(userProfileId, (e6, r6) => {
+                                if (e6) return res.status(500).json({message: "Error del servidor."});
+                                emergencyModel.getMyShiftMinutesThisMonth(userProfileId, (e7, r7) => {
+                                    if (e7) return res.status(500).json({message: "Error del servidor."});
+                                    emergencyModel.getMyRecentActivity(userProfileId, (e8, r8) => {
+                                        if (e8) return res.status(500).json({message: "Error del servidor."});
+                                        res.status(200).json({
+                                            message: "Mis estadísticas",
+                                            data: {
+                                                totalThisMonth: r1[0]?.total || 0,
+                                                avgResponseMinutes: r2[0]?.avg_minutes || null,
+                                                byType: r3,
+                                                byWeek: r4,
+                                                patientsThisMonth: r5[0]?.total || 0,
+                                                notesThisMonth: r6[0]?.total || 0,
+                                                shiftMinutesThisMonth: r7[0]?.total_minutes || 0,
+                                                recentActivity: r8,
+                                            }
+                                        });
+                                    });
+                                });
+                            });
                         });
                     });
                 });

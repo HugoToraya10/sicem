@@ -52,6 +52,17 @@ const PrivateRoute = () => {
                 alertNewPatient(`Falla reportada: ${data.unitNumber || 'unidad'}`, `${who}${data.note || ''}`)
             }
         })
+        // "Concluir traslado" (tipo Uber "terminar viaje") desde sicem-mobile —
+        // el resaltado en rojo vive en Tracking.jsx (la tarjeta del paciente),
+        // esto es solo la notificación nativa para que se entere aunque tenga
+        // abierta otra pantalla (Pacientes en Camino, Historial, etc.).
+        unitsSocket.on('eventTransferConcluded', (data) => {
+            const mine = (data?.hospitalInstitutionIds || []).some((id) => parseInt(id) === parseInt(user.institutionId))
+            if (mine) {
+                const who = data.paramedicName ? `${data.paramedicName} — ` : ''
+                alertNewPatient(`${data.unitNumber || 'Unidad'} dice haber llegado`, `${who}Confirma la llegada física en Seguimiento.`)
+            }
+        })
         return () => unitsSocket.disconnect()
     }, [isAuthorized, token, user])
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Tabs } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import * as Location from 'expo-location'
 import { AmbulanceProvider, useAmbulance } from '../../context/AmbulanceContext'
 import { SocketProvider } from '../../context/SocketContext'
@@ -114,14 +115,46 @@ const AppLayout = () => {
             <SocketProvider>
                 <LocationReporter />
                 <PushNotificationRegistrar />
+                {/* Sin tabBarIcon, expo-router/React Navigation reservaba el
+                espacio del ícono igual pero sin nada válido que dibujar ahí —
+                de ahí el "recuadrito que no cargó" que veía Hugo en las 4
+                pestañas visibles. Ionicons ya se usaba en mapa.js (el botón de
+                centrar mapa), aquí es el mismo paquete, solo que antes nadie
+                lo había conectado al propio tab bar. */}
                 <Tabs screenOptions={{ headerShown: true, tabBarActiveTintColor: '#2E7D32' }}>
-                    <Tabs.Screen name="index" options={{ title: 'Alerta', tabBarLabel: 'Alerta' }} />
-                    <Tabs.Screen name="mapa" options={{ title: 'Mapa', tabBarLabel: 'Mapa' }} />
-                    <Tabs.Screen name="paciente" options={{ title: 'Paciente', tabBarLabel: 'Paciente' }} />
-                    <Tabs.Screen name="stats" options={{ title: 'Estadísticas', tabBarLabel: 'Stats' }} />
+                    <Tabs.Screen
+                        name="index"
+                        options={{
+                            title: 'Alerta', tabBarLabel: 'Alerta',
+                            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'notifications' : 'notifications-outline'} size={size} color={color} />,
+                        }}
+                    />
+                    <Tabs.Screen
+                        name="mapa"
+                        options={{
+                            title: 'Mapa', tabBarLabel: 'Mapa',
+                            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'map' : 'map-outline'} size={size} color={color} />,
+                        }}
+                    />
+                    <Tabs.Screen
+                        name="paciente"
+                        options={{
+                            title: 'Paciente', tabBarLabel: 'Paciente',
+                            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />,
+                        }}
+                    />
+                    <Tabs.Screen
+                        name="stats"
+                        options={{
+                            title: 'Estadísticas', tabBarLabel: 'Stats',
+                            tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={size} color={color} />,
+                        }}
+                    />
                     {/* Pantallas alcanzables desde "Paciente", pero no son su propia pestaña */}
                     <Tabs.Screen name="registrar-paciente" options={{ href: null, title: 'Registrar paciente' }} />
                     <Tabs.Screen name="notas" options={{ href: null, title: 'Nota de urgencia' }} />
+                    <Tabs.Screen name="expediente" options={{ href: null, title: 'Expediente clínico' }} />
+                    <Tabs.Screen name="perfil" options={{ href: null, title: 'Mi perfil' }} />
                 </Tabs>
             </SocketProvider>
         </AmbulanceProvider>

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, Linking } from 'react-native'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import * as Notifications from 'expo-notifications'
 import { useRouter } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
 import { useAuth } from '../../context/AuthContext'
 import { useAmbulance } from '../../context/AmbulanceContext'
 import { useSocketAlerts } from '../../context/SocketContext'
@@ -48,16 +50,51 @@ const ConnectionBadge = ({ connected }) => (
     </View>
 )
 
-const Header = ({ user, connected, onLogout }) => (
+// Antes, si el paramédico rechazaba (o alguna vez le desactivaron) el
+// permiso de notificaciones, registerForPushNotificationsAsync solo lo
+// avisaba con un console.warn — invisible para él. Con la app cerrada o en
+// segundo plano, el socket no funciona (ver eventEmergencyAssignedToMe en
+// SocketContext.jsx), así que sin push es la ÚNICA forma de enterarse de una
+// emergencia nueva.
+//
+// BUG REAL corregido: el comentario original decía "se revisa cada vez que
+// la pestaña Alerta vuelve a montarse", pero un useEffect con [] solo corre
+// UNA vez por sesión — las pestañas de expo-router se quedan MONTADAS al
+// cambiar entre ellas (mismo patrón documentado en paciente.js/mapa.js), así
+// que si el paramédico activaba el permiso desde Ajustes a medio uso, el
+// banner se quedaba pegado hasta reiniciar la app entera. useFocusEffect sí
+// vuelve a correr cada vez que la pestaña Alerta recupera el foco.
+const PushPermissionWarning = () => {
+    const [denied, setDenied] = useState(false)
+
+    useFocusEffect(useCallback(() => {
+        Notifications.getPermissionsAsync()
+            .then(({ status }) => setDenied(status !== 'granted'))
+            .catch(() => {})
+    }, []))
+
+    if (!denied) return null
+    return (
+        <TouchableOpacity style={styles.pushWarningBanner} onPress={() => Linking.openSettings()}>
+            <Ionicons name="notifications-off-outline" size={16} color="#7a5c00" />
+            <Text style={styles.pushWarningText}>
+                Sin permiso de notificaciones — puedes perderte emergencias con la app cerrada. Toca para activarlo.
+            </Text>
+        </TouchableOpacity>
+    )
+}
+
+const Header = ({ user, connected, onLogout, onPressProfile }) => (
     <View>
         <View style={styles.header}>
-            <View style={styles.headerLeft}>
+            <TouchableOpacity style={styles.headerLeft} onPress={onPressProfile}>
                 <Ionicons name="person-circle" size={30} color="#2E7D32" />
                 <Text style={styles.welcome}>Hola, {user?.firstName || 'Paramédico'}</Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity onPress={onLogout}><Text style={styles.logout}>Cerrar sesión</Text></TouchableOpacity>
         </View>
         <ConnectionBadge connected={connected} />
+        <PushPermissionWarning />
     </View>
 )
 
@@ -236,7 +273,7 @@ const AlertaScreen = () => {
     if (!user?.assignedAmbulanceId) {
         return (
             <View style={styles.container}>
-                <Header user={user} connected={connected} onLogout={handleLogoutPress} />
+                <Header user={user} connected={connected} onLogout={handleLogoutPress} onPressProfile={() => router.push('/perfil')} />
                 <View style={styles.idleBox}>
                     <MaterialCommunityIcons name="ambulance" size={48} color="#ccc" />
                     <Text style={styles.hint}>Todavía no tienes ninguna ambulancia asignada. Pide a tu institución que te ligue a una unidad desde sicem-web o sicem-desktop antes de poder iniciar turno.</Text>
@@ -249,7 +286,7 @@ const AlertaScreen = () => {
     if (!activeAmbulanceId) {
         return (
             <View style={styles.container}>
-                <Header user={user} connected={connected} onLogout={handleLogoutPress} />
+                <Header user={user} connected={connected} onLogout={handleLogoutPress} onPressProfile={() => router.push('/perfil')} />
                 <View style={styles.card}>
                     <Ionicons name="play-circle-outline" size={40} color="#2E7D32" style={{ alignSelf: 'center', marginBottom: 8 }} />
                     <Text style={styles.sectionTitle}>Iniciar turno</Text>
@@ -298,7 +335,7 @@ const AlertaScreen = () => {
         const em = acceptedEmergency.emergency
         return (
             <View style={styles.container}>
-                <Header user={user} connected={connected} onLogout={handleLogoutPress} />
+                <Header user={user} connected={connected} onLogout={handleLogoutPress} onPressProfile={() => router.push('/perfil')} />
                 <Text style={styles.sectionTitle}>En curso</Text>
                 <View style={styles.inProgressCard}>
                     <Ionicons name="navigate-circle" size={28} color="#C0272D" />
@@ -325,7 +362,7 @@ const AlertaScreen = () => {
     const countdown = formatCountdown(scheduledEnd)
     return (
         <View style={styles.container}>
-            <Header user={user} connected={connected} onLogout={handleLogoutPress} />
+            <Header user={user} connected={connected} onLogout={handleLogoutPress} onPressProfile={() => router.push('/perfil')} />
 
             <View style={styles.unitCard}>
                 <MaterialCommunityIcons name="ambulance" size={32} color="#2E7D32" />
@@ -377,6 +414,8 @@ const styles = StyleSheet.create({
     connectionBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
     connectionDot: { width: 8, height: 8, borderRadius: 4 },
     connectionText: { fontSize: 11, color: '#888', fontWeight: '600' },
+    pushWarningBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff3cd', borderWidth: 1, borderColor: '#e0a800', borderRadius: 8, padding: 10, marginBottom: 16 },
+    pushWarningText: { flex: 1, fontSize: 11, color: '#7a5c00', fontWeight: '600' },
     card: { borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 16, backgroundColor: '#fafafa' },
     sectionTitle: { fontSize: 13, fontWeight: '700', color: '#555', textTransform: 'uppercase', marginTop: 4, marginBottom: 6, textAlign: 'center' },
     hint: { fontSize: 12, color: '#999', marginBottom: 8, textAlign: 'center' },

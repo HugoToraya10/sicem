@@ -757,22 +757,30 @@ const SHIFT_EXPIRY_SWEEP_INTERVAL_MS = 10000;
 // nadie llamara a terminar-turno — libera la unidad (Fuera de servicio) y le
 // manda a ESE paramédico en particular (room 'user_<id>', se une al conectar
 // el socket) un aviso para que su celular cierre la sesión solo.
+//
+// BUG REAL encontrado en producción: esto cerraba la sesión SIEMPRE, sin
+// importar si el paramédico seguía a medio traslado con una emergencia
+// abierta — su horario se cumplía en el reloj y el sistema lo sacaba de la
+// app de todos modos, aunque su ambulancia siguiera con una emergencia real
+// asignada (con pacientes ya registrados). Eso no tiene sentido operativo:
+// nadie debe ser expulsado de una llamada en curso solo porque su horario ya
+// terminó. Ahora, si la unidad sigue atada a una emergencia sin cerrar, este
+// barrido NO hace nada esta vez — ni termina el turno, ni cierra la sesión —
+// y se vuelve a revisar en el siguiente ciclo (10s). En cuanto la emergencia
+// se cierre/desasigne, el turno se cierra solo como antes, sin que nadie
+// tenga que hacer nada aparte.
 const sweepExpiredShifts = () => {
     const io = getIo();
     unitModel.getExpiredActiveShifts((e, rows) => {
         if (e || !rows || rows.length === 0) return;
         rows.forEach((shift) => {
-            unitModel.endShift(shift.user_profile_id, (eEnd) => {
-                if (eEnd) return;
-                // El cierre de sesión del paramédico se avisa siempre, sin
-                // importar si la unidad sigue atada a una emergencia sin
-                // cerrar — lo único condicionado es si se le pisa el estado
-                // de la ambulancia (mismo criterio que en endShift manual).
-                io.to('user_' + shift.user_profile_id).emit('eventForceLogout', {
-                    reason: 'Tu turno se cerró automáticamente porque terminó tu horario laboral.'
-                });
-                unitModel.getOpenAssignmentByAmbulance(shift.ambulance_id, (eOpen, rOpen) => {
-                    if (!eOpen && rOpen.length > 0) return;
+            unitModel.getOpenAssignmentByAmbulance(shift.ambulance_id, (eOpen, rOpen) => {
+                if (!eOpen && rOpen && rOpen.length > 0) return;
+                unitModel.endShift(shift.user_profile_id, (eEnd) => {
+                    if (eEnd) return;
+                    io.to('user_' + shift.user_profile_id).emit('eventForceLogout', {
+                        reason: 'Tu turno se cerró automáticamente porque terminó tu horario laboral.'
+                    });
                     unitModel.updateAmbulanceStatus(shift.ambulance_id, NO_CREW_STATUS_ID, (eStatus) => {
                         if (!eStatus) {
                             io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(shift.ambulance_id), ambulanceStatusId: NO_CREW_STATUS_ID });
@@ -865,6 +873,157 @@ const reportAmbulanceFailure = (req, res) => {
     });
 }
 
+// El paramédico declara "ya llegué al hospital, estoy descargando" — tipo
+// Uber "concluir viaje". Solo tiene sentido si la unidad está Trasladando (4)
+// de verdad: en cualquier otro estado no hay traslado que concluir. Esto NO
+// mueve la unidad a Disponible por sí solo (ver PARAMEDIC_FORWARD_TRANSITIONS
+// arriba — el paramédico nunca decide su propia disponibilidad sin más) — solo
+// avisa al hospital destino que confirme la llegada física (acción que YA
+// existe, ver confirmPatientDelivery en services/emergencias). Una vez que
+// AMBAS cosas pasen (esto + el hospital confirma a todos los pacientes),
+// markAvailableAfterTransfer (abajo) es lo único que sí libera la unidad.
+const concludeTransfer = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 3) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    const userProfileId = req.decoded.userProfileId;
+    unitModel.getActiveShiftByUser(userProfileId, (e, r) => {
+        if (e || r.length === 0) {
+            return res.status(403).json({message: "No tienes un turno activo."});
+        }
+        const ambulanceId = r[0].ambulance_id;
+        if (parseInt(r[0].ambulance_status_id) !== 4) {
+            return res.status(400).json({message: "Tu unidad no está en estado 'Trasladando' — no hay ningún traslado que concluir."});
+        }
+        unitModel.getActiveTransferByAmbulance(ambulanceId, (eT, rT) => {
+            if (eT || rT.length === 0) {
+                return res.status(400).json({message: "No se encontró un traslado activo para tu unidad."});
+            }
+            const transfer = rT[0];
+            if (transfer.paramedic_concluded_at) {
+                return res.status(400).json({message: "Ya habías marcado este traslado como concluido — solo falta que el hospital confirme la llegada física."});
+            }
+            unitModel.markTransferConcluded(transfer.assignment_id, (eMark) => {
+                if (eMark) {
+                    return res.status(500).json({message: "Error del servidor."});
+                }
+                unitModel.getTransferPatients(transfer.emergency_id, ambulanceId, (eP, rP) => {
+                    const patients = (!eP && rP) ? rP : [];
+                    unitModel.getConcludeTransferContext(ambulanceId, userProfileId, (eCtx, rCtx) => {
+                        const context = (!eCtx && rCtx.length > 0) ? rCtx[0] : {};
+                        const io = getIo();
+                        // hospitalInstitutionIds: normalmente uno, puede haber dos si la
+                        // unidad lleva pacientes a instituciones destino distintas —
+                        // sicem-desktop (PrivateRoute.jsx) filtra comparando su propio
+                        // institutionId contra este arreglo, mismo patrón que
+                        // eventAmbulanceFailureReported (que compara contra un solo id).
+                        io.to('despachador').to('admin').to('hospital').emit('eventTransferConcluded', {
+                            ambulanceId: parseInt(ambulanceId),
+                            unitNumber: context.unit_number || null,
+                            paramedicName: `${context.first_name || ''} ${context.first_surname || ''}`.trim() || null,
+                            emergencyId: transfer.emergency_id,
+                            emergencyPatientIds: patients.map((p) => p.emergency_patient_id),
+                            hospitalInstitutionIds: [...new Set(patients.map((p) => p.destination_institution_id).filter(Boolean))],
+                        });
+                        res.status(200).json({message: "Traslado concluido — se avisó al hospital destino para que confirme la llegada física."});
+                    });
+                });
+            });
+        });
+    });
+}
+
+// El paramédico marca su unidad como Disponible otra vez — la ÚNICA vía por
+// la que esto puede pasar por acción DIRECTA suya (ver PARAMEDIC_FORWARD_TRANSITIONS
+// arriba). Se exige, validado en servidor (no solo en la UI del celular):
+// 1) que él mismo ya haya llamado a concludeTransfer, Y
+// 2) que el hospital ya haya confirmado la llegada física (delivered_at) de
+//    TODOS los pacientes de este traslado.
+// Mientras falte cualquiera de las dos, la unidad se queda como está.
+const markAvailableAfterTransfer = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 3) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    const userProfileId = req.decoded.userProfileId;
+    unitModel.getActiveShiftByUser(userProfileId, (e, r) => {
+        if (e || r.length === 0) {
+            return res.status(403).json({message: "No tienes un turno activo."});
+        }
+        const ambulanceId = r[0].ambulance_id;
+        if (parseInt(r[0].ambulance_status_id) !== 4) {
+            return res.status(400).json({message: "Tu unidad no está en estado 'Trasladando'."});
+        }
+        unitModel.getActiveTransferByAmbulance(ambulanceId, (eT, rT) => {
+            if (eT || rT.length === 0) {
+                return res.status(400).json({message: "No se encontró un traslado activo para tu unidad."});
+            }
+            const transfer = rT[0];
+            if (!transfer.paramedic_concluded_at) {
+                return res.status(400).json({message: "Primero debes marcar el traslado como concluido."});
+            }
+            unitModel.getTransferPatients(transfer.emergency_id, ambulanceId, (eP, rP) => {
+                if (eP) {
+                    return res.status(500).json({message: "Error del servidor."});
+                }
+                const pending = rP.filter((p) => !p.delivered_at);
+                if (pending.length > 0) {
+                    return res.status(400).json({message: "El hospital todavía no confirma la llegada física de todos tus pacientes."});
+                }
+                unitModel.releaseAmbulanceAfterTransfer(transfer.assignment_id, ambulanceId, (eRel) => {
+                    if (eRel) {
+                        return res.status(500).json({message: "Error del servidor."});
+                    }
+                    const io = getIo();
+                    io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(ambulanceId), ambulanceStatusId: 1 });
+                    res.status(200).json({message: "Unidad marcada como Disponible."});
+                });
+            });
+        });
+    });
+}
+
+// Para que sicem-mobile sepa (sin depender de que la emergencia siga
+// "aceptada" en el celular — puede que ya se haya cerrado del lado del
+// backend mientras el paramédico todavía no concluye/el hospital todavía no
+// confirma) si hay un traslado esperando el ciclo concluir/disponible, y en
+// qué punto va. Regresa null si no hay turno activo, si la unidad no está en
+// 4 (Trasladando), o si no hay ningún traslado abierto para ella.
+const getMyActiveTransfer = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 3) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    unitModel.getActiveShiftByUser(req.decoded.userProfileId, (e, r) => {
+        if (e || r.length === 0 || parseInt(r[0].ambulance_status_id) !== 4) {
+            return res.status(200).json({message: "Sin traslado activo.", data: null});
+        }
+        const ambulanceId = r[0].ambulance_id;
+        unitModel.getActiveTransferByAmbulance(ambulanceId, (eT, rT) => {
+            if (eT || rT.length === 0) {
+                return res.status(200).json({message: "Sin traslado activo.", data: null});
+            }
+            const transfer = rT[0];
+            unitModel.getTransferPatients(transfer.emergency_id, ambulanceId, (eP, rP) => {
+                const patients = (!eP && rP) ? rP : [];
+                const firstWithHospital = patients.find((p) => p.hospital_name);
+                res.status(200).json({
+                    message: "Traslado activo",
+                    data: {
+                        assignmentId: transfer.assignment_id,
+                        emergencyId: transfer.emergency_id,
+                        paramedicConcludedAt: transfer.paramedic_concluded_at,
+                        hospitalName: firstWithHospital?.hospital_name || null,
+                        hospitalLatitude: firstWithHospital?.hospital_latitude || null,
+                        hospitalLongitude: firstWithHospital?.hospital_longitude || null,
+                        patientsTotal: patients.length,
+                        patientsDelivered: patients.filter((p) => p.delivered_at).length,
+                        allPatientsDelivered: patients.length > 0 && patients.every((p) => p.delivered_at),
+                    }
+                });
+            });
+        });
+    });
+}
+
 // Interno — no lleva JWT de usuario (no hay usuario "llamando" esto, es
 // services/usuarios avisando de un evento). Se autentica con un secreto
 // compartido por variable de entorno, nunca con verifyToken normal.
@@ -891,5 +1050,5 @@ module.exports = {
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
     startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep, notifyForceLogout,
-    reportAmbulanceFailure
+    reportAmbulanceFailure, concludeTransfer, markAvailableAfterTransfer, getMyActiveTransfer
 }

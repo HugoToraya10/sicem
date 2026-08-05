@@ -177,6 +177,73 @@ const getOpenAssignmentByAmbulance = (ambulanceId, callback) => {
     db.query(sql, [ambulanceId], callback);
 }
 
+// Traslado "activo" de la ambulancia — a diferencia de getOpenAssignmentByAmbulance,
+// NO exige e.closed_at IS NULL: el punto de esta función es encontrar el
+// assignment incluso DESPUÉS de que la emergencia ya se cerró (ver comentario
+// en closeEmergencyRaw, services/emergencias/models/emergency.js — una
+// ambulancia en Trasladando ya NO se libera sola al cerrarse la emergencia,
+// se queda esperando a que el propio paramédico confirme "llegada al
+// hospital" vía concludeTransfer/markAvailableAfterTransfer más abajo). Sigue
+// exigiendo unassigned_at IS NULL — eso sí marca que el ciclo de este
+// traslado en particular no se ha cerrado todavía.
+const getActiveTransferByAmbulance = (ambulanceId, callback) => {
+    const sql = `SELECT assignment_id, emergency_id, paramedic_concluded_at
+                FROM assignments
+                WHERE ambulance_id = ? AND unassigned_at IS NULL
+                ORDER BY assignment_id DESC LIMIT 1`;
+    db.query(sql, [ambulanceId], callback);
+}
+
+// El paramédico declara "ya llegué, estoy descargando" (tipo Uber "concluir
+// viaje") — ver concludeTransfer en el controller. No cambia
+// ambulance_status_id por sí solo: solo es la mitad de la condición que
+// exige markAvailableAfterTransfer para poder devolver la unidad a Disponible.
+const markTransferConcluded = (assignmentId, callback) => {
+    const sql = `UPDATE assignments SET paramedic_concluded_at = NOW() WHERE assignment_id = ?`;
+    db.query(sql, [assignmentId], callback);
+}
+
+// Pacientes de ESTA emergencia que van en ESTA ambulancia y sí tienen
+// hospital destino asignado — mismo filtro que closeEmergency usa para
+// decidir qué cuenta como "pendiente de entrega" (destination_institution_id
+// IS NOT NULL). Trae también nombre/coordenadas del hospital destino, para
+// que markAvailableAfterTransfer y el polling de sicem-mobile no necesiten
+// una consulta aparte. Cruce directo a emergencies_patients/institutions
+// (tablas de otros servicios, misma BD compartida) — mismo patrón ya usado en
+// el resto de este archivo.
+const getTransferPatients = (emergencyId, ambulanceId, callback) => {
+    const sql = `SELECT ep.emergency_patient_id, ep.delivered_at, ep.destination_institution_id,
+                i.name AS hospital_name, i.latitude AS hospital_latitude, i.longitude AS hospital_longitude
+                FROM emergencies_patients ep
+                JOIN institutions i ON i.institution_id = ep.destination_institution_id
+                WHERE ep.emergency_id = ? AND ep.ambulance_id = ? AND ep.destination_institution_id IS NOT NULL`;
+    db.query(sql, [emergencyId, ambulanceId], callback);
+}
+
+// Única vía por la que una ambulancia vuelve a Disponible por acción DIRECTA
+// del paramédico (ver markAvailableAfterTransfer en el controller, que valida
+// AMBAS condiciones — concluí traslado + hospital confirmó llegada física de
+// todos — antes de llegar aquí). Desasigna el assignment (mismo efecto que
+// unassignAmbulance del lado de emergencias) y libera la unidad en la misma
+// operación.
+const releaseAmbulanceAfterTransfer = (assignmentId, ambulanceId, callback) => {
+    db.query(`UPDATE assignments SET unassigned_at = NOW() WHERE assignment_id = ?`, [assignmentId], (e) => {
+        if (e) return callback(e);
+        db.query(`UPDATE ambulances SET ambulance_status_id = 1, updated_at = NOW() WHERE ambulance_id = ?`, [ambulanceId], callback);
+    });
+}
+
+// Contexto para el aviso de "traslado concluido" a sicem-desktop — número de
+// unidad y nombre del paramédico. El/los hospital(es) destino a los que avisar
+// se resuelven aparte con getTransferPatients (puede haber más de uno si la
+// ambulancia lleva dos pacientes a instituciones distintas).
+const getConcludeTransferContext = (ambulanceId, userProfileId, callback) => {
+    const sql = `SELECT a.unit_number, up.first_name, up.first_surname
+                FROM ambulances a, user_profiles up
+                WHERE a.ambulance_id = ? AND up.user_profile_id = ?`;
+    db.query(sql, [ambulanceId, userProfileId], callback);
+}
+
 // Registro (histórico) de una falla reportada por el paramédico — NO cambia
 // ambulance_status_id solo (ver fundamentos-legales/
 // autoridad-crum-sobre-tamp-paramedico.txt: el paramédico reporta, el
@@ -406,6 +473,7 @@ module.exports = {
     updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus, getOpenAssignmentByAmbulance,
     reportAmbulanceFailure, getFailureReportContext,
     advanceEmergencyStatusForAmbulance,
+    getActiveTransferByAmbulance, markTransferConcluded, getTransferPatients, releaseAmbulanceAfterTransfer, getConcludeTransferContext,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,

@@ -100,6 +100,27 @@ window.centerMap = function() {
 </html>`
 }
 
+// Distancia en línea recta (Haversine, metros) — para detectar "ya casi
+// llegas al hospital" (ver ARRIVAL_THRESHOLD_METERS abajo) no hace falta la
+// distancia de RUTA real (que ya se calcula aparte con OSRM para mostrar el
+// ETA), basta con qué tan cerca está el punto azul del marcador del
+// hospital — más simple y no depende de que OSRM haya respondido a tiempo.
+const haversineMeters = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000
+    const toRad = (deg) => (deg * Math.PI) / 180
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lon2 - lon1)
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// Confirmado con Hugo: 100m resultó muy poco margen en la práctica (el GPS
+// en campo no es tan preciso), se subió a 300m. Se usa en DOS puntos del
+// flujo: para poder pasar de "En camino" a "En escena" (cerca de la
+// emergencia) y para poder "Concluir traslado" (cerca del hospital destino)
+// — mismo margen para los dos, por consistencia.
+const ARRIVAL_THRESHOLD_METERS = 300
+
 // Misma ruta real (no línea recta) que usa NewEmergency.jsx en sicem-web —
 // servidor demo público de OSRM, mismo ecosistema OSM que el resto del proyecto.
 const fetchRoute = (originLat, originLon, destLat, destLon) => {
@@ -135,6 +156,17 @@ const MapaScreen = () => {
     const [route, setRoute] = useState(null)
     const [hospitalDestination, setHospitalDestination] = useState(null)
     const [updatingStatus, setUpdatingStatus] = useState(false)
+    // Estado del ciclo "llegada al hospital" (concluir traslado -> el hospital
+    // confirma llegada física -> marcar disponible) — viene de un endpoint
+    // dedicado (mi-traslado-actual) en vez de derivarse de acceptedEmergency,
+    // porque este ciclo tiene que seguir funcionando AUNQUE la emergencia ya
+    // se haya cerrado del lado del backend (ver el comentario en
+    // closeEmergencyRaw, services/emergencias/models/emergency.js — una
+    // unidad en Trasladando ya no se libera sola al cerrarse la emergencia,
+    // se queda esperando este ciclo). Null mientras no aplique.
+    const [activeTransfer, setActiveTransfer] = useState(null)
+    const [concludingTransfer, setConcludingTransfer] = useState(false)
+    const [markingAvailable, setMarkingAvailable] = useState(false)
     // Centro con el que se construye el mapa la PRIMERA vez — se congela en
     // cuanto se conoce uno (ver el useEffect de abajo) y ya no se vuelve a
     // tocar, para que mapHtml no dependa de myLocation (si dependiera, cada
@@ -233,6 +265,24 @@ const MapaScreen = () => {
         return () => clearInterval(interval)
     }, [em?.emergency_id, activeAmbulanceId])
 
+    // Ciclo "llegada al hospital" — se sondea SIEMPRE que la unidad esté
+    // Trasladando (4), sin importar si acceptedEmergency sigue viva o no (ver
+    // comentario junto a activeTransfer arriba). Cada 5s: suficientemente
+    // rápido para que "Concluir traslado"/"Marcar Disponible" aparezcan sin
+    // que el paramédico tenga que salir y volver a entrar a la pestaña.
+    useEffect(() => {
+        if (ambulanceStatusId !== 4) { setActiveTransfer(null); return }
+        const fetchTransfer = () => {
+            fetch(`${API_BASE_URL}/unidades/mi-traslado-actual`, { headers })
+                .then((res) => res.json())
+                .then(({ data }) => setActiveTransfer(data ? toLowerCaseKeys(data) : null))
+                .catch((err) => console.error('Error consultando tu traslado actual. ', err))
+        }
+        fetchTransfer()
+        const interval = setInterval(fetchTransfer, 5000)
+        return () => clearInterval(interval)
+    }, [ambulanceStatusId])
+
     const hasEmergencyLocation = em?.latitude && em?.longitude
     const emergencyLocation = hasEmergencyLocation ? { latitude: parseFloat(em.latitude), longitude: parseFloat(em.longitude) } : null
 
@@ -329,12 +379,26 @@ const MapaScreen = () => {
             .finally(() => setUpdatingStatus(false))
     }
 
+    // Distancia en línea recta a la escena de la emergencia — mismo criterio
+    // (Haversine, ARRIVAL_THRESHOLD_METERS) que ya se usa para "Concluir
+    // traslado" en el hospital más abajo. Confirmado con Hugo: no se puede
+    // pasar a "En escena" si no
+    // estás de verdad cerca — evita que se marque por accidente o de
+    // antemano, antes de haber llegado en realidad.
+    const distanceToEmergencyMeters = (myLocation && emergencyLocation)
+        ? haversineMeters(myLocation.latitude, myLocation.longitude, emergencyLocation.latitude, emergencyLocation.longitude)
+        : null
+    const withinSceneArrivalRange = distanceToEmergencyMeters != null && distanceToEmergencyMeters <= ARRIVAL_THRESHOLD_METERS
+
     // Un solo paso a la vez, con confirmación — no hay marcha atrás una vez
     // aceptada (ver PARAMEDIC_FORWARD_TRANSITIONS), así que el diálogo lo dice
     // explícitamente en vez de dejar que un toque accidental avance la unidad.
     const handleAdvanceStatus = () => {
         const step = FORWARD_TRANSITIONS[ambulanceStatusId]
         if (!step) return
+        // Defensa extra además de ocultar el botón (ver render más abajo) —
+        // por si esta función se llegara a invocar por otro camino.
+        if (ambulanceStatusId === 2 && !withinSceneArrivalRange) return
         Alert.alert(
             'Confirmar cambio de estado',
             `Vas a marcar la unidad como "${step.label.replace('Pasar a ', '')}". No podrás regresar al paso anterior — solo tu CRUM/hospital puede cerrar o reasignar la emergencia. ¿Confirmas?`,
@@ -343,6 +407,66 @@ const MapaScreen = () => {
                 { text: 'Confirmar', onPress: () => applyStatusUpdate(step.next) },
             ]
         )
+    }
+
+    // Hospital contra el que se mide la distancia de llegada — se prefiere el
+    // que trae activeTransfer (funciona incluso si acceptedEmergency ya se
+    // limpió) y se cae a hospitalDestination mientras activeTransfer todavía
+    // no responde la primera vez.
+    const arrivalHospital = activeTransfer?.hospitalLatitude
+        ? { name: activeTransfer.hospitalName, latitude: parseFloat(activeTransfer.hospitalLatitude), longitude: parseFloat(activeTransfer.hospitalLongitude) }
+        : hospitalDestination
+
+    const distanceToHospitalMeters = (myLocation && arrivalHospital)
+        ? haversineMeters(myLocation.latitude, myLocation.longitude, arrivalHospital.latitude, arrivalHospital.longitude)
+        : null
+
+    const withinArrivalRange = distanceToHospitalMeters != null && distanceToHospitalMeters <= ARRIVAL_THRESHOLD_METERS
+
+    // "Concluir traslado" — tipo Uber "terminar viaje". No cambia el estado de
+    // la unidad todavía: solo le avisa (destacado, en rojo) al hospital
+    // destino que confirme la llegada física de sus pacientes (acción que ya
+    // existe en sicem-desktop, ver Tracking.jsx). Ver concludeTransfer en
+    // services/unidades/controllers/unit.js para la validación real.
+    const handleConcludeTransfer = () => {
+        Alert.alert(
+            'Concluir traslado',
+            'Se avisará a tu hospital destino que ya llegaste, para que confirme la llegada física de tu(s) paciente(s). ¿Confirmas?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Confirmar', onPress: () => {
+                        setConcludingTransfer(true)
+                        fetch(`${API_BASE_URL}/unidades/concluir-traslado`, { method: 'PATCH', headers })
+                            .then((res) => res.json().then((body) => {
+                                if (!res.ok) throw new Error(body.message || 'No se pudo concluir el traslado.')
+                            }))
+                            .then(() => {
+                                fetch(`${API_BASE_URL}/unidades/mi-traslado-actual`, { headers })
+                                    .then((res) => res.json())
+                                    .then(({ data }) => setActiveTransfer(data ? toLowerCaseKeys(data) : null))
+                            })
+                            .catch((err) => { console.error('Error concluyendo traslado. ', err); Alert.alert('Error', err.message) })
+                            .finally(() => setConcludingTransfer(false))
+                    }
+                },
+            ]
+        )
+    }
+
+    // Único botón que puede regresar la unidad a Disponible desde el celular
+    // (ver PARAMEDIC_FORWARD_TRANSITIONS más arriba) — el backend vuelve a
+    // validar las dos condiciones (concluí traslado + hospital confirmó a
+    // todos), esto solo controla cuándo se OFRECE el botón.
+    const handleMarkAvailable = () => {
+        setMarkingAvailable(true)
+        fetch(`${API_BASE_URL}/unidades/marcar-disponible`, { method: 'PATCH', headers })
+            .then((res) => res.json().then((body) => {
+                if (!res.ok) throw new Error(body.message || 'No se pudo marcar la unidad como disponible.')
+            }))
+            .then(() => { setActiveTransfer(null); refreshShift() })
+            .catch((err) => { console.error('Error marcando unidad disponible. ', err); Alert.alert('Error', err.message) })
+            .finally(() => setMarkingAvailable(false))
     }
 
     // Antes esto esperaba a que myLocation estuviera listo para dibujar
@@ -373,6 +497,68 @@ const MapaScreen = () => {
         () => buildMapHtml({ initialCenter, emergencyLocation, hospitalLocation: hospitalDestination }),
         [initialCenter, emergencyLocation?.latitude, emergencyLocation?.longitude, hospitalDestination]
     )
+
+    // Contenido del ciclo "llegada al hospital" para cuando la unidad está
+    // Trasladando (4) — se usa tanto dentro del mapa normal (mientras
+    // acceptedEmergency sigue viva) como en la pantalla de remate de abajo
+    // (cuando ya se cerró pero el ciclo todavía no termina). Ver activeTransfer
+    // arriba: viene de un endpoint dedicado que no depende de acceptedEmergency.
+    const renderTransferStatus = () => {
+        if (!activeTransfer) {
+            return <ActivityIndicator color="#1565C0" style={{ marginVertical: 8 }} />
+        }
+        if (!activeTransfer.paramedicConcludedAt) {
+            if (withinArrivalRange) {
+                return (
+                    <TouchableOpacity style={styles.advanceButton} onPress={handleConcludeTransfer} disabled={concludingTransfer}>
+                        {concludingTransfer
+                            ? <ActivityIndicator color="#fff" />
+                            : <Text style={styles.advanceButtonText}>Concluir traslado (avisar al hospital)</Text>}
+                    </TouchableOpacity>
+                )
+            }
+            return (
+                <Text style={styles.hint}>
+                    Trasladando al paciente.{distanceToHospitalMeters != null ? ` Te faltan ${Math.round(distanceToHospitalMeters)} m para poder concluir el traslado.` : ` En cuanto estés a menos de ${ARRIVAL_THRESHOLD_METERS} m del hospital, podrás concluir el traslado.`}
+                </Text>
+            )
+        }
+        if (activeTransfer.allPatientsDelivered) {
+            return (
+                <TouchableOpacity style={[styles.advanceButton, styles.availableButton]} onPress={handleMarkAvailable} disabled={markingAvailable}>
+                    {markingAvailable
+                        ? <ActivityIndicator color="#fff" />
+                        : <Text style={styles.advanceButtonText}>Marcar unidad como Disponible</Text>}
+                </TouchableOpacity>
+            )
+        }
+        return (
+            <Text style={styles.hint}>
+                Traslado concluido — esperando que tu hospital confirme la llegada física
+                {activeTransfer.patientsTotal > 1 ? ` (${activeTransfer.patientsDelivered}/${activeTransfer.patientsTotal} pacientes)` : ''}. En cuanto confirme, podrás marcar tu unidad como Disponible.
+            </Text>
+        )
+    }
+
+    // Cuando acceptedEmergency ya se limpió (la emergencia se cerró del lado
+    // del backend) PERO la unidad sigue Trasladando esperando el ciclo
+    // concluir-traslado/marcar-disponible, no tiene caso mostrar el mapa
+    // completo (ya no hay em.latitude/longitude ni ruta que trazar) — pero
+    // TAMPOCO se puede caer al placeholder de "no tienes ninguna emergencia",
+    // porque el paramédico todavía tiene algo pendiente que hacer aquí. Ver
+    // closeEmergencyRaw (services/emergencias) para por qué la unidad se
+    // queda en 4 en vez de liberarse sola.
+    if (!em && ambulanceStatusId === 4) {
+        return (
+            <View style={styles.centered}>
+                <Text style={styles.emergencyType}>Traslado en curso</Text>
+                {activeTransfer?.hospitalName && <Text style={styles.hint}>Hospital: {activeTransfer.hospitalName}</Text>}
+                <View style={{ width: '100%', marginTop: 12 }}>
+                    {renderTransferStatus()}
+                </View>
+            </View>
+        )
+    }
 
     if (!em) {
         return (
@@ -455,6 +641,25 @@ const MapaScreen = () => {
                 <Text style={styles.sectionTitle}>Estado de la unidad</Text>
                 {ambulanceStatusId == null ? (
                     <ActivityIndicator color="#1565C0" style={{ marginBottom: 12 }} />
+                ) : ambulanceStatusId === 2 ? (
+                    // En camino -> En escena: exige estar a ≤ARRIVAL_THRESHOLD_METERS de la
+                    // escena de la emergencia — no se puede marcar de
+                    // antemano ni por accidente antes de llegar de verdad.
+                    withinSceneArrivalRange ? (
+                        <TouchableOpacity
+                            style={styles.advanceButton}
+                            onPress={handleAdvanceStatus}
+                            disabled={updatingStatus}
+                        >
+                            {updatingStatus
+                                ? <ActivityIndicator color="#fff" />
+                                : <Text style={styles.advanceButtonText}>{FORWARD_TRANSITIONS[2].label}</Text>}
+                        </TouchableOpacity>
+                    ) : (
+                        <Text style={styles.hint}>
+                            Todavía no puedes marcar "En escena" — estás lejos de la ubicación reportada.{distanceToEmergencyMeters != null ? ` Te faltan ${Math.round(distanceToEmergencyMeters)} m.` : ' Esperando tu ubicación...'}
+                        </Text>
+                    )
                 ) : FORWARD_TRANSITIONS[ambulanceStatusId] ? (
                     <TouchableOpacity
                         style={styles.advanceButton}
@@ -466,26 +671,22 @@ const MapaScreen = () => {
                             : <Text style={styles.advanceButtonText}>{FORWARD_TRANSITIONS[ambulanceStatusId].label}</Text>}
                     </TouchableOpacity>
                 ) : ambulanceStatusId === 4 ? (
-                    // Trasladando — último paso que controla el paramédico.
-                    // De aquí en adelante el cierre (y el regreso de la
-                    // unidad a Disponible) lo hace el CRUM/hospital, no un
-                    // botón en este celular.
-                    <Text style={styles.hint}>
-                        Trasladando al paciente. Cuando tu CRUM/hospital cierre la emergencia, la unidad vuelve a Disponible automáticamente.
-                    </Text>
+                    // Trasladando — a partir de aquí el flujo "llegada al
+                    // hospital" (concluir traslado -> hospital confirma ->
+                    // marcar disponible) toma el control, ver renderTransferStatus.
+                    renderTransferStatus()
                 ) : (
                     // Estado inesperado para tener una emergencia en curso
                     // (ej. Disponible/Fuera de servicio) — no debería pasar en
                     // flujo normal, pero no hay ningún botón que ofrecer aquí.
                     <Text style={styles.hint}>Consulta con tu CRUM — el estado de la unidad no coincide con esta emergencia.</Text>
                 )}
-                {/* Deliberadamente NO hay botón de "terminar seguimiento" — solo
-                dejaba de mostrarse en el celular, sin cerrar nada de verdad en
-                el backend (la emergencia seguía abierta, la unidad seguía
-                Trasladando, y nadie en sicem-web/desktop se enteraba). La
-                pantalla se limpia sola cuando el CRUM/hospital cierra la
-                emergencia de verdad — ver eventEmergencyClosed en
-                SocketContext.jsx. */}
+                {/* No hay botón de "terminar seguimiento" fuera del flujo de
+                arriba — cualquier cierre real pasa por concluir-traslado +
+                confirmación del hospital (Trasladando) o por que el
+                CRUM/hospital cierre la emergencia (los demás estados). La
+                pantalla se limpia sola cuando eso pasa — ver
+                eventEmergencyClosed en SocketContext.jsx. */}
             </ScrollView>
         </View>
     )
@@ -520,6 +721,7 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 12, fontWeight: '700', color: '#555', textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
     advanceButton: { backgroundColor: '#1565C0', borderRadius: 8, padding: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
     advanceButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    availableButton: { backgroundColor: '#2E7D32' },
 })
 
 export default MapaScreen

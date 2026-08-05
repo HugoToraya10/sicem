@@ -30,6 +30,12 @@ const SocketProvider = ({ children }) => {
     // la pantalla).
     const [pendingAlert, setPendingAlert] = useState(null)
     const [acceptedEmergency, setAcceptedEmergency] = useState(null)
+    // Se incrementa cada vez que llega eventPatientRegistered para MI
+    // emergencia — paciente.js lo agrega como dependencia de su fetch para
+    // refrescar la lista al instante en vez de esperar el poll/focus manual
+    // (antes había que salir y volver a entrar a la pestaña para ver a un
+    // paciente recién registrado desde sicem-web/NewEmergency.jsx).
+    const [patientListVersion, setPatientListVersion] = useState(0)
     // Para el foquito de "conectado/sin conexión" en la pestaña Alerta — si
     // esto está en false, el paramédico NO puede confiar en que "no me ha
     // sonado nada" signifique "no hay nada".
@@ -40,6 +46,11 @@ const SocketProvider = ({ children }) => {
     // valor más reciente sin necesidad de reconectar el socket por eso.
     const pendingAlertRef = useRef(null)
     useEffect(() => { pendingAlertRef.current = pendingAlert }, [pendingAlert])
+    // Mismo motivo que pendingAlertRef — el efecto del socket solo depende de
+    // `token`, así que necesita esto para saber, en cualquier momento, cuál
+    // es la emergencia aceptada VIGENTE sin reconectar el socket por eso.
+    const acceptedEmergencyRef = useRef(null)
+    useEffect(() => { acceptedEmergencyRef.current = acceptedEmergency }, [acceptedEmergency])
 
     useEffect(() => {
         if (!token) {
@@ -75,18 +86,36 @@ const SocketProvider = ({ children }) => {
                         return
                     }
                     setAcceptedEmergency((current) => {
-                        // Si ya sabíamos de esta emergencia (por el socket en vivo,
-                        // ya está pendiente de aceptar, o ya se había recuperado
-                        // antes), no se toca nada — esto es solo para cuando de
-                        // verdad se perdió el aviso por completo.
-                        if (current || pendingAlertRef.current) return current
-                        // Se trata como YA ACEPTADA (no como pendiente de
-                        // Aceptar/Rechazar): el despachador ya asignó la unidad y
-                        // la marcó "En camino" independientemente de si el aviso
-                        // llegó o no — no tiene sentido hacer que el paramédico
-                        // "acepte" algo que operativamente ya está en curso.
+                        // Si ya coincide con lo que dice el backend, no hay nada que
+                        // reconciliar.
+                        if (current && String(current.emergencyId) === String(data.emergency_id)) return current
+                        // Si hay un aviso pendiente de aceptar (pendingAlert) para
+                        // ESTA MISMA emergencia, se deja que el flujo normal de
+                        // aceptar/rechazar lo maneje — no hay que adelantarse.
+                        if (pendingAlertRef.current && String(pendingAlertRef.current.emergencyId) === String(data.emergency_id)) return current
+                        // BUG REAL corregido: antes, si `current` ya tenía CUALQUIER
+                        // valor (aunque fuera de una emergencia VIEJA que el backend
+                        // ya había dejado de considerar "la mía" — p. ej. porque el
+                        // despachador asignó la unidad a una emergencia nueva y el
+                        // aviso en vivo no llegó a tiempo), esta función lo dejaba
+                        // intacto y el celular se quedaba mostrando la emergencia
+                        // vieja para siempre (con sus pacientes viejos, no los de la
+                        // nueva). El backend (mi-emergencia-actual, que ya elige la
+                        // asignación más reciente de la unidad) es quien manda: se
+                        // trata como YA ACEPTADA (no como pendiente de
+                        // Aceptar/Rechazar) — el despachador ya asignó la unidad y la
+                        // marcó "En camino" independientemente de si el aviso llegó o
+                        // no, no tiene sentido hacer que el paramédico "acepte" algo
+                        // que operativamente ya está en curso.
                         return { emergencyId: data.emergency_id, ambulanceId: data.ambulance_id, notes: data.notes, emergency: toLowerCaseKeys(data) }
                     })
+                    // Un pendingAlert que ya no coincide con lo que el backend
+                    // considera vigente (p. ej. la unidad se reasignó antes de que
+                    // se llegara a acuse de recibido) ya no debe seguir pidiendo
+                    // que se acepte — quedaría un banner fantasma.
+                    setPendingAlert((currentPending) =>
+                        (currentPending && String(currentPending.emergencyId) !== String(data.emergency_id)) ? null : currentPending
+                    )
                 })
                 .catch((error) => console.error('Error revisando si hay una emergencia en curso perdida. ', error))
         })
@@ -117,6 +146,33 @@ const SocketProvider = ({ children }) => {
         socket.on('eventEmergencyClosed', ({ emergencyId }) => {
             setAcceptedEmergency((current) => (current && String(current.emergencyId) === String(emergencyId)) ? null : current)
             setPendingAlert((current) => (current && String(current.emergencyId) === String(emergencyId)) ? null : current)
+        })
+
+        // El hospital destino rechazó recibir a un paciente que llevas —
+        // antes esto solo le llegaba al despachador/hospital, nunca a quien
+        // sigue con el paciente físicamente encima. Se manda dirigido (ver
+        // confirmPatientReception en emergencias), así que si llega aquí es
+        // porque de verdad te toca a ti saberlo.
+        socket.on('eventPatientReceptionUpdated', ({ accepted, rejectionReason }) => {
+            if (accepted) return
+            Alert.alert(
+                'Recepción rechazada',
+                rejectionReason
+                    ? `Tu hospital destino rechazó recibir al paciente: ${rejectionReason}`
+                    : 'Tu hospital destino rechazó recibir al paciente. Consulta con tu CRUM/hospital cómo proceder.'
+            )
+        })
+
+        // Paciente registrado (desde este mismo celular, o desde
+        // NewEmergency.jsx en sicem-web para la misma emergencia) — antes esto
+        // solo le llegaba a 'hospital', ver registerEmergencyPatient en
+        // services/emergencias/controllers/emergency.js. Solo cuenta si es
+        // para la emergencia que tengo aceptada ahora mismo.
+        socket.on('eventPatientRegistered', ({ emergencyId }) => {
+            const current = acceptedEmergencyRef.current
+            if (current && String(current.emergencyId) === String(emergencyId)) {
+                setPatientListVersion((v) => v + 1)
+            }
         })
 
         return () => { socket.disconnect(); socketRef.current = null; setConnected(false) }
@@ -163,7 +219,7 @@ const SocketProvider = ({ children }) => {
     }
 
     return (
-        <SocketContext.Provider value={{ pendingAlert, acceptedEmergency, acknowledgeAlert, connected }}>
+        <SocketContext.Provider value={{ pendingAlert, acceptedEmergency, acknowledgeAlert, connected, patientListVersion }}>
             {children}
         </SocketContext.Provider>
     )

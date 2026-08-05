@@ -28,11 +28,24 @@ const IncomingPatientCard = ({ patient, onViewDetail, onAccept, onReject }) => {
     const isOverdue = patient.max_wait_minutes !== null && patient.max_wait_minutes !== undefined
         && elapsedMinutes !== null && elapsedMinutes > Number(patient.max_wait_minutes)
 
+    // El paramédico ya tocó "Concluir traslado" (tipo Uber "terminar viaje")
+    // desde sicem-mobile — la ambulancia dice haber llegado, aunque el
+    // paciente TODAVÍA esté "Pendiente" de aceptar (que es lo más probable en
+    // la práctica: la ambulancia puede llegar antes de que el hospital
+    // termine de decidir). Antes esto solo se resaltaba en Seguimiento (una
+    // vez "Aceptada"), así que en este escenario tan común el aviso nunca se
+    // veía en ningún lado.
+    const isUrgent = Boolean(patient.paramedic_concluded_at) && !patient.delivered_at
+
     return (
-        <div className="patient-card" style={{ borderLeftColor: patient.triage_hex_color || '#1565C0' }}>
+        <div
+            className={`patient-card${isUrgent ? ' pc-urgent' : ''}`}
+            style={{ borderLeftColor: isUrgent ? '#C0272D' : (patient.triage_hex_color || '#1565C0') }}
+        >
             <div className="pc-info">
                 <div className="pc-name-row">
                     <div className="pc-name">{fullName}</div>
+                    {isUrgent && <span className="pc-urgent-badge">🚑 Unidad ya llegó</span>}
                     {patient.triage_level && (
                         <span className="pc-triage-badge" style={{ background: patient.triage_hex_color || '#888' }}>
                             {patient.triage_level} · {patient.triage_color_name}
