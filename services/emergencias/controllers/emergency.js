@@ -374,17 +374,28 @@ const unassignAmbulance = (req, res) => {
     if (![1, 2, 4].includes(roleId)) {
         return res.status(403).json({message: "Acceso denegado."});
     }
-    let {assignmentId, ambulanceIds} = req.body;
+    let {assignmentId, ambulanceIds, emergencyId} = req.body;
     // La campana de fallas reportadas (sicem-web/desktop) solo conoce
     // ambulanceId + emergencyId (lo que trae el propio reporte de falla),
     // nunca el assignmentId interno — se resuelve aquí antes de continuar.
-    const { ambulanceId, emergencyId } = req.body;
+    const { ambulanceId } = req.body;
+    const { reason } = req.body; // p. ej. 'ambulance_failure' — para que sicem-mobile pueda avisarle al paramédico con un mensaje específico
     if (!assignmentId && ambulanceId && emergencyId) {
         ambulanceIds = [ambulanceId];
     }
 
     const resolveAssignmentIdIfNeeded = (callback) => {
-        if (assignmentId) return callback(null);
+        if (assignmentId) {
+            // Vino solo el assignmentId (flujo viejo, EmergencyDetail.jsx) —
+            // igual hace falta emergencyId para avisar por socket y revisar
+            // si la emergencia se quedó sin ninguna unidad.
+            if (emergencyId) return callback(null);
+            return emergencyModel.getEmergencyIdByAssignment(assignmentId, (e, r) => {
+                if (e || r.length === 0) return callback(new Error('No se encontró esa asignación.'));
+                emergencyId = r[0].emergency_id;
+                callback(null);
+            });
+        }
         if (!ambulanceId || !emergencyId) {
             return callback(new Error('Falta assignmentId, o ambulanceId + emergencyId.'));
         }
@@ -405,7 +416,27 @@ const unassignAmbulance = (req, res) => {
                 });
                 // Faltaba 'hospital' — MyAmbulances.jsx (sicem-desktop) nunca se
                 // enteraba de que su propia unidad volvió a estar disponible.
-                io.to('admin').to('dispatcher').to('hospital').emit('eventAmbulanceUnassigned', { assignmentId, ambulanceIds });
+                // Faltaba 'paramedic' también — sicem-mobile nunca se enteraba de
+                // que le quitaron su unidad de la emergencia hasta cerrar e
+                // iniciar sesión de nuevo (mi-emergencia-actual solo se reconcilia
+                // al reconectar el socket).
+                io.to('admin').to('dispatcher').to('hospital').to('paramedic')
+                    .emit('eventAmbulanceUnassigned', { assignmentId, ambulanceIds, emergencyId, reason: reason || null });
+
+                // Si esa era la ÚLTIMA unidad activa de la emergencia, regresa a
+                // "Registrada" para que el despachador la vuelva a ver como
+                // pendiente de asignar — antes se quedaba en "Asignada" para
+                // siempre aunque ya no tuviera ninguna ambulancia en camino.
+                emergencyModel.countActiveAssignments(emergencyId, (e3, r3) => {
+                    if (e3) { console.error('Error contando asignaciones activas:', e3); return; }
+                    if (r3[0].total > 0) return;
+                    emergencyModel.updateEmergencyStatus(emergencyId, 1, (e4, r4) => {
+                        if (e4) { console.error('Error regresando emergencia a Registrada:', e4); return; }
+                        io.to('admin').to('dispatcher').to('hospital').to('paramedic')
+                            .emit('eventEmergencyStatusUpdated', { emergencyId, emergencyStatusId: 1, statusName: 'Registrada' });
+                    });
+                });
+
                 res.status(200).json({message: "Ambulancia desasignada."});
             }
         });

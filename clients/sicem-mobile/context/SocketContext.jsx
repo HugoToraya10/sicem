@@ -148,6 +148,26 @@ const SocketProvider = ({ children }) => {
             setPendingAlert((current) => (current && String(current.emergencyId) === String(emergencyId)) ? null : current)
         })
 
+        // El despachador (o el hospital, si la unidad tuvo una falla) desasignó
+        // TU unidad de esta emergencia — antes esto solo le llegaba a
+        // sicem-web/desktop, el celular se enteraba hasta la próxima
+        // reconexión del socket (cerrar e iniciar sesión de nuevo). Se trata
+        // igual que eventEmergencyClosed (única forma legítima de soltar una
+        // emergencia en curso — ver el comentario de arriba), más un aviso
+        // explícito de por qué.
+        socket.on('eventAmbulanceUnassigned', ({ emergencyId, reason }) => {
+            const current = acceptedEmergencyRef.current
+            if (!current || String(current.emergencyId) !== String(emergencyId)) return
+            setAcceptedEmergency(null)
+            setPendingAlert((currentPending) => (currentPending && String(currentPending.emergencyId) === String(emergencyId)) ? null : currentPending)
+            Alert.alert(
+                'Unidad desasignada',
+                reason === 'ambulance_failure'
+                    ? 'Tu unidad fue desasignada de esta emergencia debido a la falla reportada.'
+                    : 'Tu unidad fue desasignada de esta emergencia.'
+            )
+        })
+
         // El hospital destino rechazó recibir a un paciente que llevas —
         // antes esto solo le llegaba al despachador/hospital, nunca a quien
         // sigue con el paciente físicamente encima. Se manda dirigido (ver

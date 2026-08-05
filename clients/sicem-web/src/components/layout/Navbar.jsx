@@ -88,7 +88,7 @@ const Navbar = ({ userName, roleLabel, links }) => {
         fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ ambulanceId: report.ambulance_id, emergencyId: report.emergency_id }),
+            body: JSON.stringify({ ambulanceId: report.ambulance_id, emergencyId: report.emergency_id, reason: 'ambulance_failure' }),
         })
             .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
             .then(({ ok, body }) => {

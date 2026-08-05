@@ -354,6 +354,24 @@ const unassignAmbulance = (assignmentId, callback) => {
     db.query(sql, [assignmentId], callback);
 }
 
+// emergency_id de un assignment puntual — para cuando quien llama a
+// unassignAmbulance solo mandó assignmentId (el flujo viejo, desde
+// EmergencyDetail.jsx) y hace falta saber a qué emergencia avisarle por
+// socket / revisar si se quedó sin ninguna unidad.
+const getEmergencyIdByAssignment = (assignmentId, callback) => {
+    const sql = `SELECT emergency_id FROM assignments WHERE assignment_id = ?`;
+    db.query(sql, [assignmentId], callback);
+}
+
+// Cuántas asignaciones ABIERTAS (unassigned_at IS NULL) le quedan a una
+// emergencia — si llega a 0 después de desasignar, la emergencia se quedó
+// sin ninguna unidad y debe regresar a "Registrada" para que el
+// despachador la vuelva a ver como pendiente de asignar.
+const countActiveAssignments = (emergencyId, callback) => {
+    const sql = `SELECT COUNT(*) AS total FROM assignments WHERE emergency_id = ? AND unassigned_at IS NULL`;
+    db.query(sql, [emergencyId], callback);
+}
+
 // Resuelve el assignment_id abierto de una ambulancia en una emergencia —
 // para cuando quien llama (p. ej. el hospital, desde la campana de fallas
 // reportadas) solo conoce ambulanceId + emergencyId, no el assignmentId
@@ -1188,7 +1206,7 @@ module.exports = {
     toggleEmergencyType, toggleEmergencyStatus, toggleRequestStatus, toggleTriageLevel,
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
     // Confirmación de recepción / reasignación de destino / entrega física
-    getInstitutionIdByUserProfile, getAmbulanceInstitutionIds, getOpenAssignmentId, getRequestStatusIdByName, getEmergencyPatientById,
+    getInstitutionIdByUserProfile, getAmbulanceInstitutionIds, getOpenAssignmentId, getEmergencyIdByAssignment, countActiveAssignments, getRequestStatusIdByName, getEmergencyPatientById,
     updatePatientReceptionStatus, reassignPatientDestination, assignAmbulanceToPatient,
     confirmPatientDelivery, dischargePatient, getUndeliveredPendingCount, closeEmergencyRaw,
     decrementInstitutionBeds, incrementInstitutionBeds, decrementSpecialityBeds, incrementSpecialityBeds, getAcceptedUndeliveredPatients,

@@ -319,6 +319,24 @@ const EmergencyDetail = () => {
     useEffect(() => {
         const emergencySocket = connectEmergencySocket(token)
 
+        // Una unidad de esta emergencia se desasignó — desde aquí mismo (ya se
+        // refresca directo, ver handleUnassignAmbulance), pero también puede
+        // pasar desde la campana de fallas reportadas (otra pestaña, u otra
+        // sesión) — sin esto, esta pantalla se quedaba mostrando la unidad ya
+        // desasignada hasta recargar.
+        emergencySocket.on('eventAmbulanceUnassigned', (data) => {
+            if (!data.emergencyId || String(data.emergencyId) !== String(emergencyId)) return
+            fetchAssignments()
+        })
+
+        // Si esta emergencia se quedó sin ninguna unidad activa, el backend la
+        // regresa sola a "Registrada" — refleja el cambio de estado sin que
+        // haga falta recargar la página.
+        emergencySocket.on('eventEmergencyStatusUpdated', (data) => {
+            if (!data.emergencyId || String(data.emergencyId) !== String(emergencyId)) return
+            fetchEmergencyData()
+        })
+
         emergencySocket.on('eventPatientReceptionUpdated', (data) => {
             if (String(data.emergencyId) !== String(emergencyId)) return
             setPatients((current) => current.map((p) =>
