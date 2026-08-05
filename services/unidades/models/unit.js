@@ -265,6 +265,27 @@ const getFailureReportContext = (ambulanceId, userProfileId, callback) => {
     db.query(sql, [ambulanceId, userProfileId], callback);
 }
 
+// Historial persistente de fallas reportadas — el aviso en vivo (socket) se
+// pierde si nadie tenía la pantalla abierta en ese momento, esto es lo que
+// permite verlas después. institutionId null/undefined = sin filtrar (uso:
+// despachador/admin, que ven de cualquier institución); con institutionId,
+// solo las de unidades de esa institución (uso: hospital).
+const getFailureReports = (institutionId, callback) => {
+    const params = [];
+    let sql = `SELECT afr.ambulance_failure_report_id, afr.ambulance_id, afr.emergency_id,
+                    afr.note, afr.reported_at, a.unit_number, a.institution_id,
+                    up.first_name, up.first_surname
+                FROM ambulance_failure_reports afr
+                JOIN ambulances a ON afr.ambulance_id = a.ambulance_id
+                JOIN user_profiles up ON afr.user_profile_id = up.user_profile_id`;
+    if (institutionId) {
+        sql += ` WHERE a.institution_id = ?`;
+        params.push(institutionId);
+    }
+    sql += ` ORDER BY afr.reported_at DESC`;
+    db.query(sql, params, callback);
+}
+
 
 //---- GETs ------------------------
 const getAllAmbulances = (callback) => {
@@ -471,7 +492,7 @@ module.exports = {
     registerLocations, registerAmbulance, createAmbulanceType, registerAmbulanceStatus,
     toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus, getExternalAvailableAmbulances,
     updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus, getOpenAssignmentByAmbulance,
-    reportAmbulanceFailure, getFailureReportContext,
+    reportAmbulanceFailure, getFailureReportContext, getFailureReports,
     advanceEmergencyStatusForAmbulance,
     getActiveTransferByAmbulance, markTransferConcluded, getTransferPatients, releaseAmbulanceAfterTransfer, getConcludeTransferContext,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,

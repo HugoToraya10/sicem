@@ -873,6 +873,34 @@ const reportAmbulanceFailure = (req, res) => {
     });
 }
 
+// Historial persistente de fallas reportadas — el aviso en vivo (socket,
+// eventAmbulanceFailureReported arriba) se pierde si nadie tenía la pantalla
+// abierta en ese momento; esto es lo que permite consultarlas después.
+// Roles 1/2 (admin/despachador) ven de cualquier institución; rol 4
+// (hospital) solo ve las de su propia institución.
+const getFailureReports = (req, res) => {
+    const roleId = parseInt(req.decoded.roleId);
+    if (![1, 2, 4].includes(roleId)) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    if (roleId === 4) {
+        unitModel.getUserInstitutionInfo(req.decoded.userProfileId, (e, r) => {
+            if (e || r.length === 0) {
+                return res.status(500).json({message: "Error del servidor."});
+            }
+            unitModel.getFailureReports(r[0].institution_id, (eReports, reports) => {
+                if (eReports) return res.status(500).json({message: "Error del servidor."});
+                res.json({message: "Reportes de falla", reports});
+            });
+        });
+        return;
+    }
+    unitModel.getFailureReports(null, (e, reports) => {
+        if (e) return res.status(500).json({message: "Error del servidor."});
+        res.json({message: "Reportes de falla", reports});
+    });
+}
+
 // El paramédico declara "ya llegué al hospital, estoy descargando" — tipo
 // Uber "concluir viaje". Solo tiene sentido si la unidad está Trasladando (4)
 // de verdad: en cualquier otro estado no hay traslado que concluir. Esto NO
@@ -1050,5 +1078,5 @@ module.exports = {
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
     startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep, notifyForceLogout,
-    reportAmbulanceFailure, concludeTransfer, markAvailableAfterTransfer, getMyActiveTransfer
+    reportAmbulanceFailure, getFailureReports, concludeTransfer, markAvailableAfterTransfer, getMyActiveTransfer
 }

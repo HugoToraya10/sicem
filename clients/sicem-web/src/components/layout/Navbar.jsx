@@ -1,14 +1,30 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { API_BASE_URL } from '../../config/api'
+import { connectUnitsSocket } from '../../sockets/unitsSocket'
 import './Navbar.css'
+
+const LAST_SEEN_KEY_PREFIX = 'sicem_failure_reports_last_seen_'
 
 const Navbar = ({ userName, roleLabel, links }) => {
     const location = useLocation()
     const navigate = useNavigate()
-    const { logout } = useAuth()
+    const { logout, token, user } = useAuth()
     const [openDropdown, setOpenDropdown] = useState(null)
     const dropdownRef = useRef(null)
+
+    // Historial de fallas reportadas por paramédicos — el aviso en vivo
+    // (toast/notificación) se pierde si nadie tenía la pantalla abierta en
+    // ese momento; esta campana es lo que permite verlas después, sin
+    // depender de haber estado viendo la pantalla en el instante exacto.
+    const [failureReports, setFailureReports] = useState([])
+    const [bellOpen, setBellOpen] = useState(false)
+    const [lastSeen, setLastSeen] = useState(() => {
+        const stored = localStorage.getItem(LAST_SEEN_KEY_PREFIX + (user?.profileId || ''))
+        return stored ? new Date(stored) : new Date(0)
+    })
+    const bellRef = useRef(null)
 
     const handleLogout = () => {
         logout()
@@ -21,10 +37,46 @@ const Navbar = ({ userName, roleLabel, links }) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setOpenDropdown(null)
             }
+            if (bellRef.current && !bellRef.current.contains(event.target)) {
+                setBellOpen(false)
+            }
         }
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
+
+    useEffect(() => {
+        if (!token) return
+        fetch(`${API_BASE_URL}/unidades/reportes-falla`, { headers: { Authorization: `Bearer ${token}` } })
+            .then((res) => res.json())
+            .then((data) => setFailureReports(data.reports || []))
+            .catch(() => {})
+
+        const unitsSocket = connectUnitsSocket(token)
+        unitsSocket.on('eventAmbulanceFailureReported', (data) => {
+            setFailureReports((current) => [{
+                ambulance_failure_report_id: `live-${Date.now()}`,
+                unit_number: data.unitNumber,
+                first_name: (data.paramedicName || '').split(' ')[0] || '',
+                first_surname: (data.paramedicName || '').split(' ').slice(1).join(' '),
+                note: data.note,
+                reported_at: data.reportedAt || new Date().toISOString(),
+            }, ...current])
+        })
+        return () => unitsSocket.disconnect()
+    }, [token])
+
+    const unreadCount = failureReports.filter((r) => new Date(r.reported_at) > lastSeen).length
+
+    const toggleBell = () => {
+        const opening = !bellOpen
+        setBellOpen(opening)
+        if (opening) {
+            const now = new Date()
+            setLastSeen(now)
+            localStorage.setItem(LAST_SEEN_KEY_PREFIX + (user?.profileId || ''), now.toISOString())
+        }
+    }
 
     // Un link "normal" tiene `to`. Un dropdown tiene `children` en su lugar.
     const isDropdownItem = (link) => Boolean(link.children)
@@ -79,6 +131,30 @@ const Navbar = ({ userName, roleLabel, links }) => {
                 })}
             </div>
             <div className="navbar-right">
+                <div className="navbar-bell-wrap" ref={bellRef}>
+                    <button className="navbar-bell" onClick={toggleBell} title="Fallas reportadas">
+                        🔔
+                        {unreadCount > 0 && <span className="navbar-bell-badge">{unreadCount}</span>}
+                    </button>
+                    {bellOpen && (
+                        <div className="navbar-bell-panel">
+                            <div className="navbar-bell-title">Fallas reportadas</div>
+                            {failureReports.length === 0 && (
+                                <div className="navbar-bell-empty">Sin reportes por ahora.</div>
+                            )}
+                            {failureReports.map((r) => (
+                                <div key={r.ambulance_failure_report_id} className="navbar-bell-item">
+                                    <div className="navbar-bell-item-header">
+                                        <strong>{r.unit_number || 'Unidad'}</strong>
+                                        <span>{new Date(r.reported_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                    <div className="navbar-bell-item-who">{r.first_name} {r.first_surname}</div>
+                                    <div className="navbar-bell-item-note">{r.note}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 <Link to="/perfil" className={`navbar-user ${location.pathname === '/perfil' ? 'active' : ''}`}>
                     <span className="navbar-user-dot" />
                     {userName} — {roleLabel}

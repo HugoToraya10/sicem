@@ -156,3 +156,105 @@
     background: var(--role-accent);
     color: white;
 }
+
+/* ── Campana de fallas reportadas ────────────────────────── */
+.navbar-bell-wrap {
+    position: relative;
+}
+
+.navbar-bell {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    position: relative;
+    padding: 4px 6px;
+    border-radius: 5px;
+    transition: background 0.15s ease;
+}
+
+.navbar-bell:hover {
+    background: #1a1a2e;
+}
+
+.navbar-bell-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: var(--role-accent, #C0272D);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.navbar-bell-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: #1a1a2e;
+    border: 1px solid #2a2a45;
+    border-radius: 6px;
+    width: 300px;
+    max-height: 360px;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    z-index: 200;
+}
+
+.navbar-bell-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #d0d0e0;
+    padding: 10px 12px;
+    border-bottom: 1px solid #2a2a45;
+}
+
+.navbar-bell-empty {
+    padding: 16px 12px;
+    font-size: 12px;
+    color: #8888a0;
+    text-align: center;
+}
+
+.navbar-bell-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid #23233a;
+}
+
+.navbar-bell-item:last-child {
+    border-bottom: none;
+}
+
+.navbar-bell-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    color: white;
+    margin-bottom: 3px;
+}
+
+.navbar-bell-item-header span {
+    font-size: 10.5px;
+    color: #8888a0;
+    font-weight: 400;
+}
+
+.navbar-bell-item-who {
+    font-size: 11px;
+    color: #8888a0;
+    margin-bottom: 3px;
+}
+
+.navbar-bell-item-note {
+    font-size: 12px;
+    color: #d0d0e0;
+    line-height: 1.4;
+}

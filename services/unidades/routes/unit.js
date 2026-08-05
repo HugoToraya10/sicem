@@ -40,6 +40,7 @@ router.get('/estados-ambulancia', unitController.getAllAmbulanceStatuses); // TO
 router.get('/ubicacion/:ambulanceId', middleware.verifyToken, unitController.getLocationsByAmbulance); // ✅ Dashboard.jsx
 router.get('/mi-turno-activo', middleware.verifyToken, unitController.getMyActiveShift); // ✅ sicem-mobile
 router.get('/mi-traslado-actual', middleware.verifyToken, unitController.getMyActiveTransfer); // ✅ sicem-mobile
+router.get('/reportes-falla', middleware.verifyToken, unitController.getFailureReports); // ✅ sicem-web / sicem-desktop (panel de fallas)
 
 // gets de administración (incluyen activos e inactivos)
 router.get('/ambulancias-todas', middleware.verifyToken, unitController.getAllAmbulancesAdmin);
