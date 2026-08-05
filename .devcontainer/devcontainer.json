@@ -1,0 +1,6 @@
+{
+  "name": "SICEM",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20",
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "postStartCommand": "sudo service mysql start"
+}
