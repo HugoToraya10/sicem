@@ -1,7 +1,7 @@
 {
   "expo": {
     "scheme": "sicemmobile",
-    "name": "sicem-mobile",
+    "name": "SICEM",
     "slug": "sicem-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.sicem.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#C0272D",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

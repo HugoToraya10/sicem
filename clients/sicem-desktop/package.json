@@ -1,7 +1,9 @@
 {
   "name": "sicem-desktop",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "SICEM — aplicación de escritorio para hospitales",
+  "author": "SICEM",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -28,12 +30,16 @@
   "build": {
     "appId": "com.sicem.desktop",
     "productName": "SICEM Desktop",
+    "icon": "build/icon.ico",
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
     ],
     "directories": {
       "output": "release"
+    },
+    "win": {
+      "icon": "build/icon.ico"
     }
   }
 }

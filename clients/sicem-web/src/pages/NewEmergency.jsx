@@ -1233,7 +1233,7 @@ const proceedWithConfirmation = (forms) => {
                             <div key={type.ambulance_type_id} className="unit-type-group">
                                 <div className="unit-type-header">
                                     {type.image_url && (
-                                        <img className="unit-type-image" src={`/src/assets/units/${type.image_url}`} alt={type.ambulance_type} />
+                                        <img className="unit-type-image" src={`/assets/units/${type.image_url}`} alt={type.ambulance_type} />
                                     )}
                                     <span className="unit-type-name">{type.ambulance_type}</span>
                                     <span className="unit-type-count">{unitsOfThisType.length} disp.</span>
@@ -1290,7 +1290,7 @@ const proceedWithConfirmation = (forms) => {
                             <div key={`ext-${type.ambulance_type_id}`} className="unit-type-group unit-type-group-external">
                                 <div className="unit-type-header">
                                     {type.image_url && (
-                                        <img className="unit-type-image" src={`/src/assets/units/${type.image_url}`} alt={type.ambulance_type} />
+                                        <img className="unit-type-image" src={`/assets/units/${type.image_url}`} alt={type.ambulance_type} />
                                     )}
                                     <span className="unit-type-name">{type.ambulance_type}</span>
                                     <span className="unit-type-count">{unitsOfThisType.length} disp.</span>
