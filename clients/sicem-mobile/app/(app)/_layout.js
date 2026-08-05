@@ -56,8 +56,17 @@ const LocationReporter = () => {
             if (status !== 'granted' || cancelled) return
 
             try {
+                // Mismo intervalo/precisión que usa mapa.js para su propio
+                // punto azul (BestForNavigation, 3s/10m) — antes esto
+                // reportaba cada 15s/30m, así que el dashboard/NewEmergency en
+                // sicem-web (que solo pueden ser tan rápidos como lo que el
+                // celular les manda) se sentían más lentos que el mapa del
+                // propio celular. OJO: esto corre TODO el turno, no solo
+                // mientras se ve la pantalla del mapa — reportar tan seguido
+                // consume más batería/datos que antes; si eso se vuelve un
+                // problema real, hay que subir estos números de nuevo.
                 subscriptionRef.current = await Location.watchPositionAsync(
-                    { accuracy: Location.Accuracy.Balanced, timeInterval: 15000, distanceInterval: 30 },
+                    { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 3000, distanceInterval: 10 },
                     (position) => {
                         fetch(`${API_BASE_URL}/unidades/registrar-ubicacion`, {
                             method: 'POST',

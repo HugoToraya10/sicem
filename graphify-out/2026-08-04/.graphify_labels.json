@@ -30,7 +30,7 @@
   "28": "Patients.jsx",
   "29": "hospitales/index.js",
   "30": "pacientes/index.js",
-  "31": "toLowerCaseKeys",
+  "31": "getNavLinks",
   "32": "unidades/index.js",
   "33": "usuarios/index.js",
   "34": "Dashboard.jsx",
@@ -73,5 +73,6 @@
   "71": "hola.txt (trivial placeholder file)",
   "72": "useAuth",
   "73": "withNdkVersion.js",
+  "74": "activateAcceptedExternalUnit",
   "76": "README.md"
 }

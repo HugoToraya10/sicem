@@ -72,5 +72,6 @@ router.get('/analiticas/pacientes-por-tipo/:institutionId', middleware.verifyTok
 router.get('/analiticas/pacientes-por-mes/:institutionId', middleware.verifyToken, emergencyController.getPatientsByMonthForInstitution);
 router.get('/analiticas/tiempo-traslado/:institutionId', middleware.verifyToken, emergencyController.getAvgTransferTimeForInstitution);
 router.get('/analiticas/mis-estadisticas', middleware.verifyToken, emergencyController.getMyStatsThisMonth); // ✅ sicem-mobile
+router.get('/mi-emergencia-actual', middleware.verifyToken, emergencyController.getMyCurrentEmergencyStatus); // ✅ sicem-mobile (recuperación si se perdió el aviso en vivo)
 
 module.exports = router

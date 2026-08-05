@@ -4,12 +4,7 @@ import { useRouter } from 'expo-router'
 import { useAuth } from '../../context/AuthContext'
 import { useSocketAlerts } from '../../context/SocketContext'
 import { API_BASE_URL } from '../../constants/api'
-
-const toLowerCaseKeys = (obj) => {
-    const out = {}
-    for (const key in obj) out[key.toLowerCase()] = obj[key]
-    return out
-}
+import { toLowerCaseKeys } from '../../utils/formatData'
 
 const PacienteScreen = () => {
     const { token } = useAuth()

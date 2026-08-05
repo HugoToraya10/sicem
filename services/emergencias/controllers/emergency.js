@@ -115,6 +115,17 @@ const registerAssignment = (req, res) => {
                     if (e2) console.error('Error actualizando estado ambulancia:', e2);
                 });
                 const { emergencyId, ambulanceIds, userProfileId, notes } = req.body;
+                // La emergencia pasa sola de "Registrada" a "Asignada" — antes
+                // se quedaba en "Registrada" para siempre a menos que el
+                // despachador la cambiara a mano por separado, aunque la
+                // ambulancia ya llevara horas en camino. Solo avanza (nunca
+                // retrocede una que ya iba más adelante por otra unidad).
+                emergencyModel.advanceEmergencyStatus(emergencyId, 2, (e2b, r2b) => {
+                    if (e2b) { console.error('Error avanzando estado de emergencia:', e2b); return; }
+                    if (r2b.affectedRows > 0) {
+                        io.to('admin').to('dispatcher').to('hospital').to('paramedic').emit('eventEmergencyStatusUpdated', { emergencyId, emergencyStatusId: 2 });
+                    }
+                });
                 // Faltaba 'hospital' aquí también — misma razón que en eventAmbulanceUnassigned.
                 // Ya NO se manda a 'paramedic' en general — ese room recibía esto sin
                 // importar qué unidad trae cada quien. Ahora se manda la alerta completa
@@ -252,7 +263,10 @@ const updateEmergencyStatus = (req, res) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
-                io.to('paramedic').to('hospital').to('admin').emit('eventEmergencyStatusUpdated', { emergencyId, emergencyStatusId });
+                // Faltaba 'dispatcher' — otro despachador con el Dashboard abierto en
+                // otra sesión nunca se enteraba de este cambio en vivo, solo al
+                // refrescar la página.
+                io.to('paramedic').to('hospital').to('admin').to('dispatcher').emit('eventEmergencyStatusUpdated', { emergencyId, emergencyStatusId });
                 res.status(200).json({message: "Estado de emergencia actualizado."});
             }
         });
@@ -395,6 +409,59 @@ const cancelInterInstitutionalRequest = (req, res) => {
 // que la ambulancia nunca salía de "Pendiente". También faltaba comprobar que
 // quien responde de verdad pertenece a la institución receptora — sin eso,
 // cualquier hospital podía aceptar la solicitud de otro.
+// Activa de verdad una unidad interinstitucional que ACABA de ser aceptada
+// por su propia institución — hasta este punto (nunca antes) es que la
+// unidad "responde": se crea su asignación real (antes NO existía ninguna
+// fila en `assignments` para unidades prestadas, así que ni el despachador
+// que la pidió la veía "asignada" igual que a las propias, ni — el bug real
+// que reportó Hugo — el paramédico que la maneja se enteraba NUNCA de esta
+// emergencia, ni antes ni después de que su hospital autorizara el
+// préstamo, porque nada le avisaba). Aquí se reutiliza exactamente el mismo
+// patrón que ya usa registerAssignment para las unidades propias: asignación
+// + estado "En camino" + aviso por socket y push SOLO al paramédico con
+// turno activo en esa unidad.
+const activateAcceptedExternalUnit = (io, ambulanceId, emergencyId, respondingUserProfileId, done) => {
+    emergencyModel.registerAssignment({ emergencyId, ambulanceIds: [ambulanceId], userProfileId: respondingUserProfileId, notes: null }, (eAssign) => {
+        if (eAssign) console.error('Error creando asignación para unidad interinstitucional aceptada:', eAssign);
+        emergencyModel.updateAmbulanceStatus([ambulanceId], 2, (eStatus) => {
+            if (eStatus) console.error('Error actualizando estado de unidad interinstitucional aceptada:', eStatus);
+        });
+        // Misma lógica que registerAssignment: la emergencia pasa sola a
+        // "Asignada" en cuanto tiene una unidad de verdad trabajando en ella
+        // (esta unidad prestada apenas ahora cuenta como tal).
+        emergencyModel.advanceEmergencyStatus(emergencyId, 2, (eAdv, rAdv) => {
+            if (eAdv) { console.error('Error avanzando estado de emergencia (unidad interinstitucional):', eAdv); return; }
+            if (rAdv.affectedRows > 0) {
+                io.to('admin').to('dispatcher').to('hospital').to('paramedic').emit('eventEmergencyStatusUpdated', { emergencyId, emergencyStatusId: 2 });
+            }
+        });
+        emergencyModel.getEmergencyById(emergencyId, (eDetail, rDetail) => {
+            const emergencyDetail = (!eDetail && rDetail.length > 0) ? rDetail[0] : null;
+            emergencyModel.getActiveShiftUserByAmbulance(ambulanceId, (e3, r3) => {
+                if (!e3 && r3.length > 0) {
+                    const assignedUserProfileId = r3[0].user_profile_id;
+                    io.to('user_' + assignedUserProfileId).emit('eventEmergencyAssignedToMe', {
+                        emergencyId, ambulanceId, notes: null, emergency: emergencyDetail
+                    });
+                    emergencyModel.getUserPushToken(assignedUserProfileId, (e4, r4) => {
+                        if (!e4 && r4.length > 0 && r4[0].push_token) {
+                            sendPushNotification(
+                                r4[0].push_token,
+                                'Nueva emergencia asignada',
+                                emergencyDetail?.type_name || 'Tu hospital autorizó prestar tu unidad a otra institución — abre la app.',
+                                { emergencyId, ambulanceId }
+                            );
+                        }
+                    });
+                }
+                // Si nadie tiene turno activo en esa unidad ahora mismo, no hay a
+                // quién avisarle directamente — igual que en registerAssignment.
+                done();
+            });
+        });
+    });
+}
+
 const respondInterInstitutionalRequest = (req, res) => {
     const io = configSocket.getIo();
     const allowedRoles = [1, 3, 4];
@@ -423,6 +490,8 @@ const respondInterInstitutionalRequest = (req, res) => {
                         }
                         if (parseInt(requestStatusId) === 3 && ambulanceId && emergencyId) {
                             emergencyModel.clearAmbulanceFromEmergencyPatients(emergencyId, ambulanceId, afterCleanup);
+                        } else if (parseInt(requestStatusId) === 2 && ambulanceId && emergencyId) {
+                            activateAcceptedExternalUnit(io, ambulanceId, emergencyId, req.decoded.userProfileId, afterCleanup);
                         } else {
                             afterCleanup();
                         }
@@ -431,10 +500,13 @@ const respondInterInstitutionalRequest = (req, res) => {
             });
         }
 
-        if (parseInt(req.decoded.roleId) === 1) {
-            return proceed();
-        }
-
+        // Antes solo se checaba "ya fue respondida" para roles 3/4 — un admin
+        // (rol 1) podía llamar esto dos veces sobre la misma solicitud ya
+        // Aceptada y (con la activación de arriba) crearía una asignación
+        // duplicada y le mandaría la notificación al paramédico dos veces.
+        // Ahora que aceptar de verdad tiene efectos reales, este chequeo
+        // aplica para TODOS los roles por igual — el resto de la validación
+        // (dueño de la unidad) sigue siendo exclusiva de roles 3/4.
         emergencyModel.getInterInstitutionalRequestById(interInstitutionalRequestId, (e1, r1) => {
             if (e1) {
                 return res.status(500).json({message: "Error del servidor."});
@@ -443,6 +515,11 @@ const respondInterInstitutionalRequest = (req, res) => {
             } else if (r1[0].request_status_id !== 1) {
                 return res.status(400).json({message: "Esta solicitud ya fue respondida."});
             }
+
+            if (parseInt(req.decoded.roleId) === 1) {
+                return proceed();
+            }
+
             emergencyModel.getInstitutionIdByUserProfile(req.decoded.userProfileId, (e2, r2) => {
                 if (e2 || r2.length === 0 || parseInt(r2[0].institution_id) !== parseInt(r1[0].receiving_institution_id)) {
                     return res.status(403).json({message: "Solo la institución dueña de la unidad puede responder esta solicitud."});
@@ -1315,6 +1392,19 @@ const getMyStatsThisMonth = (req, res) => {
     }
 }
 
+// Respaldo de "recuperación" para sicem-mobile — ver comentario en
+// getMyCurrentEmergency en el modelo. Se llama al conectar el socket (o
+// periódicamente) para ponerse al día si se perdió el aviso en vivo.
+const getMyCurrentEmergencyStatus = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 3) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    emergencyModel.getMyCurrentEmergency(req.decoded.userProfileId, (e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."});
+        res.status(200).json({message: "Emergencia actual", data: r[0] || null});
+    });
+}
+
 module.exports = {
     // POST
     registerEmergency, registerEmergencyPatient, registerEmergencyNote,
@@ -1338,5 +1428,5 @@ module.exports = {
     //GETs de estadísticas filtradas por hospital
     getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution,
     //GET de estadísticas del paramédico (sicem-mobile)
-    getMyStatsThisMonth
+    getMyStatsThisMonth, getMyCurrentEmergencyStatus
 }

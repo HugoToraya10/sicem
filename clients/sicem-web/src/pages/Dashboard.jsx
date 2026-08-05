@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Navbar from '../components/layout/Navbar'
 import EmergencyCard from '../components/emergencies/EmergencyCard'
 import MapArea from '../components/map/MapArea'
@@ -60,11 +60,13 @@ console.log('navLinks calculados:', navLinks)
 
     const [emergencies, setEmergencies] = useState([])
     const [ambulances, setAmbulances] = useState([])
+    const [hospitals, setHospitals] = useState([])
     const [toasts, setToasts] = useState([])
     const [avgResponseToday, setAvgResponseToday] = useState(null)
     const [statusFilter, setStatusFilter] = useState('all')
     const [triageFilter, setTriageFilter] = useState('all')
     const [triageCatalog, setTriageCatalog] = useState([])
+    const [emergencyStatusCatalog, setEmergencyStatusCatalog] = useState([])
     const [unitsExpanded, setUnitsExpanded] = useState(false)
 
     const pushToast = (typeName, description) => {
@@ -73,6 +75,33 @@ console.log('navLinks calculados:', navLinks)
         setTimeout(() => {
             setToasts((current) => current.filter((t) => t.id !== id))
         }, 5000)
+    }
+
+    // Los listeners de socket de abajo se crean UNA vez (efectos con deps
+    // fijas) — si applyEmergencyStatusUpdate leyera emergencyStatusCatalog
+    // directo, quedaría pegado al valor que tenía en ese primer render
+    // (probablemente todavía vacío, el fetch del catálogo es async). Este
+    // ref siempre tiene el valor más reciente sin tener que reconectar los
+    // sockets por eso — mismo patrón que pendingAlertRef en
+    // sicem-mobile/context/SocketContext.jsx.
+    const emergencyStatusCatalogRef = useRef([])
+    useEffect(() => { emergencyStatusCatalogRef.current = emergencyStatusCatalog }, [emergencyStatusCatalog])
+
+    // eventEmergencyStatusUpdated llega desde DOS sockets distintos según
+    // quién lo haya disparado: el servicio de emergencias (cambio manual del
+    // despachador, o el nuevo auto-avance al asignar una unidad) y el
+    // servicio de unidades (auto-avance cuando el paramédico mueve su propia
+    // ambulancia — En escena/Trasladando). Este último siempre manda
+    // statusName ya resuelto; el manual todavía no, así que aquí se cae al
+    // catálogo si hace falta.
+    const applyEmergencyStatusUpdate = ({ emergencyId, emergencyStatusId, statusName }) => {
+        const resolvedName = statusName
+            || emergencyStatusCatalogRef.current.find((s) => String(s.emergency_status_id) === String(emergencyStatusId))?.name
+        setEmergencies((current) => current.map((em) => (
+            String(em.emergency_id) === String(emergencyId)
+                ? { ...em, status_name: resolvedName ?? em.status_name }
+                : em
+        )))
     }
 
     // Emergencias activas
@@ -86,6 +115,19 @@ console.log('navLinks calculados:', navLinks)
             .then(res => res.json())
             .then(({ data }) => setEmergencies(data.map(em => toLowerCaseKeys(em))))
             .catch(error => console.error('Ha ocurrido un error buscando las emergencias activas', error))
+    }, [])
+
+    // Hospitales, para pintarlos en el mismo mapa que las ambulancias — el
+    // CRUM decide a qué hospital mandar cada traslado, así que verlos juntos
+    // ayuda a esa decisión de un vistazo. Camas disponibles no cambia tan
+    // seguido como para necesitar socket — un fetch al montar alcanza.
+    useEffect(() => {
+        fetch('http://localhost:3000/hospitales/instituciones-destino', {
+            headers: { "Content-Type": "application/json" }
+        })
+            .then(res => res.json())
+            .then(({ data }) => setHospitals((data || []).map(h => toLowerCaseKeys(h))))
+            .catch(error => console.error('Error recuperando hospitales. ', error))
     }, [])
 
     // Ambulancias con su última ubicación conocida, para pintarlas en el mapa
@@ -133,6 +175,17 @@ console.log('navLinks calculados:', navLinks)
             .catch(error => console.error('Error recuperando catálogo de triage. ', error))
     }, [])
 
+    // Catálogo de estados de emergencia — solo para poder ponerle nombre a
+    // eventEmergencyStatusUpdated cuando llega sin statusName (el endpoint
+    // manual de cambio de estado todavía no lo manda, a diferencia de los
+    // nuevos que sí sincronizan el estado desde la ambulancia).
+    useEffect(() => {
+        fetch('http://localhost:3000/emergencias/estados-emergencia', { headers: { "Content-Type": "application/json" } })
+            .then(res => res.json())
+            .then(({ data }) => setEmergencyStatusCatalog((data || []).map(s => toLowerCaseKeys(s))))
+            .catch(error => console.error('Error recuperando catálogo de estados de emergencia. ', error))
+    }, [])
+
     // Tiempo promedio de respuesta de hoy (KPI)
     useEffect(() => {
         fetch('http://localhost:3000/emergencias/analiticas/tiempo-respuesta-hoy', {
@@ -153,13 +206,18 @@ console.log('navLinks calculados:', navLinks)
         emergencySocket.on('eventEmergencyRegistered', data => {
             const em = toLowerCaseKeys(data)
             setEmergencies(currentEmergencies => [em, ...currentEmergencies])
-            pushToast(em.type_name, em.description)
+            pushToast(`Nueva emergencia: ${em.type_name || 'Sin tipo'}`, em.description || 'Sin descripción')
         })
 
         emergencySocket.on('eventEmergencyClosed', ({ emergency_id, emergencyId }) => {
             const closedId = emergency_id || emergencyId
             setEmergencies(current => current.filter(em => em.emergency_id !== closedId))
         })
+
+        // Cambio manual del despachador (updateEmergencyStatus), o auto-avance
+        // al asignar una unidad (registerAssignment / unidad interinstitucional
+        // aceptada) — ambos emiten desde este mismo socket de emergencias.
+        emergencySocket.on('eventEmergencyStatusUpdated', applyEmergencyStatusUpdate)
 
         // Un hospital confirmó o rechazó la recepción de un paciente — ajusta los
         // contadores de esa emergencia en el acto en vez de refetchear la lista
@@ -194,6 +252,33 @@ console.log('navLinks calculados:', navLinks)
                     : amb
             ))
         })
+
+        // El backend YA manda esto (sicem-mobile reporta ubicación cada 15s
+        // mientras hay turno activo, ver LocationReporter en
+        // clients/sicem-mobile/app/(app)/_layout.js) — solo faltaba
+        // escucharlo aquí. Antes las ambulancias se pedían UNA vez al montar
+        // (fetch a /unidades/ubicacion/:id) y ya nunca se volvían a mover en
+        // el mapa sin recargar la página entera.
+        unitsSocket.on('eventoUbicacionAmbulancia', ({ ambulanceId, latitude, longitude }) => {
+            setAmbulances(current => current.map(amb =>
+                parseInt(amb.ambulance_id) === parseInt(ambulanceId)
+                    ? { ...amb, latitude, longitude }
+                    : amb
+            ))
+        })
+
+        // El paramédico reportó una falla en su unidad — solo avisa, no
+        // cambia nada solo (ver reportAmbulanceFailure en
+        // services/unidades/controllers/unit.js). El despachador decide qué
+        // hacer (reasignar, sacarla de servicio, etc.).
+        unitsSocket.on('eventAmbulanceFailureReported', ({ unitNumber, paramedicName, note }) => {
+            pushToast(`⚠ Falla reportada — ${unitNumber || 'unidad'}`, paramedicName ? `${paramedicName}: ${note}` : note)
+        })
+
+        // Auto-avance del estado de la emergencia cuando el paramédico mueve
+        // su propia ambulancia (En escena/Trasladando) — ver
+        // advanceEmergencyStatusForAmbulance en services/unidades.
+        unitsSocket.on('eventEmergencyStatusUpdated', applyEmergencyStatusUpdate)
 
         return () => unitsSocket.disconnect()
     }, [token])
@@ -237,8 +322,11 @@ console.log('navLinks calculados:', navLinks)
             <div className="toast-stack">
                 {toasts.map((t) => (
                     <div key={t.id} className="toast-card">
-                        <span className="toast-title">Nueva emergencia: {t.typeName || 'Sin tipo'}</span>
-                        <span className="toast-desc">{t.description || 'Sin descripción'}</span>
+                        {/* pushToast ya recibe el título completo armado por quien lo llama
+                        (antes decía "Nueva emergencia: " siempre, aunque el toast fuera de
+                        otra cosa — como el de falla reportada que se agregó después). */}
+                        <span className="toast-title">{t.typeName || 'Aviso'}</span>
+                        <span className="toast-desc">{t.description || ''}</span>
                     </div>
                 ))}
             </div>
@@ -322,7 +410,7 @@ console.log('navLinks calculados:', navLinks)
                     </div>
                 </aside>
 
-                <MapArea ambulances={ambulances} />
+                <MapArea ambulances={ambulances} hospitals={hospitals} />
 
                 <aside className="dashboard-sidebar dashboard-sidebar-right">
                     <h4 className="sidebar-title">Necesitan aceptación ({needsAcceptanceEmergencies.length})</h4>

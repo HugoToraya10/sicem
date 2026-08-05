@@ -1,8 +1,18 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { Alert } from 'react-native'
+import { Alert, Vibration } from 'react-native'
 import { io } from 'socket.io-client'
 import { useAuth } from './AuthContext'
-import { SOCKET_URL, UNITS_SOCKET_URL } from '../constants/api'
+import { SOCKET_URL, UNITS_SOCKET_URL, API_BASE_URL } from '../constants/api'
+import { toLowerCaseKeys } from '../utils/formatData'
+
+// La BD regresa nombres de columna en MAYÚSCULAS para varias tablas
+// (LATITUDE, DESCRIPTION, etc.) — sicem-web lo compensa al leer sus propias
+// respuestas REST con este mismo toLowerCaseKeys, pero lo que llega por
+// SOCKET (eventEmergencyAssignedToMe) nunca pasaba por esa normalización,
+// así que campos como em.latitude quedaban undefined y el mapa no podía
+// dibujar nada. Se aplica aquí a lo que llega tanto por socket como por la
+// recuperación REST. toLowerCaseKeys no admite null/undefined (revienta con
+// Object.entries), por eso cada uso de abajo lo cubre antes de llamarla.
 
 // Los sockets del proyecto se conectan directo al servicio de emergencias
 // (puerto 3005), sin pasar por el gateway — mismo patrón que sicem-web/desktop.
@@ -13,26 +23,103 @@ const SocketProvider = ({ children }) => {
     const socketRef = useRef(null)
     const unitsSocketRef = useRef(null)
 
-    // pendingAlert: emergencia recién asignada, esperando Aceptar/Rechazar.
-    // acceptedEmergency: la que ya se aceptó y está en curso (sigue disponible
-    // aunque cambies de pestaña, por eso vive aquí y no en la pantalla).
+    // pendingAlert: emergencia recién asignada, esperando que el paramédico
+    // la "vea" (acknowledgeAlert — no es un aceptar/rechazar, ver comentario
+    // ahí abajo). acceptedEmergency: la que ya se reconoció y está en curso
+    // (sigue disponible aunque cambies de pestaña, por eso vive aquí y no en
+    // la pantalla).
     const [pendingAlert, setPendingAlert] = useState(null)
     const [acceptedEmergency, setAcceptedEmergency] = useState(null)
+    // Para el foquito de "conectado/sin conexión" en la pestaña Alerta — si
+    // esto está en false, el paramédico NO puede confiar en que "no me ha
+    // sonado nada" signifique "no hay nada".
+    const [connected, setConnected] = useState(false)
+    // El efecto de abajo solo vuelve a correr cuando cambia `token`, así que
+    // su closure de "connect" quedaría con el pendingAlert de cuando se creó
+    // (obsoleto) si se leyera el state directo — esta ref siempre tiene el
+    // valor más reciente sin necesidad de reconectar el socket por eso.
+    const pendingAlertRef = useRef(null)
+    useEffect(() => { pendingAlertRef.current = pendingAlert }, [pendingAlert])
 
     useEffect(() => {
         if (!token) {
             if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null }
+            setConnected(false)
             return
         }
 
         const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket'] })
         socketRef.current = socket
 
+        socket.on('connect', () => {
+            setConnected(true)
+            // "Ponerse al día" — por si se perdió una alerta mientras el socket
+            // estuvo desconectado (pasa solo: segundo plano, WiFi que parpadea).
+            // Se corre en CADA conexión, no solo la primera, porque cada
+            // reconexión es exactamente el momento en el que pudo haberse
+            // perdido algo.
+            fetch(`${API_BASE_URL}/emergencias/mi-emergencia-actual`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then((res) => res.json())
+                .then(({ data }) => {
+                    if (!data) {
+                        // El backend ya no reporta NINGUNA emergencia activa para mi
+                        // turno — si el celular seguía mostrando una, hay que
+                        // soltarla: pudo haberse cerrado desde sicem-web/desktop
+                        // mientras el socket estuvo desconectado. Es la misma regla
+                        // que eventEmergencyClosed de abajo: el paramédico nunca
+                        // decide esto por su cuenta, solo lo reconcilia con lo que
+                        // diga el backend.
+                        setAcceptedEmergency(null)
+                        return
+                    }
+                    setAcceptedEmergency((current) => {
+                        // Si ya sabíamos de esta emergencia (por el socket en vivo,
+                        // ya está pendiente de aceptar, o ya se había recuperado
+                        // antes), no se toca nada — esto es solo para cuando de
+                        // verdad se perdió el aviso por completo.
+                        if (current || pendingAlertRef.current) return current
+                        // Se trata como YA ACEPTADA (no como pendiente de
+                        // Aceptar/Rechazar): el despachador ya asignó la unidad y
+                        // la marcó "En camino" independientemente de si el aviso
+                        // llegó o no — no tiene sentido hacer que el paramédico
+                        // "acepte" algo que operativamente ya está en curso.
+                        return { emergencyId: data.emergency_id, ambulanceId: data.ambulance_id, notes: data.notes, emergency: toLowerCaseKeys(data) }
+                    })
+                })
+                .catch((error) => console.error('Error revisando si hay una emergencia en curso perdida. ', error))
+        })
+        socket.on('disconnect', () => setConnected(false))
+
         socket.on('eventEmergencyAssignedToMe', (payload) => {
-            setPendingAlert(payload)
+            setPendingAlert({ ...payload, emergency: payload.emergency ? toLowerCaseKeys(payload.emergency) : null })
+            // Vibración insistente (patrón repetido) para que sea imposible no
+            // notarla — se detiene sola al aceptar/rechazar (ver abajo). No usa
+            // sonido de sistema porque esto es un evento de socket con la app
+            // ABIERTA, no una notificación push del sistema operativo (esa ya
+            // trae su propio sonido).
+            Vibration.vibrate([0, 600, 300, 600, 300, 600], true)
         })
 
-        return () => { socket.disconnect(); socketRef.current = null }
+        // Único lugar legítimo donde se suelta una emergencia en curso en el
+        // celular: cuando el CRUM/hospital de VERDAD la cerró
+        // (closeEmergency/forceCloseEmergency, roles 1/2 en emergencias, que
+        // emiten esto al room 'paramedic'). El paramédico no tiene — ni debe
+        // tener — un botón para esto: ver fundamentos-legales/
+        // autoridad-crum-sobre-tamp-paramedico.txt. Antes existía un botón
+        // "Terminar seguimiento" en mapa.js que llamaba a esto manualmente —
+        // se quitó porque solo limpiaba la pantalla del celular sin avisarle
+        // a nadie ni cerrar nada de verdad en el backend, dejando la unidad
+        // "perdida" (seguía Trasladando, la emergencia seguía abierta, y
+        // nadie en sicem-web/desktop se enteraba de que el paramédico ya no
+        // la estaba siguiendo).
+        socket.on('eventEmergencyClosed', ({ emergencyId }) => {
+            setAcceptedEmergency((current) => (current && String(current.emergencyId) === String(emergencyId)) ? null : current)
+            setPendingAlert((current) => (current && String(current.emergencyId) === String(emergencyId)) ? null : current)
+        })
+
+        return () => { socket.disconnect(); socketRef.current = null; setConnected(false) }
     }, [token])
 
     // Conexión aparte al servicio de unidades (puerto 3003, su propio
@@ -57,22 +144,26 @@ const SocketProvider = ({ children }) => {
         return () => { unitsSocket.disconnect(); unitsSocketRef.current = null }
     }, [token])
 
-    const acceptAlert = () => {
+    // NO es un "aceptar/rechazar" — el despachador (CRUM, misma institución)
+    // ya decidió y ya marcó la unidad "En camino"; el paramédico no tiene
+    // margen para decidir si atiende o no una asignación directa de su
+    // propia institución (ver fundamentos-legales/ — el paramédico ejecuta,
+    // no decide la disponibilidad operativa de la unidad). Esto es solo un
+    // acuse de recibido: "ya la vi, voy para allá". Un verdadero
+    // aceptar/rechazar solo tendría sentido para una solicitud
+    // INTERINSTITUCIONAL (esa la acepta/rechaza el HOSPITAL desde
+    // sicem-desktop, no el paramédico desde el celular — ver
+    // registerInterInstitutionalRequest en el backend, es un flujo aparte
+    // que ni siquiera le llega a esta pantalla).
+    const acknowledgeAlert = () => {
         if (!pendingAlert) return
+        Vibration.cancel()
         setAcceptedEmergency(pendingAlert)
         setPendingAlert(null)
     }
 
-    const rejectAlert = () => {
-        // TODO: avisarle al despachador que esta unidad no puede atender —
-        // por ahora solo la descarta localmente, no hay endpoint para esto todavía.
-        setPendingAlert(null)
-    }
-
-    const clearAcceptedEmergency = () => setAcceptedEmergency(null)
-
     return (
-        <SocketContext.Provider value={{ pendingAlert, acceptedEmergency, acceptAlert, rejectAlert, clearAcceptedEmergency }}>
+        <SocketContext.Provider value={{ pendingAlert, acceptedEmergency, acknowledgeAlert, connected }}>
             {children}
         </SocketContext.Provider>
     )

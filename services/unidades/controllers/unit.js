@@ -322,6 +322,24 @@ const updateAmbulance = (req, res) => {
     }
 }
 
+// El paramédico (rol 3) solo puede AVANZAR la unidad en esta secuencia, nunca
+// retroceder, saltar pasos ni volverla "Disponible" por su cuenta — el CRUM
+// es quien "establece la secuencia de las actividades" (NOM-034-SSA3-2013,
+// punto 4.1.8) y quien coordina el traslado (7.1.6); el TAMP ejecuta y
+// reporta (7.1.7), no decide la disponibilidad de su propia unidad. Ver
+// fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt.
+// 2=En camino (ya lo pone registerAssignment al asignar, en emergencias) ->
+// 3=En escena -> 4=Trasladando. De ahí no hay más avance posible por este
+// endpoint: el regreso a 1=Disponible solo ocurre cuando el CRUM/hospital
+// cierra o desasigna la emergencia (closeEmergency/unassignAmbulance, del
+// lado de emergencias), nunca aquí.
+const PARAMEDIC_FORWARD_TRANSITIONS = { 2: 3, 3: 4 };
+
+// Con qué estado de EMERGENCIA corresponde cada avance de AMBULANCIA — 2 (En
+// camino) no está aquí porque esa transición no pasa por este endpoint (la
+// pone registerAssignment directo en emergencias, al asignar).
+const AMBULANCE_TO_EMERGENCY_STATUS = { 3: 3, 4: 4 }; // En escena->En atención, Trasladando->Trasladando
+
 // Estado del día a día de una ambulancia propia (Disponible/En camino/etc.) —
 // operación normal para CUALQUIER rol 4, no exige is_institution_admin (a
 // diferencia de las funciones de arriba). Solo exige que la ambulancia
@@ -329,7 +347,8 @@ const updateAmbulance = (req, res) => {
 const updateAmbulanceStatus = (req, res) => {
     // Rol 3 (paramédico) agregado — antes solo admin/hospital podían cambiar
     // el estado de una unidad, pero sicem-mobile necesita que el paramédico
-    // en campo pueda marcar "En escena"/"Trasladando"/etc. él mismo.
+    // en campo pueda marcar "En escena"/"Trasladando" él mismo (ver
+    // PARAMEDIC_FORWARD_TRANSITIONS arriba — restringido a esos dos pasos).
     const allowedRoles = [1, 3, 4];
     if(!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message:"Acceso denegado."})
@@ -342,6 +361,26 @@ const updateAmbulanceStatus = (req, res) => {
                     return res.status(500).json({message:"Error del servidor."})
                 } else {
                     io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(ambulanceId), ambulanceStatusId: parseInt(ambulanceStatusId) });
+
+                    // La emergencia asociada avanza sola cuando corresponde (ver
+                    // AMBULANCE_TO_EMERGENCY_STATUS) — nunca bloquea la respuesta
+                    // de este endpoint si algo sale mal aquí, es un efecto
+                    // secundario, no el objetivo principal de la petición.
+                    const targetEmergencyStatusId = AMBULANCE_TO_EMERGENCY_STATUS[parseInt(ambulanceStatusId)];
+                    if (targetEmergencyStatusId) {
+                        unitModel.advanceEmergencyStatusForAmbulance(ambulanceId, targetEmergencyStatusId, (eSync, rSync) => {
+                            if (eSync) {
+                                console.error('Error sincronizando estado de emergencia con el de la ambulancia:', eSync);
+                            } else if (rSync) {
+                                io.to('despachador').to('admin').to('hospital').to('paramedico').emit('eventEmergencyStatusUpdated', {
+                                    emergencyId: rSync.emergency_id,
+                                    emergencyStatusId: rSync.emergency_status_id,
+                                    statusName: rSync.status_name,
+                                });
+                            }
+                        });
+                    }
+
                     res.status(200).json({message:"Estado de la ambulancia actualizado.", data: { ambulanceId, ambulanceStatusId }})
                 }
             })
@@ -356,6 +395,11 @@ const updateAmbulanceStatus = (req, res) => {
                 if (e || r.length === 0 || parseInt(r[0].ambulance_id) !== parseInt(ambulanceId)) {
                     return res.status(403).json({message: "Solo puedes cambiar el estado de la unidad donde tienes turno activo."});
                 } else {
+                    const currentStatusId = parseInt(r[0].ambulance_status_id);
+                    const requestedStatusId = parseInt(ambulanceStatusId);
+                    if (PARAMEDIC_FORWARD_TRANSITIONS[currentStatusId] !== requestedStatusId) {
+                        return res.status(403).json({message: "No puedes cambiar el estado de la unidad a ese valor. Solo puedes avanzar la secuencia (En camino → En escena → Trasladando); el resto lo decide tu CRUM/institución."});
+                    }
                     proceed();
                 }
             });
@@ -549,12 +593,28 @@ const startShift = (req, res) => {
                     // Disponible automáticamente para que el mapa del despachador
                     // (NewEmergency/Dashboard/EmergencyDetail) la vea al instante, sin
                     // que un admin tenga que ir a cambiarle el estado a mano.
-                    unitModel.updateAmbulanceStatus(ambulanceId, 1, (eStatus) => {
-                        if (!eStatus) {
-                            io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(ambulanceId), ambulanceStatusId: 1 });
+                    //
+                    // PERO solo si la unidad no sigue atada a una emergencia sin
+                    // cerrar (assignments.unassigned_at IS NULL + emergencia sin
+                    // closed_at) — de lo contrario esto era un bug real: si el
+                    // paramédico cerraba sesión/terminaba turno a medio flujo y
+                    // volvía a entrar, la unidad se marcaba "Disponible" en el mapa
+                    // del despachador AUNQUE la emergencia anterior siguiera activa,
+                    // dejando que se le asignara otra vez a una emergencia distinta
+                    // (encontrado en producción: la misma unidad terminó con 3
+                    // emergencias abiertas al mismo tiempo). Si sigue atada, se deja
+                    // el estado real como está (En camino/En escena/Trasladando).
+                    unitModel.getOpenAssignmentByAmbulance(ambulanceId, (eOpen, rOpen) => {
+                        if (!eOpen && rOpen.length > 0) {
+                            return res.status(201).json({message: "Turno iniciado."})
                         }
-                        res.status(201).json({message: "Turno iniciado."})
-                    })
+                        unitModel.updateAmbulanceStatus(ambulanceId, 1, (eStatus) => {
+                            if (!eStatus) {
+                                io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(ambulanceId), ambulanceStatusId: 1 });
+                            }
+                            res.status(201).json({message: "Turno iniciado."})
+                        })
+                    });
                 }
             })
         }
@@ -667,12 +727,21 @@ const endShift = (req, res) => {
                 if (!ambulanceId) {
                     return res.status(200).json({message: "Turno terminado."})
                 }
-                unitModel.updateAmbulanceStatus(ambulanceId, NO_CREW_STATUS_ID, (eStatus) => {
-                    if (!eStatus) {
-                        io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(ambulanceId), ambulanceStatusId: NO_CREW_STATUS_ID });
+                // Mismo criterio que en startShift: si la unidad sigue atada a
+                // una emergencia sin cerrar, no se le pisa el estado real
+                // (Trasladando, etc.) por marcarla "sin tripulación" — eso
+                // perdería justo la información que el despachador necesita ver.
+                unitModel.getOpenAssignmentByAmbulance(ambulanceId, (eOpen, rOpen) => {
+                    if (!eOpen && rOpen.length > 0) {
+                        return res.status(200).json({message: "Turno terminado."})
                     }
-                    res.status(200).json({message: "Turno terminado."})
-                })
+                    unitModel.updateAmbulanceStatus(ambulanceId, NO_CREW_STATUS_ID, (eStatus) => {
+                        if (!eStatus) {
+                            io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(ambulanceId), ambulanceStatusId: NO_CREW_STATUS_ID });
+                        }
+                        res.status(200).json({message: "Turno terminado."})
+                    })
+                });
             })
         })
     }
@@ -695,12 +764,19 @@ const sweepExpiredShifts = () => {
         rows.forEach((shift) => {
             unitModel.endShift(shift.user_profile_id, (eEnd) => {
                 if (eEnd) return;
-                unitModel.updateAmbulanceStatus(shift.ambulance_id, NO_CREW_STATUS_ID, (eStatus) => {
-                    if (!eStatus) {
-                        io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(shift.ambulance_id), ambulanceStatusId: NO_CREW_STATUS_ID });
-                    }
-                    io.to('user_' + shift.user_profile_id).emit('eventForceLogout', {
-                        reason: 'Tu turno se cerró automáticamente porque terminó tu horario laboral.'
+                // El cierre de sesión del paramédico se avisa siempre, sin
+                // importar si la unidad sigue atada a una emergencia sin
+                // cerrar — lo único condicionado es si se le pisa el estado
+                // de la ambulancia (mismo criterio que en endShift manual).
+                io.to('user_' + shift.user_profile_id).emit('eventForceLogout', {
+                    reason: 'Tu turno se cerró automáticamente porque terminó tu horario laboral.'
+                });
+                unitModel.getOpenAssignmentByAmbulance(shift.ambulance_id, (eOpen, rOpen) => {
+                    if (!eOpen && rOpen.length > 0) return;
+                    unitModel.updateAmbulanceStatus(shift.ambulance_id, NO_CREW_STATUS_ID, (eStatus) => {
+                        if (!eStatus) {
+                            io.to('despachador').to('hospital').to('admin').emit('eventAmbulanceStatusChanged', { ambulanceId: parseInt(shift.ambulance_id), ambulanceStatusId: NO_CREW_STATUS_ID });
+                        }
                     });
                 });
             });
@@ -738,6 +814,57 @@ const getMyActiveShift = (req, res) => {
     })
 }
 
+// El paramédico reporta que algo le pasó a su unidad — esto SOLO notifica
+// (socket, sin push — sicem-web/desktop no tienen push registrado, son apps
+// de navegador/Electron) a su despachador/hospital. NO cambia
+// ambulance_status_id por su cuenta: quien decide qué hacer (reasignar,
+// sacarla de servicio, etc.) es el CRUM/hospital, nunca el paramédico
+// directamente — ver fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt.
+const reportAmbulanceFailure = (req, res) => {
+    if (parseInt(req.decoded.roleId) !== 3) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    const { note } = req.body;
+    if (!note || !note.trim()) {
+        return res.status(400).json({message: "Describe brevemente la falla antes de enviar el reporte."});
+    }
+    const userProfileId = req.decoded.userProfileId;
+    // La ambulancia SIEMPRE es la del turno activo del paramédico — nunca un
+    // ambulanceId que mande el cliente, mismo criterio que registerLocations.
+    unitModel.getActiveShiftByUser(userProfileId, (e, r) => {
+        if (e || r.length === 0) {
+            return res.status(403).json({message: "No tienes un turno activo — no hay ninguna unidad que reportar."});
+        }
+        const ambulanceId = r[0].ambulance_id;
+        unitModel.getOpenAssignmentByAmbulance(ambulanceId, (eOpen, rOpen) => {
+            // getOpenAssignmentByAmbulance regresa un ARREGLO (fila 0, si hay) —
+            // rOpen.emergency_id (sin el [0]) siempre daba undefined, así que
+            // el reporte nunca quedaba ligado a la emergencia en curso aunque
+            // sí hubiera una.
+            const emergencyId = (!eOpen && rOpen && rOpen.length > 0) ? rOpen[0].emergency_id : null;
+            unitModel.reportAmbulanceFailure(ambulanceId, userProfileId, emergencyId, note.trim(), (eInsert) => {
+                if (eInsert) {
+                    return res.status(500).json({message: "Error del servidor."});
+                }
+                unitModel.getFailureReportContext(ambulanceId, userProfileId, (eCtx, rCtx) => {
+                    const io = getIo();
+                    const context = (!eCtx && rCtx.length > 0) ? rCtx[0] : {};
+                    io.to('despachador').to('admin').to('hospital').emit('eventAmbulanceFailureReported', {
+                        ambulanceId: parseInt(ambulanceId),
+                        unitNumber: context.unit_number || null,
+                        institutionId: context.institution_id || null,
+                        paramedicName: `${context.first_name || ''} ${context.first_surname || ''}`.trim() || null,
+                        note: note.trim(),
+                        emergencyId,
+                        reportedAt: new Date().toISOString(),
+                    });
+                    res.status(201).json({message: "Falla reportada — tu despachador/hospital ya fue notificado."});
+                });
+            });
+        });
+    });
+}
+
 // Interno — no lleva JWT de usuario (no hay usuario "llamando" esto, es
 // services/usuarios avisando de un evento). Se autentica con un secreto
 // compartido por variable de entorno, nunca con verifyToken normal.
@@ -763,5 +890,6 @@ module.exports = {
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
-    startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep, notifyForceLogout
+    startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep, notifyForceLogout,
+    reportAmbulanceFailure
 }

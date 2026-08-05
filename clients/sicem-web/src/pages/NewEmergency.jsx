@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { toLowerCaseKeys } from "../utils/formatData";
 import { useNavigate } from "react-router-dom";
@@ -67,7 +67,16 @@ const NewEmergency = () => {
     const [unitRoutes, setUnitRoutes] = useState({});
     const [routesLoading, setRoutesLoading] = useState(false);
     const [externalUnitLocations, setExternalUnitLocations] = useState({});
+    const [externalUnitRoutes, setExternalUnitRoutes] = useState({});
+    const [recommendExternalUnits, setRecommendExternalUnits] = useState(false);
     const [nearestRouteGeometry, setNearestRouteGeometry] = useState(null);
+
+    // Para distinguir "el despachador acaba de marcar/mover el destino"
+    // (debe sentirse instantáneo) de "solo se movió una unidad en vivo"
+    // (eso sí se debounce, ver los useEffect de rutas de abajo).
+    const lastDestKeyRef = useRef(null);
+    const lastExternalDestKeyRef = useRef(null);
+    const lastNearestDestKeyRef = useRef(null);
 
     const [externalUnits, setExternalUnits] = useState([]);
     const [groupedExternalUnits, setGroupedExternalUnits] = useState({});
@@ -151,19 +160,41 @@ const NewEmergency = () => {
     // En cuanto se sabe dónde está la emergencia Y dónde está cada unidad, se le
     // pide a OSRM la ruta real de cada una hacia ese punto — se recalcula si
     // cambia la ubicación marcada o la lista de ubicaciones de las unidades.
+    //
+    // unitLocations ahora puede cambiar cada pocos segundos POR CADA unidad
+    // (llega en vivo por eventoUbicacionAmbulancia) — sin debounce, cada
+    // actualización de CUALQUIER unidad dispararía una tanda completa de
+    // llamadas a OSRM. PERO el debounce solo debe aplicar cuando lo que
+    // cambió fue la ubicación de una unidad EN VIVO — no cuando el
+    // despachador acaba de marcar/mover el destino, que debe sentirse
+    // instantáneo (antes se sentía "tardadísimo" porque el debounce le
+    // pegaba a los dos casos por igual). lastDestKeyRef distingue uno del
+    // otro: si el destino cambió desde la última corrida, se pide la ruta YA;
+    // si el destino sigue igual (solo se movió alguna unidad), se espera.
     useEffect(() => {
         if (!latitude || !longitude) { setUnitRoutes({}); return }
         const unitsWithLocation = availableUnits.filter((u) => unitLocations[u.ambulance_id]?.latitude && unitLocations[u.ambulance_id]?.longitude)
         if (unitsWithLocation.length === 0) { setUnitRoutes({}); return }
 
-        setRoutesLoading(true)
-        Promise.all(unitsWithLocation.map((u) => {
-            const loc = unitLocations[u.ambulance_id]
-            return fetchRouteDistance(parseFloat(loc.latitude), parseFloat(loc.longitude), parseFloat(latitude), parseFloat(longitude))
-                .then((route) => [u.ambulance_id, route])
-        }))
-            .then((entries) => setUnitRoutes(Object.fromEntries(entries)))
-            .finally(() => setRoutesLoading(false))
+        const run = () => {
+            setRoutesLoading(true)
+            Promise.all(unitsWithLocation.map((u) => {
+                const loc = unitLocations[u.ambulance_id]
+                return fetchRouteDistance(parseFloat(loc.latitude), parseFloat(loc.longitude), parseFloat(latitude), parseFloat(longitude))
+                    .then((route) => [u.ambulance_id, route])
+            }))
+                .then((entries) => setUnitRoutes(Object.fromEntries(entries)))
+                .finally(() => setRoutesLoading(false))
+        }
+
+        const destKey = `${latitude},${longitude}`
+        const destinationJustChanged = lastDestKeyRef.current !== destKey
+        lastDestKeyRef.current = destKey
+
+        if (destinationJustChanged) { run(); return }
+
+        const timeoutId = setTimeout(run, 4000)
+        return () => clearTimeout(timeoutId)
     }, [latitude, longitude, availableUnits, unitLocations])
 
     const fetchExternalUnits = () => {
@@ -193,6 +224,24 @@ const NewEmergency = () => {
             fetchAvailableUnits()
             fetchExternalUnits()
         })
+
+        // El backend YA manda esto (sicem-mobile reporta ubicación cada 15s
+        // mientras hay turno activo) — solo faltaba escucharlo. Antes cada
+        // unidad se ubicaba UNA vez al aparecer en availableUnits/externalUnits
+        // (ver los useEffect de arriba con fetch a /unidades/ubicacion/:id) y
+        // ya nunca se volvía a mover en el mapa ni a recalcular su ruta/ETA
+        // sin recargar la página. Actualiza el que corresponda (propia o
+        // externa) — si el ambulanceId no está en ninguna todavía, no hace
+        // nada (se resuelve solo cuando esa unidad aparezca en la lista).
+        unitsSocket.on('eventoUbicacionAmbulancia', ({ ambulanceId, latitude, longitude }) => {
+            setUnitLocations((current) => current[ambulanceId]
+                ? { ...current, [ambulanceId]: { ...current[ambulanceId], latitude, longitude } }
+                : current)
+            setExternalUnitLocations((current) => current[ambulanceId]
+                ? { ...current, [ambulanceId]: { ...current[ambulanceId], latitude, longitude } }
+                : current)
+        })
+
         return () => unitsSocket.disconnect()
     }, [token])
 
@@ -209,6 +258,36 @@ const NewEmergency = () => {
                 .catch(() => [u.ambulance_id, null])
         )).then((entries) => setExternalUnitLocations(Object.fromEntries(entries)))
     }, [externalUnits, token])
+
+    // Rutas de las unidades EXTERNAS hacia el destino — solo se calculan si
+    // recommendExternalUnits está prendido (el filtro que pidió Hugo: por
+    // default NO se recomiendan unidades de otras instituciones como "la más
+    // cercana", porque pedirlas de verdad implica un paso extra —
+    // interinstitucional, esperar autorización— que una unidad propia no
+    // necesita). Mismo criterio de "instantáneo si cambió el destino,
+    // debounced si solo se movió una unidad" que el efecto de arriba.
+    useEffect(() => {
+        if (!recommendExternalUnits || !latitude || !longitude) { setExternalUnitRoutes({}); return }
+        const unitsWithLocation = externalUnits.filter((u) => externalUnitLocations[u.ambulance_id]?.latitude && externalUnitLocations[u.ambulance_id]?.longitude)
+        if (unitsWithLocation.length === 0) { setExternalUnitRoutes({}); return }
+
+        const run = () => {
+            Promise.all(unitsWithLocation.map((u) => {
+                const loc = externalUnitLocations[u.ambulance_id]
+                return fetchRouteDistance(parseFloat(loc.latitude), parseFloat(loc.longitude), parseFloat(latitude), parseFloat(longitude))
+                    .then((route) => [u.ambulance_id, route])
+            })).then((entries) => setExternalUnitRoutes(Object.fromEntries(entries)))
+        }
+
+        const destKey = `${latitude},${longitude}`
+        const destinationJustChanged = lastExternalDestKeyRef.current !== destKey
+        lastExternalDestKeyRef.current = destKey
+
+        if (destinationJustChanged) { run(); return }
+
+        const timeoutId = setTimeout(run, 4000)
+        return () => clearTimeout(timeoutId)
+    }, [recommendExternalUnits, latitude, longitude, externalUnits, externalUnitLocations])
 
     useEffect(() =>{
         fetch('http://localhost:3000/unidades/tipos-ambulancia', {
@@ -720,8 +799,8 @@ const proceedWithConfirmation = (forms) => {
     // recta, dos unidades a la misma distancia recta pueden tardar muy
     // distinto según por dónde entra la carretera. Sin ruta todavía (o si
     // OSRM no encontró camino), se queda al final.
-    const sortUnitsByDistance = (units) => {
-        const withRoute = units.map((u) => ({ ...u, route: unitRoutes[u.ambulance_id] || null }))
+    const sortByRoute = (units, routesDict) => {
+        const withRoute = units.map((u) => ({ ...u, route: routesDict[u.ambulance_id] || null }))
         return withRoute.sort((a, b) => {
             if (!a.route && !b.route) return 0
             if (!a.route) return 1
@@ -729,35 +808,61 @@ const proceedWithConfirmation = (forms) => {
             return a.route.durationMin - b.route.durationMin
         })
     }
+    const sortUnitsByDistance = (units) => sortByRoute(units, unitRoutes)
+    const sortExternalUnitsByDistance = (units) => sortByRoute(units, externalUnitRoutes)
 
-    // La más cercana (en tiempo real de traslado) de TODAS las unidades propias
-    // disponibles, sin importar tipo — es la recomendación principal; cada
-    // tarjeta ya muestra su propia ruta, esto solo marca cuál es la ganadora.
+    // La más cercana (en tiempo real de traslado) — por default solo entre las
+    // propias disponibles, sin importar tipo. Si recommendExternalUnits está
+    // prendido (filtro que pidió Hugo), también compite contra las externas
+    // con ruta ya calculada; si no, ni se le calcula ruta a las externas (ver
+    // el useEffect de arriba) para no gastar de más en OSRM por algo que ni
+    // se va a mostrar.
     const nearestUnitId = (() => {
         if (!latitude || !longitude) return null
-        const withRoute = sortUnitsByDistance(availableUnits).filter(u => u.route !== null)
-        return withRoute.length > 0 ? withRoute[0].ambulance_id : null
+        const ownWithRoute = sortUnitsByDistance(availableUnits).filter(u => u.route !== null)
+        if (!recommendExternalUnits) {
+            return ownWithRoute.length > 0 ? ownWithRoute[0].ambulance_id : null
+        }
+        const externalWithRoute = sortExternalUnitsByDistance(externalUnits).filter(u => u.route !== null)
+        const combined = [...ownWithRoute, ...externalWithRoute].sort((a, b) => a.route.durationMin - b.route.durationMin)
+        return combined.length > 0 ? combined[0].ambulance_id : null
     })()
 
     // Traza completa (punto A: la unidad más cercana → punto B: la emergencia)
     // para dibujarla en el mapa — a diferencia del cálculo de arriba (que solo
     // pide distancia/duración con overview=false, más liviano), aquí sí se
     // pide la geometría completa (overview=full), pero solo para la unidad
-    // ganadora — pedirla para las 5-10 unidades sería tirar la mayoría.
+    // ganadora — pedirla para las 5-10 unidades sería tirar la mayoría. La
+    // unidad ganadora puede ser propia o externa (si el filtro está prendido),
+    // por eso busca la ubicación en las dos listas.
     useEffect(() => {
         if (!nearestUnitId || !latitude || !longitude) { setNearestRouteGeometry(null); return }
-        const loc = unitLocations[nearestUnitId]
+        const loc = unitLocations[nearestUnitId] || externalUnitLocations[nearestUnitId]
         if (!loc?.latitude || !loc?.longitude) { setNearestRouteGeometry(null); return }
-        const url = `https://router.project-osrm.org/route/v1/driving/${loc.longitude},${loc.latitude};${longitude},${latitude}?overview=full&geometries=geojson`
-        fetch(url)
-            .then(res => res.json())
-            .then((data) => {
-                if (data.code !== 'Ok' || !data.routes?.[0]) { setNearestRouteGeometry(null); return }
-                // GeoJSON trae [lon, lat] — Leaflet quiere [lat, lon].
-                setNearestRouteGeometry(data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]))
-            })
-            .catch((error) => { console.error('Error trazando la ruta más cercana. ', error); setNearestRouteGeometry(null) })
-    }, [nearestUnitId, latitude, longitude, unitLocations])
+
+        const run = () => {
+            const url = `https://router.project-osrm.org/route/v1/driving/${loc.longitude},${loc.latitude};${longitude},${latitude}?overview=full&geometries=geojson`
+            fetch(url)
+                .then(res => res.json())
+                .then((data) => {
+                    if (data.code !== 'Ok' || !data.routes?.[0]) { setNearestRouteGeometry(null); return }
+                    // GeoJSON trae [lon, lat] — Leaflet quiere [lat, lon].
+                    setNearestRouteGeometry(data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]))
+                })
+                .catch((error) => { console.error('Error trazando la ruta más cercana. ', error); setNearestRouteGeometry(null) })
+        }
+
+        // Mismo criterio de "instantáneo si de verdad cambió algo (destino o
+        // unidad ganadora), debounced si solo se movió una unidad en vivo".
+        const destKey = `${nearestUnitId}:${latitude},${longitude}`
+        const changed = lastNearestDestKeyRef.current !== destKey
+        lastNearestDestKeyRef.current = destKey
+
+        if (changed) { run(); return }
+
+        const timeoutId = setTimeout(run, 4000)
+        return () => clearTimeout(timeoutId)
+    }, [nearestUnitId, latitude, longitude, unitLocations, externalUnitLocations])
 
     //---------------------------------PASO 2: JSX de identificación de pacientes--------------------------------------------------
 
@@ -1019,6 +1124,7 @@ const proceedWithConfirmation = (forms) => {
                         <MapArea
                             ambulances={allUnitsForMap}
                             emergencyLocation={latitude && longitude ? { latitude, longitude } : null}
+                            hospitals={destinationInstitutions}
                             onMapClick={handleMapClick}
                             flyToLocation={latitude && longitude ? [parseFloat(latitude), parseFloat(longitude)] : null}
                             routes={nearestRouteGeometry ? [{ coordinates: nearestRouteGeometry }] : []}
@@ -1161,8 +1267,23 @@ const proceedWithConfirmation = (forms) => {
                         Otras Instituciones (requiere solicitud)
                     </label>
 
+                    <label className="ne-recommend-external-toggle">
+                        <input
+                            type="checkbox"
+                            checked={recommendExternalUnits}
+                            onChange={(e) => setRecommendExternalUnits(e.target.checked)}
+                        />
+                        Recomendar unidades de otras instituciones como "más cercana"
+                    </label>
+                    <p className="ne-distance-hint">
+                        {recommendExternalUnits
+                            ? 'Compiten contra tus propias unidades — pero pedirlas de verdad necesita autorización de su hospital, no es asignación directa.'
+                            : 'Apagado: solo tus propias unidades pueden salir recomendadas como "más cercana". Actívalo para incluir también las externas en esa comparación.'}
+                    </p>
+
                     {unitTypes.map((type) => {
-                        const unitsOfThisType = groupedExternalUnits[type.ambulance_type_id] || []
+                        const unitsOfType = groupedExternalUnits[type.ambulance_type_id] || []
+                        const unitsOfThisType = recommendExternalUnits ? sortExternalUnitsByDistance(unitsOfType) : unitsOfType
                         if (unitsOfThisType.length === 0) return null
                         return (
                             <div key={`ext-${type.ambulance_type_id}`} className="unit-type-group unit-type-group-external">
@@ -1178,8 +1299,14 @@ const proceedWithConfirmation = (forms) => {
                                         <label key={unit.ambulance_id} className={`unit-card unit-card-external ${selectedExternalUnits.includes(unit.ambulance_id) ? 'selected' : ''}`}>
                                             <input type="checkbox" checked={selectedExternalUnits.includes(unit.ambulance_id)} onChange={() => toggleExternalUnitSelection(unit.ambulance_id)} />
                                             <div className="unit-card-info">
-                                                <span className="unit-card-number">{unit.unit_number}</span>
-                                                <span className="unit-card-institution">{unit.institution_name}</span>
+                                                <span className="unit-card-number">
+                                                    {unit.unit_number}
+                                                    {recommendExternalUnits && unit.ambulance_id === nearestUnitId && <span className="unit-nearest-badge">Más cercana</span>}
+                                                </span>
+                                                <span className="unit-card-institution">
+                                                    {unit.institution_name}
+                                                    {recommendExternalUnits && unit.route && ` · ${unit.route.distanceKm.toFixed(1)} km · ${Math.round(unit.route.durationMin)} min`}
+                                                </span>
                                             </div>
                                         </label>
                                     ))}

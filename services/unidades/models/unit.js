@@ -125,6 +125,79 @@ const updateAmbulanceStatus = (ambulanceId, ambulanceStatusId, callback) => {
     db.query(sql, [ambulanceStatusId, ambulanceId], callback);
 }
 
+// El estado de la emergencia avanza junto con el de la ambulancia (En
+// escena -> "En atención", Trasladando -> "Trasladando") — antes eran
+// totalmente independientes y el despachador tenía que ir a cambiar el de la
+// emergencia a mano por separado cada vez, duplicando el trabajo que la
+// unidad ya está reportando sola. Solo avanza HACIA ADELANTE
+// (emergency_status_id < targetEmergencyStatusId) — nunca retrocede una
+// emergencia que ya iba más avanzada por otra unidad, y nunca toca una ya
+// cerrada. Cruce directo a `emergencies`/`assignments` (tablas del servicio
+// emergencias, misma BD compartida) — mismo patrón ya usado en
+// getOpenAssignmentByAmbulance.
+const advanceEmergencyStatusForAmbulance = (ambulanceId, targetEmergencyStatusId, callback) => {
+    const sql = `UPDATE emergencies e
+                JOIN assignments a ON a.emergency_id = e.emergency_id
+                SET e.emergency_status_id = ?, e.updated_at = NOW()
+                WHERE a.ambulance_id = ? AND a.unassigned_at IS NULL
+                    AND e.closed_at IS NULL AND e.emergency_status_id < ?`;
+    db.query(sql, [targetEmergencyStatusId, ambulanceId, targetEmergencyStatusId], (e, r) => {
+        if (e) return callback(e, null);
+        if (!r.affectedRows) return callback(null, null);
+        // El UPDATE con JOIN no regresa qué emergencia se tocó — se vuelve a
+        // consultar para poder avisar por socket con el emergencyId real.
+        const selectSql = `SELECT e.emergency_id, e.emergency_status_id, es.name AS status_name
+                    FROM emergencies e
+                    JOIN assignments a ON a.emergency_id = e.emergency_id
+                    JOIN emergency_statuses es ON es.emergency_status_id = e.emergency_status_id
+                    WHERE a.ambulance_id = ? AND a.unassigned_at IS NULL
+                    LIMIT 1`;
+        db.query(selectSql, [ambulanceId], (e2, r2) => {
+            if (e2) return callback(e2, null);
+            callback(null, r2.length > 0 ? r2[0] : null);
+        });
+    });
+}
+
+// Cruce directo a assignments/emergencies (tablas del servicio emergencias,
+// misma BD compartida — mismo patrón de queries cruzadas que ya se usa en
+// todo el proyecto). "Abierta" = con una fila en assignments sin desasignar
+// (unassigned_at IS NULL) apuntando a una emergencia que todavía no se cerró
+// (closed_at IS NULL). Se usa para que iniciar/terminar turno NUNCA le borre
+// encima a la ambulancia su estado real (En escena, Trasladando, etc.)
+// mientras sigue atada a una emergencia sin resolver — ver el comentario en
+// startShift/endShift del controller, ahí está el bug real que esto corrige
+// (una unidad terminaba "Disponible" en el mapa del despachador a mitad de
+// una emergencia solo porque el paramédico cerró sesión y volvió a entrar).
+const getOpenAssignmentByAmbulance = (ambulanceId, callback) => {
+    const sql = `SELECT a.assignment_id, a.emergency_id FROM assignments a
+                JOIN emergencies e ON e.emergency_id = a.emergency_id
+                WHERE a.ambulance_id = ? AND a.unassigned_at IS NULL AND e.closed_at IS NULL
+                LIMIT 1`;
+    db.query(sql, [ambulanceId], callback);
+}
+
+// Registro (histórico) de una falla reportada por el paramédico — NO cambia
+// ambulance_status_id solo (ver fundamentos-legales/
+// autoridad-crum-sobre-tamp-paramedico.txt: el paramédico reporta, el
+// CRUM/hospital decide qué hacer — reasignar, sacarla de servicio, etc.).
+// emergencyId es opcional (puede reportar una falla sin tener una emergencia
+// activa en ese momento).
+const reportAmbulanceFailure = (ambulanceId, userProfileId, emergencyId, note, callback) => {
+    const sql = `INSERT INTO ambulance_failure_reports (ambulance_id, user_profile_id, emergency_id, note, reported_at)
+                VALUES (?, ?, ?, ?, NOW())`;
+    db.query(sql, [ambulanceId, userProfileId, emergencyId || null, note], callback);
+}
+
+// Contexto para armar el aviso (número de unidad, institución dueña —para
+// filtrar a quién le llega el socket—, y nombre del paramédico que reporta).
+const getFailureReportContext = (ambulanceId, userProfileId, callback) => {
+    const sql = `SELECT a.unit_number, a.institution_id, up.first_name, up.first_surname
+                FROM ambulances a, user_profiles up
+                WHERE a.ambulance_id = ? AND up.user_profile_id = ?`;
+    db.query(sql, [ambulanceId, userProfileId], callback);
+}
+
 
 //---- GETs ------------------------
 const getAllAmbulances = (callback) => {
@@ -303,9 +376,15 @@ const getActiveShiftByAmbulance = (ambulanceId, callback) => {
 
 // Para que el celular sepa, al abrir la app, si ya hay un turno activo
 // (y en qué unidad) sin que el paramédico tenga que volver a elegirla.
+// scheduled_end y unit_number van aquí (no en su propio endpoint) porque
+// sicem-mobile los necesita en el MISMO momento que esto — para mostrar
+// "quedan X" (contador de turno) y en qué ambulancia está, sin una consulta
+// aparte.
 const getActiveShiftByUser = (userProfileId, callback) => {
-    const sql = `SELECT ambulance_shift_id, ambulance_id, shift_start
-                FROM ambulance_shifts WHERE user_profile_id = ? AND shift_end IS NULL
+    const sql = `SELECT s.ambulance_shift_id, s.ambulance_id, s.shift_start, s.scheduled_end, a.unit_number, a.ambulance_status_id
+                FROM ambulance_shifts s
+                JOIN ambulances a ON a.ambulance_id = s.ambulance_id
+                WHERE s.user_profile_id = ? AND s.shift_end IS NULL
                 AND ${NOT_STALE_CONDITION} LIMIT 1`;
     db.query(sql, [userProfileId], callback);
 }
@@ -324,7 +403,9 @@ module.exports = {
     getUserInstitutionInfo, getInstitutionIdByAmbulanceId,
     registerLocations, registerAmbulance, createAmbulanceType, registerAmbulanceStatus,
     toggleAmbulance, toggleAmbulanceType, toggleAmbulanceStatus, getExternalAvailableAmbulances,
-    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus,
+    updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus, getOpenAssignmentByAmbulance,
+    reportAmbulanceFailure, getFailureReportContext,
+    advanceEmergencyStatusForAmbulance,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
     getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,

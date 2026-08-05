@@ -169,6 +169,7 @@ const getAllInstitutions = (callback) => {
 // Instituciones con sus camas disponibles y especialidades, para elegir destino de traslado
 const getInstitutionsForDestination = (callback) => {
     const sql = `SELECT i.institution_id, i.name, i.available_beds, i.bed_capacity,
+                i.latitude, i.longitude,
                 GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') AS specialities
                 FROM institutions i
                 LEFT JOIN institutions_specialities ist ON i.institution_id = ist.institution_id AND ist.is_active = 1

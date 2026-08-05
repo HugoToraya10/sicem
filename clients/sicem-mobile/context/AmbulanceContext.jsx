@@ -12,7 +12,13 @@ const AmbulanceContext = createContext(null)
 
 const AmbulanceProvider = ({ children }) => {
     const { token, logout } = useAuth()
-    const [activeAmbulanceId, setActiveAmbulanceId] = useState(null)
+    // { ambulanceId, unitNumber, scheduledEnd (string ISO o null), ambulanceStatusId } | null —
+    // scheduledEnd y unitNumber son para el contador de turno y la tarjeta de
+    // "en qué unidad estás" en la pestaña Alerta. ambulanceStatusId es la
+    // fuente de verdad que usa mapa.js para saber qué botón "Pasar a X"
+    // mostrarle al paramédico — se vuelve a pedir con refreshShift() después
+    // de cada cambio de estado, en vez de llevar un estado optimista aparte.
+    const [activeShift, setActiveShift] = useState(null)
     const [loading, setLoading] = useState(true)
     const [busy, setBusy] = useState(false)
 
@@ -22,12 +28,19 @@ const AmbulanceProvider = ({ children }) => {
         if (!token) { setLoading(false); return }
         fetch(`${API_BASE_URL}/unidades/mi-turno-activo`, { headers })
             .then((res) => res.json())
-            .then(({ data }) => setActiveAmbulanceId(data ? data.ambulance_id : null))
+            .then(({ data }) => setActiveShift(data ? {
+                ambulanceId: data.ambulance_id,
+                unitNumber: data.unit_number,
+                scheduledEnd: data.scheduled_end,
+                ambulanceStatusId: data.ambulance_status_id,
+            } : null))
             .catch((err) => console.error('Error consultando turno activo. ', err))
             .finally(() => setLoading(false))
     }, [token])
 
     useEffect(() => { fetchActiveShift() }, [fetchActiveShift])
+
+    const activeAmbulanceId = activeShift?.ambulanceId ?? null
 
     // El aviso por socket (eventForceLogout, ver SocketContext.jsx) es rápido
     // cuando llega, pero depende de que el socket esté conectado en ese
@@ -47,7 +60,7 @@ const AmbulanceProvider = ({ children }) => {
                 .then((res) => res.json())
                 .then(({ data }) => {
                     if (!data) {
-                        setActiveAmbulanceId(null)
+                        setActiveShift(null)
                         Alert.alert('Turno finalizado', 'Tu turno se cerró automáticamente porque terminó tu horario laboral.')
                         logout()
                     }
@@ -66,7 +79,9 @@ const AmbulanceProvider = ({ children }) => {
         })
             .then((res) => res.json().then((body) => {
                 if (!res.ok) throw new Error(body.message || 'No se pudo iniciar el turno.')
-                setActiveAmbulanceId(ambulanceId)
+                // Se vuelve a pedir el turno completo (no solo el ID) para tener
+                // scheduledEnd/unitNumber ya listos para la pantalla.
+                return fetchActiveShift()
             }))
             .finally(() => setBusy(false))
     }
@@ -76,13 +91,17 @@ const AmbulanceProvider = ({ children }) => {
         return fetch(`${API_BASE_URL}/unidades/terminar-turno`, { method: 'PATCH', headers })
             .then((res) => res.json().then((body) => {
                 if (!res.ok) throw new Error(body.message || 'No se pudo terminar el turno.')
-                setActiveAmbulanceId(null)
+                setActiveShift(null)
             }))
             .finally(() => setBusy(false))
     }
 
     return (
-        <AmbulanceContext.Provider value={{ activeAmbulanceId, loading, busy, startShift, endShift, refreshShift: fetchActiveShift }}>
+        <AmbulanceContext.Provider value={{
+            activeAmbulanceId, unitNumber: activeShift?.unitNumber ?? null, scheduledEnd: activeShift?.scheduledEnd ?? null,
+            ambulanceStatusId: activeShift?.ambulanceStatusId ?? null,
+            loading, busy, startShift, endShift, refreshShift: fetchActiveShift,
+        }}>
             {children}
         </AmbulanceContext.Provider>
     )

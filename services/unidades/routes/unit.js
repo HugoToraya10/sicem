@@ -9,6 +9,7 @@ router.post('/registrar-ambulancia', middleware.verifyToken, unitController.regi
 router.post('/crear-tipo-ambulancia', middleware.verifyToken, unitController.createAmbulanceType); // TODO
 router.post('/registrar-estado-ambulancia', middleware.verifyToken, unitController.registerAmbulanceStatus); // TODO
 router.post('/iniciar-turno', middleware.verifyToken, unitController.startShift); // ✅ sicem-mobile
+router.post('/reportar-falla', middleware.verifyToken, unitController.reportAmbulanceFailure); // ✅ sicem-mobile
 // Interno — SOLO lo llama services/usuarios (no lleva JWT de usuario, lleva
 // un secreto compartido entre servicios). Ver login en usuarios: cuando
 // alguien inicia sesión con la misma cuenta en otro dispositivo, avisa por

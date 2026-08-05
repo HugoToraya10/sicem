@@ -29,6 +29,21 @@
     box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 
+.hospital-marker-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: #8E44AD;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .map-legend {
     position: absolute;
     bottom: 14px;

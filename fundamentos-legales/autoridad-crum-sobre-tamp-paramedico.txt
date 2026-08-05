@@ -1,0 +1,169 @@
+JUSTIFICACION LEGAL — EL PARAMEDICO (TAMP) NO DECIDE POR SI MISMO EL ESTADO DE LA
+AMBULANCIA NI DE LA EMERGENCIA; DEPENDE DEL CRUM (SICEM-DESKTOP)
+================================================================================
+
+Sistema: SICEM (sicem-mobile / sicem-desktop / servicio unidades / servicio
+emergencias)
+Norma de referencia: NOM-034-SSA3-2013, "Regulacion de los servicios de salud.
+Atencion medica prehospitalaria." Diario Oficial de la Federacion, 23 de
+septiembre de 2014.
+Fuente oficial: https://www.gob.mx/cms/uploads/attachment/file/512076/NOM-034-SSA3-2013.pdf
+
+Este documento explica, punto por punto, por que SICEM restringe al paramedico
+(TAMP, desde sicem-mobile) para que NO pueda: (1) cambiar el estado de su
+ambulancia o de la emergencia a voluntad, en cualquier orden, y (2) volver el
+estado de la ambulancia a "Disponible" por su cuenta mientras tiene una
+emergencia asignada. Esa autoridad se modela como perteneciente al CRUM
+(el despachador, en sicem-desktop/sicem-web), y la unidad avanza en una
+secuencia de un solo sentido que el paramedico ejecuta pero no decide.
+
+--------------------------------------------------------------------------------
+DEFINICIONES BASE (punto 4 de la norma)
+--------------------------------------------------------------------------------
+
+- Punto 4.1.8 — CRUM: "instancia tecnico-medico-administrativa... que
+  establece la secuencia de las actividades especificas para la atencion
+  medica prehospitalaria, en el sitio del evento critico, el traslado y la
+  recepcion en el establecimiento para la atencion medica designado, con la
+  finalidad de brindar atencion medica oportuna y especializada las 24 horas
+  del dia."
+
+  Esta es la cita mas directa de toda la norma para esta decision: es el CRUM
+  quien "establece la secuencia de las actividades", no el TAMP en el sitio.
+  La norma pone la autoria de la secuencia operativa en la coordinacion
+  (CRUM/sicem-desktop), no en el ejecutor de campo.
+
+- Punto 4.1.12 — TAMP (Tecnico en Atencion Medica Prehospitalaria): personal
+  operativo capacitado para brindar atencion medica prehospitalaria. La norma
+  lo define por su funcion tecnica de atencion al paciente, no le atribuye en
+  ningun punto facultad de decision administrativa/operativa sobre la unidad.
+
+--------------------------------------------------------------------------------
+DECISION 1: El paramedico NO decide por si mismo el estado de la ambulancia o
+la emergencia — solo ejecuta lo que el CRUM coordina.
+(Implementado en services/unidades — actualizarEstadoAmbulancia restringido
+por rol y secuencia; clients/sicem-mobile/app/(app)/mapa.js — botones
+lineales "Pasar a X" en vez de una lista libre de estados.)
+--------------------------------------------------------------------------------
+
+- Punto 7.1.5 — "La coordinacion logistica y operativa, asi como la asesoria
+  en la atencion medica prehospitalaria, sera proporcionada por el personal
+  operativo del CRUM en turno, que en todos los casos debera estar integrada
+  por un medico y TAMP's activos en el servicio." La coordinacion logistica y
+  operativa —es decir, el "que hacer y cuando"— es responsabilidad del CRUM,
+  no una decision unilateral del TAMP que ya esta en la unidad/sitio.
+
+- Punto 7.1.6 — "El CRUM enviara al sitio de la urgencia la ambulancia
+  adecuada y disponible que se encuentre mas cercana... coordinara el
+  traslado al servicio de urgencias del establecimiento para la atencion
+  medica que resulte mas conveniente." Es el CRUM quien decide QUE ambulancia
+  se envia y A DONDE se traslada — el TAMP no elige su propia disponibilidad
+  ni su propio destino, los recibe ya coordinados.
+
+- Punto 7.1.7 — "El TAMP o el personal responsable de la atencion en la
+  ambulancia, reportara al CRUM los hallazgos clinicos y en su caso, el
+  diagnostico presuncional, el estado psicofisico del paciente, asi como las
+  necesidades inmediatas..." El flujo de informacion es TAMP -> CRUM
+  (reporta), no al reves. El TAMP informa; quien coordina la respuesta
+  operativa es el CRUM.
+
+- Punto 7.1.8 — "El manejo de la atencion medica prehospitalaria debera
+  realizarse de acuerdo con los protocolos escritos, que para la naturaleza
+  del evento tenga definidos la institucion responsable de brindar la
+  atencion... los protocolos deberan estar avalados y firmados por la
+  autoridad medica o el responsable sanitario del servicio de ambulancias."
+  El TAMP actua conforme a protocolos ya definidos por la institucion, no por
+  criterio propio caso a caso — esto respalda que el flujo de estados de la
+  ambulancia sea una secuencia fija que el sistema hace cumplir, no una lista
+  libre de opciones a discrecion del paramedico.
+
+CONCLUSION: la norma no tiene una frase literal que diga "el TAMP no puede
+cambiar el estado de la ambulancia en la app" (no podria tenerla — SICEM es
+un sistema que la norma no conoce). Pero el patron es consistente en los 4
+puntos citados: el CRUM coordina y establece la secuencia (4.1.8, 7.1.5,
+7.1.6), el TAMP reporta y ejecuta conforme a protocolo (7.1.7, 7.1.8). Es un
+argumento legal defendible para que SICEM modele la autoridad de cambio de
+estado en el CRUM (sicem-desktop/sicem-web) y limite al paramedico a un
+avance de un solo sentido dentro de la secuencia que ya se le asigno.
+
+--------------------------------------------------------------------------------
+DECISION 2: El paramedico NO puede volver la ambulancia a "Disponible" desde
+sicem-mobile mientras tiene una emergencia asignada — ese estado solo se
+alcanza cuando el CRUM cierra/cancela la emergencia, el hospital rechaza la
+recepcion, o el flujo se completa por entrega del paciente.
+--------------------------------------------------------------------------------
+
+- Punto 7.2.3 — "El CRUM debera dar aviso con oportunidad al establecimiento
+  para la atencion medica sobre la posibilidad de traslado del paciente que
+  recibe atencion medica prehospitalaria en una ambulancia, para que se
+  decida previa valoracion del caso, su ingreso y tratamiento inmediato o en
+  su defecto, el traslado a otro establecimiento con mayor grado de
+  complejidad y poder de resolucion." Es el establecimiento (hospital) quien
+  decide si acepta o no la recepcion del paciente — esta es la cita que
+  respalda que el "aceptar/rechazar" de una solicitud interinstitucional le
+  pertenece al HOSPITAL (sicem-desktop), no al paramedico en sicem-mobile: la
+  norma pone esa decision en el establecimiento, no en la unidad movil.
+
+- Punto 7.2.5 — "El personal medico o el TAMP de la ambulancia que lleve a
+  cabo el traslado, es responsable del paciente durante el mismo." Esta
+  responsabilidad es de CUSTODIA/ATENCION CLINICA del paciente durante el
+  traslado, no de decision administrativa sobre la disponibilidad de la
+  unidad. El TAMP responde por el paciente que ya tiene a bordo; no por
+  decidir cuando su unidad vuelve a estar libre para otro servicio.
+
+- Inferencia razonable (no literal): si el CRUM es quien "establece la
+  secuencia de las actividades" (4.1.8) y quien coordina destino y traslado
+  (7.1.6), entonces el cierre de esa secuencia — que la unidad vuelva a
+  "Disponible" — tambien le corresponde al CRUM, o a un evento que el CRUM
+  reconoce (recepcion exitosa en el hospital, cancelacion de la emergencia).
+  Permitir que el TAMP se autodeclare "Disponible" a medio flujo (por
+  ejemplo, justo despues de que se le asigno la emergencia) rompe esa cadena
+  de coordinacion: el CRUM seguiria pensando que la unidad esta ocupada
+  cuando el sistema ya la ofreceria para una nueva asignacion.
+
+CONCLUSION: no hay una prohibicion literal de que el TAMP toque el boton de
+"Disponible". La justificacion es la misma logica de las dos citas de arriba:
+la norma centraliza la coordinacion y el cierre del ciclo en el CRUM/el
+establecimiento receptor, no en el TAMP de campo. SICEM implementa esto
+haciendo que "Disponible" solo sea alcanzable por: (a) el despachador
+cancelando la emergencia, (b) el hospital rechazando la recepcion, o (c) la
+finalizacion completa del flujo (entrega del paciente registrada) — nunca
+como una opcion directa del paramedico durante una emergencia activa.
+
+--------------------------------------------------------------------------------
+DECISION 3: La confirmacion tipo "aceptar/rechazar" solo aplica a solicitudes
+INTERINSTITUCIONALES (entre hospitales distintos) y se pide a sicem-desktop
+(el hospital), NO a sicem-mobile (el paramedico) — una asignacion directa de
+la propia CRUM/institucion no requiere que el paramedico "acepte" nada.
+--------------------------------------------------------------------------------
+
+- Ya cubierto por 7.1.5/7.1.6 (arriba): si la coordinacion operativa y el
+  envio de la ambulancia son atribucion del CRUM, una asignacion directa
+  dentro de la misma institucion ya es una decision tomada — no hay nada que
+  el TAMP deba "aceptar", solo ejecutar (ver Decision 1).
+
+- Punto 7.2.3 (arriba) es la cita que si distingue una decision real de
+  aceptar/rechazar: la del ESTABLECIMIENTO receptor sobre si recibe al
+  paciente. Eso mapea de forma natural al flujo interinstitucional de SICEM
+  (registerInterInstitutionalRequest), donde el hospital destino evalua y
+  decide desde sicem-desktop — no al paramedico de la ambulancia que ya fue
+  asignada por su propio CRUM.
+
+CONCLUSION: separar "acuse de recibido" (sicem-mobile, para asignaciones
+directas de la propia institucion) de "aceptar/rechazar" (sicem-desktop, para
+solicitudes entre instituciones distintas, punto 7.2.3) tiene respaldo en que
+la norma pone la decision de aceptar un traslado en el establecimiento
+receptor, no en la unidad movil que ya fue despachada.
+
+--------------------------------------------------------------------------------
+NOTA FINAL
+--------------------------------------------------------------------------------
+Este documento cubre solo la autoridad del CRUM sobre el TAMP en cuanto a
+cambios de estado de ambulancia/emergencia y el reparto de la confirmacion
+interinstitucional. Ninguna de las tres conclusiones es una prohibicion
+literal de la NOM-034-SSA3-2013 — son inferencias razonables construidas
+sobre citas textuales reales (4.1.8, 7.1.5, 7.1.6, 7.1.7, 7.1.8, 7.2.3,
+7.2.5), siguiendo el mismo criterio de honestidad que
+traslado-pacientes-por-ambulancia.txt: se cita el punto exacto, y se distingue
+siempre entre "la norma lo dice" y "esto se infiere razonablemente de lo que
+la norma dice".

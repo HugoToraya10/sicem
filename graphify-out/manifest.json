@@ -5,8 +5,8 @@
     "semantic_hash": "c1a3b6b56600453c8961910b1fe8539e"
   },
   ".claude/settings.local.json": {
-    "mtime": 1785816246.605878,
-    "ast_hash": "e4bff8e63e173f82ececf502bc49d3be",
+    "mtime": 1785888354.356937,
+    "ast_hash": "cde0f7ce7aeea1998243f2fabb52148a",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/main.js": {
@@ -35,9 +35,9 @@
     "semantic_hash": "c9d9620fb3549c2d22e34be179f8abe1"
   },
   "clients/sicem-desktop/src/components/PrivateRoute.jsx": {
-    "mtime": 1784775675.1415515,
-    "ast_hash": "753ebf1b8a39d2fe7d5f6e0e97f1efea",
-    "semantic_hash": "753ebf1b8a39d2fe7d5f6e0e97f1efea"
+    "mtime": 1785898636.3246844,
+    "ast_hash": "c052cd311e88b15d19eecf164eac7288",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/ambulances/AmbulanceStatusCard.jsx": {
     "mtime": 1784702896.0009964,
@@ -190,8 +190,8 @@
     "semantic_hash": "33caa6d28d87fc7e637c033d0d7124b1"
   },
   "clients/sicem-mobile/package.json": {
-    "mtime": 1785816890.8980916,
-    "ast_hash": "cac1dca9b1e61a603e8e0a8118e34cd6",
+    "mtime": 1785887619.5476713,
+    "ast_hash": "2af4feeeb6239e959a5b56034faf0dd5",
     "semantic_hash": ""
   },
   "clients/sicem-web/eslint.config.js": {
@@ -220,9 +220,9 @@
     "semantic_hash": "000662c7eaa020ccca8a13816cf9ff0e"
   },
   "clients/sicem-web/src/components/map/MapArea.jsx": {
-    "mtime": 1784779829.8680115,
-    "ast_hash": "6ae3dc8733c172e1e1f60cb7acbe04ef",
-    "semantic_hash": "6ae3dc8733c172e1e1f60cb7acbe04ef"
+    "mtime": 1785895639.621349,
+    "ast_hash": "fe91414e2aafb9b2b1da62979a7b8358",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/context/AuthContext.jsx": {
     "mtime": 1784775880.9369566,
@@ -240,8 +240,8 @@
     "semantic_hash": "d464d8dacd4aaa3fab1a57a7f59c60df"
   },
   "clients/sicem-web/src/pages/Dashboard.jsx": {
-    "mtime": 1785730291.7244706,
-    "ast_hash": "2428b2bb712bafeb18276075519f6f99",
+    "mtime": 1785898611.3954873,
+    "ast_hash": "8450d864a32b721cb76cc40f398e893a",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/EmergencyDetail.jsx": {
@@ -265,8 +265,8 @@
     "semantic_hash": "71c1012cd18e9ab0ebd94e331050dcf1"
   },
   "clients/sicem-web/src/pages/NewEmergency.jsx": {
-    "mtime": 1785730355.9173002,
-    "ast_hash": "176f0f3786c6c4df74eaef3777e17fcc",
+    "mtime": 1785897452.6169155,
+    "ast_hash": "d5ef74347730450023db137572b37148",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Profile.jsx": {
@@ -355,8 +355,8 @@
     "semantic_hash": "6ec4909bd3cb6a86dbec7468b1ae7c59"
   },
   "services/emergencias/controllers/emergency.js": {
-    "mtime": 1785786120.512267,
-    "ast_hash": "d01a1b323c66f144968e398782ef386e",
+    "mtime": 1785897735.5002544,
+    "ast_hash": "e78319d6afd8a109f6d9c6c994913039",
     "semantic_hash": ""
   },
   "services/emergencias/index.js": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "services/emergencias/models/emergency.js": {
-    "mtime": 1785786097.386098,
-    "ast_hash": "8a117a972fa3dbfa10100a0fbd6507a6",
+    "mtime": 1785897638.9877348,
+    "ast_hash": "e0c16e1539d45dd338824b8566a304c0",
     "semantic_hash": ""
   },
   "services/emergencias/package.json": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "services/emergencias/routes/emergency.js": {
-    "mtime": 1785711610.3123498,
-    "ast_hash": "da5efde0ae06d03453a555107fd1cdf9",
+    "mtime": 1785872554.7586622,
+    "ast_hash": "972fb8c8b416dc6b1cf63bb9d907267d",
     "semantic_hash": ""
   },
   "services/hospitales/config/db.js": {
@@ -410,9 +410,9 @@
     "semantic_hash": ""
   },
   "services/hospitales/models/hospital.js": {
-    "mtime": 1784712379.4083364,
-    "ast_hash": "8e2b7f88431ff5ea8e7c98f0b47021b9",
-    "semantic_hash": "8e2b7f88431ff5ea8e7c98f0b47021b9"
+    "mtime": 1785895596.0262127,
+    "ast_hash": "39e8357f3236c05bbc44c8876eb17d2b",
+    "semantic_hash": ""
   },
   "services/hospitales/package.json": {
     "mtime": 1783183972.1221497,
@@ -470,8 +470,8 @@
     "semantic_hash": "43763602c28e42af89a1664f35522e07"
   },
   "services/unidades/controllers/unit.js": {
-    "mtime": 1785825332.6668117,
-    "ast_hash": "74cd23eea75c82a8f6a567d0ffd15e56",
+    "mtime": 1785899160.626892,
+    "ast_hash": "5b3eb8d3413019e4790bba0a1576974a",
     "semantic_hash": ""
   },
   "services/unidades/index.js": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "services/unidades/models/unit.js": {
-    "mtime": 1785737877.6433635,
-    "ast_hash": "49761c0056729617bc3059fa618814f9",
+    "mtime": 1785898420.7451506,
+    "ast_hash": "7038653b4c406eede36af0065562395c",
     "semantic_hash": ""
   },
   "services/unidades/package.json": {
@@ -495,8 +495,8 @@
     "semantic_hash": "0054e0327a4f79e9272eb618f4309951"
   },
   "services/unidades/routes/unit.js": {
-    "mtime": 1785825293.1624646,
-    "ast_hash": "df52cb615025a68dd33d060d52b5f8de",
+    "mtime": 1785898457.8599176,
+    "ast_hash": "c7e73329f3a50a9a34a8b5e10d1bf5e5",
     "semantic_hash": ""
   },
   "services/usuarios/config/db.js": {
@@ -700,23 +700,23 @@
     "semantic_hash": "9960a24288958394ac50e57ff638b036"
   },
   "clients/sicem-mobile/app/(app)/_layout.js": {
-    "mtime": 1785821048.3729148,
-    "ast_hash": "788ba97e5edd81a2e869128ad4e0f6a7",
+    "mtime": 1785894446.289749,
+    "ast_hash": "b0f4a0125e0163a8df76fae2b3e7d76a",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/index.js": {
-    "mtime": 1785766678.6211286,
-    "ast_hash": "8c797d7ce8163321ca0b6db6b487467a",
+    "mtime": 1785898559.4006977,
+    "ast_hash": "2c56ba8366573e30de7b25d44b7e0f25",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/notas.js": {
-    "mtime": 1785709982.6815376,
-    "ast_hash": "36c0d22e0f4af3e8ffcc60dd6b1d68a4",
+    "mtime": 1785873238.304985,
+    "ast_hash": "c13747899ae08f5ab87ba853fc763c15",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/registrar-paciente.js": {
-    "mtime": 1785711882.4767728,
-    "ast_hash": "19ffc706d9d72dbeae8717bcc9ce1771",
+    "mtime": 1785873218.009944,
+    "ast_hash": "329dd16b96e9254cf7216c56e8ed45a8",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(auth)/login.js": {
@@ -755,8 +755,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-mobile/context/AmbulanceContext.jsx": {
-    "mtime": 1785766651.2822235,
-    "ast_hash": "1fbde07f74fc90b9066312198948d7f1",
+    "mtime": 1785885761.4470136,
+    "ast_hash": "fa3a3ec966c46de39993cb2537265181",
     "semantic_hash": ""
   },
   "plantillas mockup/SICEM_Escritorio_Hospital.html": {
@@ -775,13 +775,13 @@
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/mapa.js": {
-    "mtime": 1785821068.8719735,
-    "ast_hash": "c7f89044768f2edbe5cee89244fdd867",
+    "mtime": 1785893469.513786,
+    "ast_hash": "217dea8cadaf6099346d387d4edfd422",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/paciente.js": {
-    "mtime": 1785711840.806253,
-    "ast_hash": "4f615ef429844f9aaa6312adb867e877",
+    "mtime": 1785873228.916256,
+    "ast_hash": "6823abab1db51b141d4ffabbdec06791",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/stats.js": {
@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-mobile/context/SocketContext.jsx": {
-    "mtime": 1785766661.405894,
-    "ast_hash": "77c6380db170fcd985e7a5ed76d4f2d4",
+    "mtime": 1785890596.4021935,
+    "ast_hash": "041d7aa1e1352170a24a3a8af9bcc2e6",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/sockets/unitsSocket.js": {
@@ -812,6 +812,21 @@
   "clients/sicem-mobile/plugins/withNdkVersion.js": {
     "mtime": 1785815921.5268264,
     "ast_hash": "aec03ea25849812ba1a05a479cd24df3",
+    "semantic_hash": ""
+  },
+  "clients/sicem-mobile/utils/formatData.js": {
+    "mtime": 1785873106.1257896,
+    "ast_hash": "474ccdc4aba3ff5aa6f9a657ee0cb9ec",
+    "semantic_hash": ""
+  },
+  "fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt": {
+    "mtime": 1785885542.411479,
+    "ast_hash": "0e766b9c7571679755b0a779948e4da4",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/sockets/unitsSocket.js": {
+    "mtime": 1785898621.2990856,
+    "ast_hash": "e66e45a987ac6324931a978d8e31f860",
     "semantic_hash": ""
   }
 }

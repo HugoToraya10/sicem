@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import Navbar from './layout/Navbar'
 import { getNavLinks } from '../utils/Navlinks'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
+import { connectUnitsSocket } from '../sockets/unitsSocket'
 import { ensureNotificationPermission, alertNewPatient } from '../utils/notify'
 
 // Esta app es exclusiva para admin (1) y hospital (4) — mismo criterio que Login.jsx
@@ -36,6 +37,22 @@ const PrivateRoute = () => {
             }
         })
         return () => emergencySocket.disconnect()
+    }, [isAuthorized, token, user])
+
+    // Falla reportada por el paramédico desde sicem-mobile (solo avisa — no
+    // cambia el estado de la unidad por su cuenta, eso lo decide este
+    // hospital). Va en un socket aparte (unidades, puerto 3003) porque es el
+    // servicio dueño de esa información, no emergencias.
+    useEffect(() => {
+        if (!isAuthorized) return
+        const unitsSocket = connectUnitsSocket(token)
+        unitsSocket.on('eventAmbulanceFailureReported', (data) => {
+            if (data?.institutionId && parseInt(data.institutionId) === parseInt(user.institutionId)) {
+                const who = data.paramedicName ? `${data.paramedicName} — ` : ''
+                alertNewPatient(`Falla reportada: ${data.unitNumber || 'unidad'}`, `${who}${data.note || ''}`)
+            }
+        })
+        return () => unitsSocket.disconnect()
     }, [isAuthorized, token, user])
 
     if (!isAuthorized) {

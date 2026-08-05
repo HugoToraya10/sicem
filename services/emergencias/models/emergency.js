@@ -171,6 +171,18 @@ const updateEmergencyStatus = (emergencyId, emergencyStatusId, callback) => {
     db.query(sql, [emergencyStatusId, emergencyId], callback);
 }
 
+// Avanza el estado de la emergencia SOLO hacia adelante (nunca la retrocede,
+// nunca toca una ya cerrada) — usado cuando se le asigna una ambulancia
+// (directa o interinstitucional aceptada) para que pase sola de "Registrada"
+// a "Asignada" sin que el despachador tenga que ir a cambiarla a mano por
+// separado. affectedRows en el callback dice si de verdad avanzó algo (para
+// saber si vale la pena avisar por socket).
+const advanceEmergencyStatus = (emergencyId, targetEmergencyStatusId, callback) => {
+    const sql = `UPDATE emergencies SET emergency_status_id = ?, updated_at = NOW()
+                WHERE emergency_id = ? AND closed_at IS NULL AND emergency_status_id < ?`;
+    db.query(sql, [targetEmergencyStatusId, emergencyId, targetEmergencyStatusId], callback);
+}
+
 // Actualizar estado de ambulancia al asignar/desasignar recibiendo un array de todas las ambulancias a actualizar
 const updateAmbulanceStatus = (ambulanceIds, ambulanceStatusId, callback) => {
     const placeholders = ambulanceIds.map(id => '?').join(', ');
@@ -198,7 +210,26 @@ const closeEmergencyRaw = (emergencyId, closeReason, callback) => {
     db.query(sql, [closeReason || null, emergencyId], (e, r) => {
         if (e) return callback(e, r);
         cancelPendingRequestsForEmergency(emergencyId);
-        callback(e, r);
+        // El cierre de la emergencia es lo que libera de vuelta a "Disponible"
+        // las unidades que seguían asignadas (no se desasignaron antes a mano
+        // — ver unassignAmbulance, que ya hace esto mismo para una unidad
+        // suelta) — el paramédico NUNCA puede ponerse "Disponible" por su
+        // cuenta desde sicem-mobile (ver PARAMEDIC_FORWARD_TRANSITIONS en
+        // services/unidades/controllers/unit.js), así que este es uno de los
+        // pocos puntos donde eso puede pasar. Ver fundamentos-legales/
+        // autoridad-crum-sobre-tamp-paramedico.txt.
+        db.query(`SELECT ambulance_id FROM assignments WHERE emergency_id = ? AND unassigned_at IS NULL`,
+            [emergencyId], (e2, r2) => {
+                if (!e2 && r2.length > 0) {
+                    const ids = r2.map((row) => row.ambulance_id);
+                    const placeholders = ids.map(() => '?').join(',');
+                    db.query(`UPDATE ambulances SET ambulance_status_id = 1, updated_at = NOW() WHERE ambulance_id IN (${placeholders})`,
+                        ids, (e3) => {
+                            if (e3) console.error('Error liberando ambulancias tras cierre de emergencia:', e3);
+                        });
+                }
+                callback(e, r);
+            });
     });
 }
 
@@ -550,6 +581,7 @@ const getPatientsByEmergency = (emergencyId, callback) => {
     const sql = `SELECT ep.*, up.first_name, up.first_surname, up.second_surname,
                 up.curp, up.phone_number, cr.blood_type_id, bt.blood_type,
                 rs.name AS reception_status_name, di.name AS destination_institution_name,
+                di.latitude AS destination_latitude, di.longitude AS destination_longitude,
                 sp.name AS speciality_name, amb.unit_number
                 FROM emergencies_patients ep
                 LEFT JOIN user_profiles up ON ep.user_profile_id = up.user_profile_id
@@ -949,6 +981,31 @@ const getUserPushToken = (userProfileId, callback) => {
     db.query(sql, [userProfileId], callback);
 }
 
+// "Recuperación" — el socket (eventEmergencyAssignedToMe) solo llega si el
+// celular está conectado en ESE instante exacto; si se cayó la conexión un
+// momento (pasa solo, celulares se van a segundo plano, WiFi parpadea), la
+// alerta se pierde para siempre y el paramédico nunca se entera. Esta
+// consulta es el respaldo: dado el turno activo del paramédico, busca si su
+// unidad YA tiene una emergencia asignada y sin cerrar — sicem-mobile la usa
+// al conectar el socket para "ponerse al día" sola.
+// Mismo enriquecimiento (type_name, status_name, triage) que getEmergencyById
+// arriba — así el celular recibe exactamente la misma forma sin importar si
+// la emergencia le llegó por socket en vivo o por esta recuperación.
+const getMyCurrentEmergency = (userProfileId, callback) => {
+    const sql = `SELECT e.*, et.name AS type_name, es.name AS status_name,
+                tl.level AS triage_level, tl.color AS triage_color_name, tl.hex_color AS triage_hex_color,
+                a.ambulance_id, a.notes
+                FROM ambulance_shifts s
+                JOIN assignments a ON a.ambulance_id = s.ambulance_id AND a.unassigned_at IS NULL
+                JOIN emergencies e ON a.emergency_id = e.emergency_id AND e.emergency_status_id != 5
+                LEFT JOIN emergency_types et ON e.emergency_type_id = et.emergency_type_id
+                LEFT JOIN emergency_statuses es ON e.emergency_status_id = es.emergency_status_id
+                LEFT JOIN triage_levels tl ON e.triage_level_id = tl.triage_level_id
+                WHERE s.user_profile_id = ? AND s.shift_end IS NULL
+                ORDER BY a.assigned_at DESC LIMIT 1`;
+    db.query(sql, [userProfileId], callback);
+}
+
 // Estadísticas personales del paramédico — no existe una tabla que diga
 // "este paramédico atendió esta emergencia" directamente, así que se infiere
 // cruzando assignments (qué unidad fue asignada a qué emergencia, y cuándo)
@@ -1010,7 +1067,7 @@ module.exports = {
     registerAssignment, registerInterInstitutionalRequest,
     createEmergencyType, createEmergencyStatus, createRequestStatus, createTriageLevel,
     // PATCH
-    updateEmergencyStatus, closeEmergency, forceCloseEmergency,
+    updateEmergencyStatus, advanceEmergencyStatus, closeEmergency, forceCloseEmergency,
     unassignAmbulance, respondInterInstitutionalRequest, cancelInterInstitutionalRequest, updateAmbulanceStatus,
     toggleEmergencyType, toggleEmergencyStatus, toggleRequestStatus, toggleTriageLevel,
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
@@ -1031,6 +1088,6 @@ module.exports = {
     getEmergenciesByType, getRequestsByStatus, getResponseTimeByDay, getResponseTimeToday, getEmergenciesByInstitution,
     //GETs de estadísticas filtradas por hospital
     getPatientsByTypeForInstitution, getPatientsByMonthForInstitution, getAvgTransferTimeForInstitution,
-    getActiveShiftUserByAmbulance, getUserPushToken,
+    getActiveShiftUserByAmbulance, getUserPushToken, getMyCurrentEmergency,
     getMyAssignmentCountThisMonth, getMyAvgResponseTimeThisMonth, getMyAssignmentsByTypeThisMonth, getMyAssignmentsByWeekThisMonth
 }

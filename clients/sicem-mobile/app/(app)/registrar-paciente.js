@@ -4,12 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useAuth } from '../../context/AuthContext'
 import { useAmbulance } from '../../context/AmbulanceContext'
 import { API_BASE_URL } from '../../constants/api'
-
-const toLowerCaseKeys = (obj) => {
-    const out = {}
-    for (const key in obj) out[key.toLowerCase()] = obj[key]
-    return out
-}
+import { toLowerCaseKeys } from '../../utils/formatData'
 
 const RegistrarPacienteScreen = () => {
     const { emergencyId } = useLocalSearchParams()
