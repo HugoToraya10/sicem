@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Manual Técnico — Sistema SICEM</title>
+<style>
+  @page { margin: 2cm 1.8cm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Inter, Arial, sans-serif;
+    color: #1a1a2e;
+    line-height: 1.55;
+    margin: 0;
+    font-size: 14px;
+  }
+  .mono { font-family: 'Consolas', 'JetBrains Mono', monospace; }
+  h1, h2, h3, h4 { font-family: 'Segoe UI', Inter, Arial, sans-serif; color: #12121f; }
+  h1 { font-size: 26px; border-bottom: 3px solid #C0272D; padding-bottom: 10px; margin-top: 0; }
+  h2 { font-size: 20px; margin-top: 38px; border-bottom: 1px solid #d8d8e0; padding-bottom: 6px; }
+  h3 { font-size: 16px; margin-top: 24px; color: #C0272D; }
+  h4 { font-size: 14px; margin-top: 16px; }
+  p { margin: 8px 0; }
+  code { background: #f0f0f5; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 12.5px; }
+  pre { background: #12121f; color: #e0e0f0; padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-size: 12px; font-family: 'Consolas', monospace; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; font-size: 12px; }
+  th, td { border: 1px solid #d8d8e0; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #12121f; color: white; font-weight: 600; }
+  tr:nth-child(even) td { background: #f7f7fb; }
+  .cover {
+    text-align: center;
+    padding-top: 12vh;
+    page-break-after: always;
+  }
+  .cover-logo { width: 110px; height: 110px; margin: 0 auto 24px; display: block; }
+  .cover h1 { border: none; font-size: 34px; margin-bottom: 4px; }
+  .cover .subtitle { font-size: 16px; color: #6b6b78; margin-bottom: 60px; }
+  .cover .meta { font-size: 13px; color: #8888a0; margin-top: 120px; }
+  .toc { page-break-after: always; }
+  .toc ol { font-size: 14px; line-height: 2; }
+  .toc ol ol { font-size: 13px; line-height: 1.7; }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10.5px; font-weight: 700; color: white; }
+  .b-get { background: #2E7D32; }
+  .b-post { background: #1565C0; }
+  .b-patch { background: #B8860B; }
+  .role-pub { color: #2E7D32; font-weight: 600; }
+  .architecture {
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+    background: #f7f7fb; border: 1px solid #e4e4ec; border-radius: 8px; padding: 20px; margin: 16px 0;
+  }
+  .arch-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .arch-box { border: 1.5px solid #C0272D; border-radius: 6px; padding: 8px 14px; font-size: 12px; text-align: center; background: white; min-width: 90px; }
+  .arch-box.core { background: #12121f; color: white; border-color: #12121f; }
+  .arch-box.db { background: #C0272D; color: white; border-color: #C0272D; }
+  .arch-arrow { font-size: 18px; color: #8888a0; }
+  .note {
+    background: #FFF8E1; border-left: 4px solid #B8860B; padding: 10px 14px; margin: 12px 0; font-size: 12.5px; border-radius: 0 4px 4px 0;
+  }
+  .warn {
+    background: #FFEBEE; border-left: 4px solid #C0272D; padding: 10px 14px; margin: 12px 0; font-size: 12.5px; border-radius: 0 4px 4px 0;
+  }
+  section { page-break-inside: avoid; }
+  .no-break { page-break-inside: avoid; }
+  .service-block { page-break-before: always; }
+  .footer-note { font-size: 11px; color: #8888a0; margin-top: 40px; border-top: 1px solid #e4e4ec; padding-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <svg class="cover-logo" viewBox="0 0 1024 1024">
+    <rect width="1024" height="1024" rx="224" fill="#C0272D"/>
+    <rect x="432" y="232" width="160" height="560" rx="36" fill="#FFFFFF"/>
+    <rect x="232" y="432" width="560" height="160" rx="36" fill="#FFFFFF"/>
+  </svg>
+  <h1>Manual Técnico del Sistema</h1>
+  <div class="subtitle">SICEM — Sistema Integral de Coordinación de Emergencias Médicas</div>
+  <div class="meta">
+    Documentación técnica de arquitectura, base de datos, API e infraestructura<br/>
+    Tabasco, México · 2026
+  </div>
+</div>
+
+<div class="toc">
+<h1>Índice</h1>
+<ol>
+  <li>Introducción y alcance</li>
+  <li>Arquitectura general del sistema</li>
+  <li>Stack tecnológico</li>
+  <li>Modelo de datos
+    <ol type="a"><li>Resumen por dominio</li><li>Relaciones principales</li><li>Detalle de las 34 tablas</li></ol>
+  </li>
+  <li>Servicios backend y API (163 endpoints)
+    <ol type="a"><li>Gateway</li><li>usuarios</li><li>hospitales</li><li>unidades</li><li>pacientes</li><li>emergencias</li></ol>
+  </li>
+  <li>Comunicación en tiempo real (Socket.IO)</li>
+  <li>Autenticación y autorización</li>
+  <li>Notificaciones push (Firebase Cloud Messaging)</li>
+  <li>Aplicaciones cliente</li>
+  <li>Infraestructura y despliegue</li>
+  <li>Seguridad — hallazgos y áreas de mejora identificadas</li>
+  <li>Estructura del repositorio</li>
+</ol>
+</div>
+
+<h1>1. Introducción y alcance</h1>
+<p>Este documento describe la arquitectura técnica, el modelo de datos, la interfaz de programación (API) y la infraestructura de despliegue del sistema <strong>SICEM</strong> (Sistema Integral de Coordinación de Emergencias Médicas), desarrollado para digitalizar la operación del Centro Regulador de Urgencias Médicas (CRUM) de Tabasco, México.</p>
+<p>SICEM cubre el ciclo de vida completo de una emergencia médica: recepción de la llamada por el despachador, asignación de una o varias ambulancias, atención en campo por el paramédico (signos vitales, triage, diagnóstico inicial), traslado al hospital destino, recepción y confirmación de llegada por el personal hospitalario, y cierre administrativo — incluyendo el caso interinstitucional, donde una institución solicita en préstamo una ambulancia de otra.</p>
+<p>Este manual está dirigido a quien necesite entender o dar mantenimiento al sistema desde el punto de vista técnico: arquitectura, base de datos, contratos de API, y despliegue. Para instrucciones de uso de cada aplicación dirigidas al usuario final, existen manuales de usuario independientes por aplicación (Web/Despachador, Desktop/Hospital, Mobile/Paramédico).</p>
+
+<h1>2. Arquitectura general del sistema</h1>
+<p>SICEM sigue una arquitectura de <strong>microservicios</strong>: cinco servicios de backend independientes, cada uno responsable de un dominio de negocio acotado, expuestos a través de un <strong>gateway</strong> único que actúa como punto de entrada HTTP para las tres aplicaciones cliente. Todos los servicios comparten una única base de datos MySQL/MariaDB (<code>sicem</code>), y se comunican entre sí mediante consultas SQL cruzadas directas cuando necesitan datos de otro dominio — un patrón deliberado en este proyecto para mantener la simplicidad, dado su tamaño y equipo de desarrollo, en vez de introducir un bus de mensajería o llamadas HTTP internas servicio-a-servicio.</p>
+
+<div class="architecture no-break">
+  <div class="arch-row">
+    <div class="arch-box">SICEM Web<br/><span style="color:#8888a0">Despachador</span></div>
+    <div class="arch-box">SICEM Desktop<br/><span style="color:#8888a0">Hospital</span></div>
+    <div class="arch-box">SICEM Mobile<br/><span style="color:#8888a0">Paramédico</span></div>
+  </div>
+  <div class="arch-arrow">▼ REST (HTTP) · ▼ Socket.IO (directo, sin pasar por el gateway)</div>
+  <div class="arch-row">
+    <div class="arch-box core">Gateway — puerto 3000<br/><span style="opacity:.7">proxy HTTP puro, cors abierto</span></div>
+  </div>
+  <div class="arch-arrow">▼</div>
+  <div class="arch-row">
+    <div class="arch-box">usuarios<br/>:3001</div>
+    <div class="arch-box">hospitales<br/>:3002</div>
+    <div class="arch-box">unidades<br/>:3003<br/><span style="color:#8888a0">+ Socket.IO</span></div>
+    <div class="arch-box">pacientes<br/>:3004</div>
+    <div class="arch-box">emergencias<br/>:3005<br/><span style="color:#8888a0">+ Socket.IO</span></div>
+  </div>
+  <div class="arch-arrow">▼</div>
+  <div class="arch-row">
+    <div class="arch-box db">MySQL / MariaDB — base de datos "sicem" (34 tablas, compartida por los 5 servicios)</div>
+  </div>
+</div>
+
+<p><strong>Puntos clave del diagrama:</strong></p>
+<ul>
+  <li>El gateway (<code>gateway/index.js</code>) es un proxy puro con <code>http-proxy-middleware</code>: no valida tokens, no transforma rutas, solo reenvía cada prefijo (<code>/usuarios</code>, <code>/hospitales</code>, <code>/unidades</code>, <code>/pacientes</code>, <code>/emergencias</code>) al puerto correspondiente.</li>
+  <li>Los tres clientes se conectan al gateway para todo el tráfico REST, pero <strong>los sockets se conectan directo</strong> a <code>unidades</code> (:3003) y <code>emergencias</code> (:3005), sin pasar por el gateway — cada uno corre su propia instancia independiente de Socket.IO.</li>
+  <li>No existe comunicación HTTP servicio-a-servicio: cuando, por ejemplo, <code>emergencias</code> necesita saber si una ambulancia está disponible, consulta directamente la tabla <code>ambulances</code> vía su propia conexión a la base de datos compartida, en vez de llamar a la API de <code>unidades</code>.</li>
+  <li>El servicio <code>unidades</code> expone un endpoint interno (<code>/unidades/notificar-cierre-sesion</code>) protegido por un secreto compartido (<code>X-Internal-Secret</code>, no un JWT de usuario) que <code>usuarios</code> invoca para forzar el cierre de sesión remoto de un paramédico cuando inicia sesión desde otro dispositivo.</li>
+</ul>
+
+<h1>3. Stack tecnológico</h1>
+<table>
+<tr><th>Capa</th><th>Tecnología</th><th>Notas</th></tr>
+<tr><td rowspan="6"><strong>Backend</strong></td><td>Node.js + Express</td><td>Los 5 servicios y el gateway, cada uno un proceso Express independiente.</td></tr>
+<tr><td>MySQL / MariaDB</td><td>Driver <code>mysql2</code>; consultas SQL directas (sin ORM), 34 tablas.</td></tr>
+<tr><td>Socket.IO</td><td>Comunicación en tiempo real; instancias independientes en <code>unidades</code> y <code>emergencias</code>.</td></tr>
+<tr><td>JSON Web Tokens (JWT)</td><td>Autenticación stateless, expiración de 8 horas.</td></tr>
+<tr><td>bcrypt</td><td>Hash de contraseñas.</td></tr>
+<tr><td>Firebase Admin SDK (FCM)</td><td>Notificaciones push al paramédico cuando la app móvil está en segundo plano/cerrada.</td></tr>
+<tr><td><strong>Web</strong> (sicem-web)</td><td>React 19 + Vite + React Router</td><td>SPA de escritorio para el despachador/administrador del CRUM. Desplegada en Vercel.</td></tr>
+<tr><td><strong>Desktop</strong> (sicem-desktop)</td><td>Electron + Vite + React 19</td><td>Aplicación de escritorio para personal hospitalario; empaquetada con electron-builder (instalador NSIS para Windows).</td></tr>
+<tr><td><strong>Mobile</strong> (sicem-mobile)</td><td>React Native (0.81) + Expo (SDK 54) + Expo Router</td><td>App para el paramédico en campo; build nativo Android vía Gradle (compilación local, sin depender de servicios de build en la nube).</td></tr>
+</table>
+
+<h1>4. Modelo de datos</h1>
+<p>La base de datos <code>sicem</code> tiene <strong>34 tablas</strong>, todas InnoDB con clave primaria numérica autoincremental. Una inconsistencia real y visible del esquema: algunas tablas usan nombres de columna en <code>MAYÚSCULAS</code> y otras en <code>snake_case</code> — no es un error de este documento, así está en la base real (las tablas más recientes, como <code>ambulance_shifts</code> o las de historial clínico, siguen <code>snake_case</code>; las originales del diseño inicial usan mayúsculas).</p>
+
+<h2>4.a Resumen por dominio</h2>
+<table>
+<tr><th>Dominio</th><th>Tablas</th><th>Rol</th></tr>
+<tr><td><strong>Geografía</strong> (2)</td><td><code>states</code>, <code>cities</code></td><td>Ubicación jerárquica estado → ciudad, usada por instituciones.</td></tr>
+<tr><td><strong>Usuarios y credenciales</strong> (4)</td><td><code>user_credentials</code>, <code>user_credential_history</code>, <code>user_profiles</code>, <code>roles</code></td><td>Autenticación, perfil de persona (empleado, paramédico, paciente, admin hospitalario), catálogo de roles, auditoría de activación de credenciales.</td></tr>
+<tr><td><strong>Instituciones</strong> (5)</td><td><code>institutions</code>, <code>institution_types</code>, <code>institutions_specialities</code>, <code>specialities</code>, <code>institution_notifications</code></td><td>Catálogo de hospitales/CRUM, nivel de atención, especialidades con capacidad de camas, notificaciones de llegada.</td></tr>
+<tr><td><strong>Ambulancias</strong> (6)</td><td><code>ambulances</code>, <code>ambulance_types</code>, <code>ambulances_statuses</code>, <code>ambulance_shifts</code>, <code>ambulance_failure_reports</code>, <code>locations</code></td><td>Flota, tipo, estado operativo en tiempo real, turnos, reportes de falla, historial GPS.</td></tr>
+<tr><td><strong>Emergencias y despacho</strong> (8)</td><td><code>emergencies</code>, <code>emergency_types</code>, <code>emergency_statuses</code>, <code>emergency_notes</code>, <code>triage_levels</code>, <code>assignments</code>, <code>inter_institutional_requests</code>, <code>request_statuses</code></td><td>Núcleo operativo: registro, tipificación, ciclo de vida, triage, notas clínicas, asignación de unidades, solicitudes interinstitucionales.</td></tr>
+<tr><td><strong>Pacientes y expediente clínico</strong> (9)</td><td><code>emergencies_patients</code>, <code>clinical_records</code>, <code>blood_types</code>, <code>patient_allergies(+history)</code>, <code>patient_conditions(+history)</code>, <code>patient_medications(+history)</code></td><td>Vínculo paciente↔emergencia (destino, estado de recepción), ficha clínica, y tres sub-módulos de historial clínico con auditoría propia.</td></tr>
+</table>
+<p><strong>Patrones de diseño observados en el esquema:</strong></p>
+<ul>
+  <li><strong>Catálogo + tabla operativa:</strong> cada entidad operativa (<code>emergencies</code>, <code>ambulances</code>) tiene sus catálogos de tipo/estado como tablas independientes (<code>emergency_types</code>/<code>emergency_statuses</code>, <code>ambulance_types</code>/<code>ambulances_statuses</code>), permitiendo activar/desactivar valores sin borrar historial.</li>
+  <li><strong>Auditoría de historial ligera:</strong> <code>patient_allergy_history</code>, <code>patient_condition_history</code>, <code>patient_medication_history</code> y <code>user_credential_history</code> solo registran cambios de <code>is_active</code> + fecha — no versionan todos los campos del registro.</li>
+  <li><strong><code>user_profiles</code> es el nodo central del modelo:</strong> referenciado por prácticamente todas las tablas operativas (emergencias, asignaciones, turnos, notas, expedientes clínicos), representando tanto a empleados del sistema como a pacientes (incluyendo perfiles "No identificado" para pacientes sin identificar en campo).</li>
+</ul>
+
+<h2>4.b Relaciones principales</h2>
+<p>Las relaciones más relevantes para entender el flujo de una emergencia:</p>
+<pre>emergencies ─┬─< assignments >─── ambulances
+             ├─< emergencies_patients >─── institutions (destino)
+             │         └─< emergency_notes
+             └─< inter_institutional_requests >─── institutions (solicitante / receptora)
+
+user_profiles ─── institutions
+              ├─── roles
+              ├─── ambulances (assigned_ambulance_id, turno activo)
+              └─── clinical_records ─┬─< patient_allergies
+                                     ├─< patient_conditions
+                                     └─< patient_medications</pre>
+
+<h2>4.c Detalle de las 34 tablas</h2>
+<p class="note">Convenciones: <strong>PK</strong> = clave primaria, <strong>AI</strong> = auto-incremento, <strong>UQ</strong> = restricción única, <strong>NN</strong> = NOT NULL, <strong>DEF</strong> = valor por defecto.</p>
+
+<h3>Geografía</h3>
+<table>
+<tr><th>Tabla</th><th>Descripción</th><th>Columnas clave</th><th>Foreign keys</th></tr>
+<tr><td><code>states</code></td><td>Catálogo de los 32 estados de México.</td><td><code>STATE_ID</code> PK AI, <code>NAME</code> NN</td><td>—</td></tr>
+<tr><td><code>cities</code></td><td>Ciudad dentro de un estado (en datos reales, solo Villahermosa).</td><td><code>CITY_ID</code> PK AI, <code>STATE_ID</code>, <code>NAME</code> NN</td><td><code>STATE_ID</code> → states</td></tr>
+</table>
+
+<h3>Usuarios y credenciales</h3>
+<table>
+<tr><th>Tabla</th><th>Descripción</th><th>Columnas clave</th><th>Foreign keys</th></tr>
+<tr><td><code>user_credentials</code></td><td>Credenciales de acceso (login) — email + hash de contraseña, independiente del perfil de persona.</td><td><code>USER_CREDENTIAL_ID</code> PK AI, <code>EMAIL</code> UQ, <code>PASSWORD_HASH</code>, <code>IS_ACTIVE</code>, <code>active_session_id</code></td><td>—</td></tr>
+<tr><td><code>user_credential_history</code></td><td>Auditoría de activación/desactivación de una credencial (p. ej. cierre forzado de sesión).</td><td><code>user_credential_history_id</code> PK AI, <code>user_credential_id</code> NN, <code>is_active</code>, <code>changed_at</code></td><td><code>user_credential_id</code> → user_credentials</td></tr>
+<tr><td><code>roles</code></td><td>Catálogo de roles (Administrador, Despachador, Paramédico, Hospital, Paciente).</td><td><code>ROLE_ID</code> PK AI, <code>ROLE_TYPE</code>, <code>DESCRIPTION</code>, <code>IS_ACTIVE</code></td><td>—</td></tr>
+<tr><td><code>user_profiles</code></td><td>Perfil de persona física — datos personales, CURP, rol, institución; puede no tener credenciales propias (pacientes sin cuenta).</td><td><code>USER_PROFILE_ID</code> PK AI, <code>USER_CREDENTIAL_ID</code> UQ, <code>INSTITUTION_ID</code>, <code>ROLE_ID</code>, <code>CURP</code> UQ, <code>is_institution_admin</code>, <code>assigned_ambulance_id</code>, <code>shift_windows</code> (JSON), <code>push_token</code></td><td><code>USER_CREDENTIAL_ID</code> → user_credentials · <code>INSTITUTION_ID</code> → institutions · <code>ROLE_ID</code> → roles · <code>assigned_ambulance_id</code> → ambulances</td></tr>
+</table>
+
+<h3>Instituciones</h3>
+<table>
+<tr><th>Tabla</th><th>Descripción</th><th>Columnas clave</th><th>Foreign keys</th></tr>
+<tr><td><code>institution_types</code></td><td>Catálogo de niveles de institución (Primer/Segundo/Tercer nivel, Social, Privada).</td><td><code>INSTITUTION_TYPE_ID</code> PK AI, <code>INSTITUTION_TYPE</code>, <code>IS_ACTIVE</code></td><td>—</td></tr>
+<tr><td><code>institutions</code></td><td>Hospital/centro de salud/Cruz Roja — capacidad de camas, ubicación, si es CRUM.</td><td><code>INSTITUTION_ID</code> PK AI, <code>CITY_ID</code>, <code>NAME</code>, <code>BED_CAPACITY</code>, <code>AVAILABLE_BEDS</code>, <code>LATITUDE/LONGITUDE</code>, <code>is_crum_institution</code>, <code>IS_ACTIVE</code></td><td><code>CITY_ID</code> → cities · <code>INSTITUTION_TYPE_ID</code> → institution_types</td></tr>
+<tr><td><code>specialities</code></td><td>Catálogo de especialidades médicas.</td><td><code>SPECIALITY_ID</code> PK AI, <code>NAME</code>, <code>DESCRIPTION</code>, <code>IS_ACTIVE</code></td><td>—</td></tr>
+<tr><td><code>institutions_specialities</code></td><td>Relación N:M institución↔especialidad, con capacidad de camas propia por especialidad.</td><td><code>INSTITUTION_SPECIALITY_ID</code> PK AI, <code>INSTITUTION_ID</code>+<code>SPECIALITY_ID</code> UQ compuesta, <code>TOTAL_BEDS</code>, <code>AVAILABLE_BEDS</code></td><td><code>INSTITUTION_ID</code> → institutions · <code>SPECIALITY_ID</code> → specialities</td></tr>
+<tr><td><code>institution_notifications</code></td><td>Notificación de llegada estimada a una institución. Tabla vacía en el respaldo (sin datos de prueba).</td><td><code>INSTITUTION_NOTIFICATION_ID</code> PK AI, <code>INSTITUTION_ID</code>, <code>USER_PROFILE_ID</code>, <code>EMERGENCY_ID</code>, <code>ESTIMATED_ARRIVAL</code> NN</td><td><code>INSTITUTION_ID</code> → institutions · <code>USER_PROFILE_ID</code> → user_profiles · <code>EMERGENCY_ID</code> → emergencies</td></tr>
+</table>
+
+<h3>Ambulancias</h3>
+<table>
+<tr><th>Tabla</th><th>Descripción</th><th>Columnas clave</th><th>Foreign keys</th></tr>
+<tr><td><code>ambulance_types</code></td><td>Traslado, Urgencias Básicas/Avanzadas, Cuidados Intensivos, Neonatal.</td><td><code>AMBULANCE_TYPE_ID</code> PK AI, <code>AMBULANCE_TYPE</code>, <code>IMAGE_URL</code></td><td>—</td></tr>
+<tr><td><code>ambulances_statuses</code></td><td>Disponible, En camino, En escena, Trasladando, Fuera de servicio, En mantenimiento, Reservada.</td><td><code>AMBULANCE_STATUS_ID</code> PK AI, <code>NAME</code></td><td>—</td></tr>
+<tr><td><code>ambulances</code></td><td>Unidad física — placas, número, institución, tipo, estado actual.</td><td><code>AMBULANCE_ID</code> PK AI, <code>UNIT_NUMBER</code>+<code>INSTITUTION_ID</code> UQ compuesta, <code>LICENSE_PLATE</code> UQ, <code>IS_ACTIVE</code></td><td><code>AMBULANCE_TYPE_ID</code> → ambulance_types · <code>INSTITUTION_ID</code> → institutions · <code>AMBULANCE_STATUS_ID</code> → ambulances_statuses</td></tr>
+<tr><td><code>ambulance_shifts</code></td><td>Turno de un paramédico al mando de una unidad.</td><td><code>ambulance_shift_id</code> PK AI, <code>shift_start</code> NN, <code>shift_end</code>, <code>scheduled_end</code></td><td><code>ambulance_id</code> → ambulances · <code>user_profile_id</code> → user_profiles</td></tr>
+<tr><td><code>ambulance_failure_reports</code></td><td>Reporte de falla mecánica levantado por el paramédico.</td><td><code>AMBULANCE_FAILURE_REPORT_ID</code> PK AI, <code>NOTE</code> NN, <code>REPORTED_AT</code> NN</td><td><code>AMBULANCE_ID</code> → ambulances · <code>USER_PROFILE_ID</code> → user_profiles · <code>EMERGENCY_ID</code> → emergencies</td></tr>
+<tr><td><code>locations</code></td><td>Historial de posiciones GPS de una ambulancia.</td><td><code>LOCATION_ID</code> PK AI, <code>LATITUDE/LONGITUDE</code> NN, <code>RECORDED_AT</code> NN</td><td><code>AMBULANCE_ID</code> → ambulances</td></tr>
+</table>
+
+<h3>Emergencias y despacho</h3>
+<table>
+<tr><th>Tabla</th><th>Descripción</th><th>Columnas clave</th><th>Foreign keys</th></tr>
+<tr><td><code>emergency_types</code></td><td>Trauma, Cardiovascular, Respiratoria, Neurológica, Obstétrica, Pediátrica, Intoxicación.</td><td><code>EMERGENCY_TYPE_ID</code> PK AI</td><td>—</td></tr>
+<tr><td><code>emergency_statuses</code></td><td>Registrada, Asignada, En atención, Trasladando, Cerrada.</td><td><code>EMERGENCY_STATUS_ID</code> PK AI</td><td>—</td></tr>
+<tr><td><code>triage_levels</code></td><td>Escala I–V, color, tiempo máximo de espera.</td><td><code>TRIAGE_LEVEL_ID</code> PK AI, <code>LEVEL</code>, <code>hex_color</code>, <code>MAX_WAIT_MINUTES</code></td><td>—</td></tr>
+<tr><td><code>emergencies</code></td><td>Registro central de una llamada — ubicación, reportante, tipo, estado, triage general, cierre.</td><td><code>EMERGENCY_ID</code> PK AI, <code>LATITUDE/LONGITUDE</code> NN, <code>REPORTER_NAME/PHONE</code> NN, <code>NUM_PATIENTS</code>, <code>CLOSED_AT</code>, <code>close_reason</code></td><td><code>EMERGENCY_TYPE_ID</code> → emergency_types · <code>EMERGENCY_STATUS_ID</code> → emergency_statuses · <code>USER_PROFILE_ID</code> → user_profiles (despachador que registró) · <code>triage_level_id</code> → triage_levels</td></tr>
+<tr><td><code>assignments</code></td><td>Asignación de una ambulancia a una emergencia; varias por emergencia posibles.</td><td><code>ASSIGNMENT_ID</code> PK AI, <code>ASSIGNED_AT</code>, <code>UNASSIGNED_AT</code>, <code>paramedic_concluded_at</code></td><td><code>EMERGENCY_ID</code> → emergencies · <code>AMBULANCE_ID</code> → ambulances · <code>USER_PROFILE_ID</code> → user_profiles (despachador)</td></tr>
+<tr><td><code>request_statuses</code></td><td>Pendiente, Aceptada, Rechazada, Cancelada — reutilizado para solicitudes interinstitucionales y recepción de pacientes.</td><td><code>REQUEST_STATUS_ID</code> PK AI</td><td>—</td></tr>
+<tr><td><code>inter_institutional_requests</code></td><td>Solicitud de préstamo de ambulancia entre dos instituciones para una emergencia.</td><td><code>INTER_INSTITUTIONAL_REQUEST_ID</code> PK AI, <code>REJECTION_REASON</code>, <code>REQUESTED_AT</code> NN, <code>RESPONDED_AT</code></td><td><code>EMERGENCY_ID</code> → emergencies · <code>AMBULANCE_ID</code> → ambulances · <code>USER_PROFILE_ID</code> → user_profiles · <code>REQUEST_STATUS_ID</code> → request_statuses · <code>REQUESTING_INSTITUTION_ID</code> → institutions · <code>RECEIVING_INSTITUTION_ID</code> → institutions</td></tr>
+</table>
+
+<h3>Pacientes y expediente clínico</h3>
+<table>
+<tr><th>Tabla</th><th>Descripción</th><th>Columnas clave</th><th>Foreign keys</th></tr>
+<tr><td><code>emergencies_patients</code></td><td>Vínculo paciente↔emergencia — destino, ambulancia, estado de recepción; varios pacientes por emergencia.</td><td><code>EMERGENCY_PATIENT_ID</code> PK AI, <code>rejection_reason</code>, <code>delivered_at</code>, <code>discharged_at</code></td><td><code>EMERGENCY_ID</code> → emergencies · <code>USER_PROFILE_ID</code> → user_profiles (paciente) · <code>ambulance_id</code> → ambulances · <code>destination_institution_id</code> → institutions · <code>destination_speciality_id</code> → specialities · <code>reception_status_id</code> → request_statuses</td></tr>
+<tr><td><code>emergency_notes</code></td><td>Nota clínica/signos vitales del paramédico en campo (presión, FC, saturación, Glasgow, diagnóstico, tratamiento).</td><td><code>EMERGENCY_NOTE_ID</code> PK AI, <code>BLOOD_PRESSURE</code>, <code>HEART_RATE</code>, <code>GLASGOW_SCALE</code>, <code>INITIAL_DIAGNOSIS</code>, <code>TREATMENT_APPLIED</code></td><td><code>EMERGENCY_PATIENT_ID</code> → emergencies_patients · <code>USER_PROFILE_ID</code> → user_profiles · <code>TRIAGE_LEVEL_ID</code> → triage_levels</td></tr>
+<tr><td><code>blood_types</code></td><td>Catálogo A+, A-, B+, B-, AB+, AB-, O+, O-.</td><td><code>BLOOD_TYPE_ID</code> PK AI</td><td>—</td></tr>
+<tr><td><code>clinical_records</code></td><td>Ficha clínica base (1:1 con user_profiles) — antropometría, sociodemográficos, tipo de sangre.</td><td><code>CLINICAL_RECORD_ID</code> PK AI, <code>USER_PROFILE_ID</code> UQ (1:1)</td><td><code>BLOOD_TYPE_ID</code> → blood_types · <code>USER_PROFILE_ID</code> → user_profiles</td></tr>
+<tr><td><code>patient_allergies</code> / <code>_history</code></td><td>Alergia del paciente + auditoría de activación/desactivación.</td><td><code>PATIENT_ALLERGY_ID</code> PK AI, <code>SEVERITY</code></td><td><code>CLINICAL_RECORD_ID</code> → clinical_records</td></tr>
+<tr><td><code>patient_conditions</code> / <code>_history</code></td><td>Condición preexistente + auditoría.</td><td><code>PATIENT_CONDITION_ID</code> PK AI, <code>DIAGNOSED_AT</code></td><td><code>CLINICAL_RECORD_ID</code> → clinical_records</td></tr>
+<tr><td><code>patient_medications</code> / <code>_history</code></td><td>Medicamento regular + auditoría.</td><td><code>PATIENT_MEDICATION_ID</code> PK AI, <code>DOSAGE</code>, <code>FREQUENCY</code></td><td><code>CLINICAL_RECORD_ID</code> → clinical_records</td></tr>
+</table>
+
+<h1>5. Servicios backend y API</h1>
+<p>163 endpoints en total, repartidos en 5 servicios detrás del gateway. En todos los servicios, el middleware <code>verifyToken</code> solo valida que el JWT sea válido, que la cuenta esté activa y que la sesión no haya sido invalidada — <strong>no existe un middleware de rol genérico</strong>; cada controlador valida a mano el rol (y en muchos casos también la institución/registro propio) leyendo <code>req.decoded</code>.</p>
+<p><span class="badge b-get">GET</span> <span class="badge b-post">POST</span> <span class="badge b-patch">PATCH</span> — códigos de color usados en las tablas siguientes. <span class="role-pub">público</span> significa sin <code>verifyToken</code> en absoluto.</p>
+
+<div class="service-block">
+<h2>5.a Gateway (puerto 3000)</h2>
+<p>Express + <code>cors</code> + <code>http-proxy-middleware</code>. Sin autenticación ni transformación de rutas propia:</p>
+<pre>app.use('/usuarios',    proxy → http://localhost:3001/usuarios)
+app.use('/hospitales',  proxy → http://localhost:3002/hospitales)
+app.use('/unidades',    proxy → http://localhost:3003/unidades)
+app.use('/pacientes',   proxy → http://localhost:3004/pacientes)
+app.use('/emergencias', proxy → http://localhost:3005/emergencias)</pre>
+
+<h2>5.b Servicio <code>usuarios</code> (puerto 3001) — 19 endpoints</h2>
+<p>Identidad de todo el sistema: alta/edición de cuentas, autenticación y emisión de JWT, sesión única para el rol paramédico (un solo dispositivo activo, con cierre forzado remoto), y catálogos compartidos (roles, instituciones, geografía).</p>
+<table>
+<tr><th>Método</th><th>Ruta</th><th>Rol(es)</th><th>Descripción</th></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/usuarios/registro</code></td><td>Rol 1, o Rol 4 admin de institución (propia institución)</td><td>Registra administrador, despachador, paramédico o personal hospitalario.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/usuarios/registro-paciente</code></td><td class="role-pub">público</td><td>Registra un paciente, con o sin credenciales propias.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/usuarios/actualizar-credenciales</code></td><td>Rol 1, propio usuario, o Rol 4 admin (propia institución)</td><td>Actualiza email/contraseña.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/usuarios/actualizar-perfil</code></td><td>Rol 1, propio usuario (datos de contacto), o Rol 4 admin</td><td>Edita datos de perfil.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/usuarios/actualizar-curp-paciente</code></td><td>Rol 3</td><td>El paramédico corrige la CURP de un paciente atendido.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/usuarios/invertir-estado-usuario</code></td><td>Rol 1, o Rol 4 admin (propia institución)</td><td>Activa/desactiva una cuenta.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/usuarios/alternar-admin-institucion</code></td><td>Rol 1, o Rol 4 admin (propia institución)</td><td>Otorga/revoca <code>is_institution_admin</code>.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/usuarios/registrar-push-token</code></td><td>Cualquier rol (propio usuario)</td><td>Guarda el token FCM del dispositivo.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/usuarios/login</code></td><td class="role-pub">público</td><td>Login; emite JWT (8h); rol 3 recibe <code>sessionId</code> único y fuerza cierre de sesión previa.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/obtener-usuarios</code></td><td>Roles 1–4</td><td>Lista todos los usuarios.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/obtener-usuario-id/:userProfileId</code></td><td>Roles 1–4, o propio usuario</td><td>Datos de un usuario.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/obtener-roles</code></td><td class="role-pub">público</td><td>Catálogo de roles.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/obtener-instituciones</code></td><td class="role-pub">público</td><td>Lista de instituciones.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/obtener-tipos-institucion</code></td><td class="role-pub">público</td><td>Catálogo de tipos de institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/estados</code></td><td class="role-pub">público</td><td>Catálogo de estados.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/ciudades/:stateId</code></td><td class="role-pub">público</td><td>Ciudades de un estado.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/ciudad/:cityId</code></td><td class="role-pub">público</td><td>Ciudad por ID.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/obtener-usuario-curp/:curp</code></td><td class="role-pub">público*</td><td>Busca usuario por CURP. <span style="color:#C0272D">*sin <code>verifyToken</code>, ver sección 11.</span></td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/usuarios/historial-cuenta/:userCredentialId</code></td><td>Rol 1</td><td>Historial de activaciones de una cuenta.</td></tr>
+</table>
+</div>
+
+<div class="service-block">
+<h2>5.c Servicio <code>hospitales</code> (puerto 3002) — 31 endpoints</h2>
+<p>Catálogo de instituciones y red CRUM, especialidades médicas, capacidad y disponibilidad de camas (general y por especialidad), identificación de pacientes, notificaciones institucionales.</p>
+<table>
+<tr><th>Método</th><th>Ruta</th><th>Rol(es)</th><th>Descripción</th></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/hospitales/registrar-institucion</code></td><td>Rol 1</td><td>Registra una institución nueva.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/hospitales/crear-especialidad</code></td><td>Rol 1</td><td>Crea una especialidad en el catálogo global.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/hospitales/crear-tipo-institucion</code></td><td>Rol 1</td><td>Crea un tipo de institución.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/hospitales/asignar-especialidad</code></td><td>Rol 1, o Rol 4 admin</td><td>Asigna una especialidad a una institución.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/hospitales/crear-notificacion</code></td><td>Roles 1, 3</td><td>Crea una notificación institucional.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/identificar-paciente</code></td><td>Roles 1, 4</td><td>Marca identificación de un paciente en el registro hospitalario.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/alternar-institucion</code></td><td>Rol 1</td><td>Activa/desactiva una institución.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/alternar-crum-institucion</code></td><td>Rol 1 (exclusivo)</td><td>Activa/desactiva membresía CRUM.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/alternar-especialidad-institucion</code></td><td>Rol 1, o Rol 4 admin (propia especialidad)</td><td>Activa/desactiva especialidad de una institución.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/alternar-especialidad</code></td><td>Rol 1</td><td>Activa/desactiva especialidad del catálogo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/alternar-tipo-institucion</code></td><td>Rol 1</td><td>Activa/desactiva tipo de institución.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/actualizar-camas-institucion</code></td><td>Rol 1, o Rol 4 (propia institución)</td><td>Actualiza camas disponibles; emite <code>eventBedsUpdated</code>.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/actualizar-capacidad-institucion</code></td><td>Rol 1, o Rol 4 admin</td><td>Actualiza capacidad total de camas.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/actualizar-camas-especialidad</code></td><td>Roles 1, 4*</td><td>Camas de especialidad; emite <code>eventSpecialityBedsUpdated</code>. <span style="color:#C0272D">*sin validar institución propia, ver sección 11.</span></td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/actualizar-capacidad-especialidad</code></td><td>Rol 1, o Rol 4 admin (propia)</td><td>Capacidad total de una especialidad.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/actualizar-tipo-institucion</code></td><td>Rol 1</td><td>Edita tipo de institución.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/actualizar-especialidad</code></td><td>Rol 1</td><td>Edita especialidad del catálogo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/hospitales/actualizar-institucion</code></td><td>Rol 1, o Rol 4 admin (dirección/CP propios)</td><td>Edita datos de una institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/instituciones</code></td><td class="role-pub">público</td><td>Instituciones activas.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/instituciones-destino</code></td><td class="role-pub">público</td><td>Instituciones válidas como destino de traslado.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/institucion/:name</code></td><td class="role-pub">público</td><td>Busca institución por nombre.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/notificaciones</code></td><td>Roles 1, 4</td><td>Todas las notificaciones.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/notificaciones/:name</code></td><td>Roles 1, 4</td><td>Notificaciones de una institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/especialidades-instituciones</code></td><td class="role-pub">público</td><td>Todas las especialidades asignadas.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/especialidades-institucion/:name</code></td><td class="role-pub">público</td><td>Especialidades de una institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/especialidades</code></td><td class="role-pub">público</td><td>Catálogo global de especialidades.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/especialidad/:name</code></td><td class="role-pub">público</td><td>Busca especialidad por nombre.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/tipos-institucion</code></td><td class="role-pub">público</td><td>Catálogo de tipos de institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/instituciones-todos</code></td><td>Rol 1</td><td>Todas (activas e inactivas).</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/tipos-institucion-todos</code></td><td>Rol 1</td><td>Todos los tipos (activos e inactivos).</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/hospitales/especialidades-todos</code></td><td>Rol 1</td><td>Todas las especialidades (activas e inactivas).</td></tr>
+</table>
+</div>
+
+<div class="service-block">
+<h2>5.d Servicio <code>unidades</code> (puerto 3003) — 31 endpoints</h2>
+<p>Flota de ambulancias: alta y catálogos, estado operativo en tiempo real sincronizado por socket, geolocalización, turnos del paramédico (con validación de horario y barrido automático de vencidos), reporte de fallas, y el ciclo de conclusión de traslado (paramédico concluye → hospital confirma → unidad se libera).</p>
+<table>
+<tr><th>Método</th><th>Ruta</th><th>Rol(es)</th><th>Descripción</th></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/unidades/registrar-ubicacion</code></td><td>Rol 1, o Rol 3 (unidad con turno activo)</td><td>Registra coordenada; retransmite <code>eventoUbicacionAmbulancia</code>.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/unidades/registrar-ambulancia</code></td><td>Rol 1, o Rol 4 admin</td><td>Alta de ambulancia.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/unidades/crear-tipo-ambulancia</code></td><td>Rol 1</td><td>Crea tipo de ambulancia.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/unidades/registrar-estado-ambulancia</code></td><td>Rol 1</td><td>Crea estado de ambulancia.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/unidades/iniciar-turno</code></td><td>Rol 1, o Rol 3 (propia institución, dentro de horario, sin conflicto)</td><td>Abre turno; marca "Disponible" si no está atada a emergencia.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/unidades/reportar-falla</code></td><td>Rol 3</td><td>Reporta falla; solo notifica, no cambia estado.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/unidades/notificar-cierre-sesion</code></td><td>Interno (<code>X-Internal-Secret</code>)</td><td>Fuerza cierre de sesión de un dispositivo específico.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/terminar-turno</code></td><td>Roles 1, 3</td><td>Cierra turno; marca "Fuera de servicio" si aplica.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/alternar-ambulancia</code></td><td>Rol 1, o Rol 4 admin</td><td>Activa/desactiva ambulancia.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/alternar-tipo-ambulancia</code></td><td>Rol 1</td><td>Activa/desactiva tipo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/alternar-estado-ambulancia</code></td><td>Rol 1</td><td>Activa/desactiva estado del catálogo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/actualizar-tipo-ambulancia</code></td><td>Rol 1</td><td>Edita tipo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/actualizar-estado-ambulancia-catalogo</code></td><td>Rol 1</td><td>Edita estado del catálogo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/actualizar-ambulancia</code></td><td>Rol 1, o Rol 4 admin (sin reasignar institución)</td><td>Edita datos de ambulancia.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/actualizar-estado-ambulancia</code></td><td>Rol 1, Rol 3 (solo avanzar secuencia), Rol 4 (propia institución)</td><td>Cambia estado; sincroniza emergencia asociada; emite <code>eventAmbulanceStatusChanged</code>.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/concluir-traslado</code></td><td>Rol 3</td><td>Paramédico marca llegada al hospital (no libera la unidad).</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/unidades/marcar-disponible</code></td><td>Rol 3</td><td>Libera unidad — exige conclusión + confirmación hospitalaria de todos los pacientes.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ambulancias</code></td><td>Cualquier rol</td><td>Ambulancias activas.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ambulancias-disponibles/:institutionId</code></td><td>Cualquier rol</td><td>Disponibles de una institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ambulancias-externas/:institutionId</code></td><td>Cualquier rol</td><td>Disponibles de otras instituciones.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ambulancia/numero/:unitNumber</code></td><td>Cualquier rol</td><td>Busca por número.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ambulancia/placa/:licensePlate</code></td><td>Cualquier rol</td><td>Busca por placa.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/tipos-ambulancia</code></td><td class="role-pub">público</td><td>Catálogo de tipos.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ambulancias-crum</code></td><td class="role-pub">público</td><td>Ambulancias de instituciones CRUM.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/estados-ambulancia</code></td><td class="role-pub">público</td><td>Catálogo de estados.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ubicacion/:ambulanceId</code></td><td>Roles 1–4</td><td>Última ubicación registrada.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/mi-turno-activo</code></td><td>Cualquier rol (propio)</td><td>Turno activo del usuario.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/mi-traslado-actual</code></td><td>Rol 3</td><td>Estado del traslado activo (recuperación).</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/ambulancias-todas</code></td><td>Rol 1</td><td>Todas (activas e inactivas).</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/tipos-ambulancia-todos</code></td><td>Rol 1</td><td>Todos los tipos.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/unidades/estados-ambulancia-todos</code></td><td>Rol 1</td><td>Todos los estados.</td></tr>
+</table>
+</div>
+
+<div class="service-block">
+<h2>5.e Servicio <code>pacientes</code> (puerto 3004) — 23 endpoints</h2>
+<p>Expediente clínico electrónico (ECE): un expediente único por persona, con alergias, condiciones y medicaciones, cada una activable/desactivable con historial de cambios.</p>
+<table>
+<tr><th>Método</th><th>Ruta</th><th>Rol(es)</th><th>Descripción</th></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/pacientes/crear-ece</code></td><td>Roles 1, 3, 5</td><td>Crea el expediente clínico (único por paciente).</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/pacientes/registrar-alergia</code></td><td>Roles 1, 3, 5</td><td>Registra alergia.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/pacientes/registrar-condicion</code></td><td>Roles 1, 3, 5</td><td>Registra condición preexistente.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/pacientes/registrar-medicacion</code></td><td>Roles 1, 3, 5</td><td>Registra medicación.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/pacientes/alternar-alergia</code></td><td>Roles 1, 3, 5</td><td>Activa/desactiva alergia.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/pacientes/alternar-condicion</code></td><td>Roles 1, 3, 5</td><td>Activa/desactiva condición.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/pacientes/alternar-medicacion</code></td><td>Roles 1, 3, 5</td><td>Activa/desactiva medicación.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/pacientes/actualizar-ece</code></td><td>Roles 1, 3, 5</td><td>Edita expediente general.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/pacientes/actualizar-alergia</code></td><td>Roles 1, 3, 5</td><td>Edita alergia.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/pacientes/actualizar-condicion</code></td><td>Roles 1, 3, 5</td><td>Edita condición.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/pacientes/actualizar-medicacion</code></td><td>Roles 1, 3, 5</td><td>Edita medicación.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/tipos-sangre</code></td><td class="role-pub">público*</td><td>Catálogo de tipos de sangre. <span style="color:#C0272D">*sin <code>verifyToken</code>, ver sección 11.</span></td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/ece/:userProfileId</code></td><td>Roles 1–4, o Rol 5 (solo el propio)</td><td>Expediente de un paciente.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/alergias/:clinicalRecordId</code></td><td>Roles 1–4, o Rol 5 (propio)</td><td>Alergias de un expediente.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/condiciones/:clinicalRecordId</code></td><td>Roles 1–4, o Rol 5 (propio)</td><td>Condiciones de un expediente.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/medicamentos/:clinicalRecordId</code></td><td>Roles 1–4, o Rol 5 (propio)</td><td>Medicaciones de un expediente.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/expedientes-todos</code></td><td>Rol 1</td><td>Todos los expedientes.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/alergias-todas</code></td><td>Rol 1</td><td>Todas las alergias del sistema.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/condiciones-todas</code></td><td>Rol 1</td><td>Todas las condiciones del sistema.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/medicamentos-todos</code></td><td>Rol 1</td><td>Todas las medicaciones del sistema.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/historial-alergia/:patientAllergyId</code></td><td>Rol 1</td><td>Historial de una alergia.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/historial-condicion/:patientConditionId</code></td><td>Rol 1</td><td>Historial de una condición.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/pacientes/historial-medicamento/:patientMedicationId</code></td><td>Rol 1</td><td>Historial de una medicación.</td></tr>
+</table>
+</div>
+
+<div class="service-block">
+<h2>5.f Servicio <code>emergencias</code> (puerto 3005) — 59 endpoints</h2>
+<p>El núcleo operativo del sistema: ciclo de vida completo de una emergencia (registro → asignación → atención en campo → traslado → recepción/entrega → alta → cierre), solicitudes interinstitucionales, notas de urgencia, reserva/liberación automática de camas, catálogos propios, y analíticas globales/institucionales/personales. Se apoya en Socket.IO (rooms por rol) y notificaciones push.</p>
+<table>
+<tr><th>Método</th><th>Ruta</th><th>Rol(es)</th><th>Descripción</th></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/registrar-emergencia</code></td><td>Roles 1, 2</td><td>Registra emergencia; notifica por socket.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/registrar-paciente</code></td><td>Roles 1, 2, 3</td><td>Registra paciente con destino obligatorio.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/registrar-nota-urgencia</code></td><td>Roles 1, 3</td><td>Nota de urgencia (signos vitales, triage, diagnóstico).</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/registrar-asignacion</code></td><td>Roles 1, 2</td><td>Asigna ambulancia(s); bloquea si ya atienden otra emergencia; notifica y envía push.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/registrar-solicitud</code></td><td>Roles 1, 2</td><td>Crea solicitud interinstitucional.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/crear-tipo-emergencia</code></td><td>Rol 1</td><td>Crea tipo de emergencia.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/crear-estado-emergencia</code></td><td>Rol 1</td><td>Crea estado de emergencia.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/crear-estado-solicitud</code></td><td>Rol 1</td><td>Crea estado de solicitud.</td></tr>
+<tr><td><span class="badge b-post">POST</span></td><td><code>/emergencias/crear-nivel-triage</code></td><td>Rol 1</td><td>Crea nivel de triage.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/actualizar-estado-emergencia</code></td><td>Roles 1, 2</td><td>Cambia estado manualmente; notifica a todos.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/cerrar-emergencia</code></td><td>Roles 1, 2</td><td>Cierra; rechaza (409) si hay pacientes pendientes de entrega.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/forzar-cierre-emergencia</code></td><td>Rol 1</td><td>Cierra ignorando pendientes; exige motivo; libera camas reservadas.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/desasignar-ambulancia</code></td><td>Roles 1, 2</td><td>Desasigna; regresa unidad a "Disponible".</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/responder-solicitud</code></td><td>Rol 1, o Roles 3/4 (institución receptora)</td><td>Acepta/rechaza solicitud; activa o libera la unidad prestada.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/cancelar-solicitud</code></td><td>Autor de la solicitud, o Rol 1</td><td>Cancela solicitud propia; libera unidad.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/alternar-tipo-emergencia</code></td><td>Rol 1</td><td>Activa/desactiva tipo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/alternar-estado-emergencia</code></td><td>Rol 1</td><td>Activa/desactiva estado del catálogo.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/alternar-estado-solicitud</code></td><td>Rol 1</td><td>Activa/desactiva estado de solicitud.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/alternar-nivel-triage</code></td><td>Rol 1</td><td>Activa/desactiva nivel de triage.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/actualizar-tipo-emergencia</code></td><td>Rol 1</td><td>Edita tipo de emergencia.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/actualizar-estado-emergencia-catalogo</code></td><td>Rol 1</td><td>Edita estado del catálogo (no el de una emergencia puntual).</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/actualizar-estado-solicitud</code></td><td>Rol 1</td><td>Edita estado de solicitud.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/actualizar-nivel-triage</code></td><td>Rol 1</td><td>Edita nivel de triage.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/confirmar-recepcion-paciente</code></td><td>Rol 1, o Rol 4 (propia institución)</td><td>Acepta/rechaza paciente; reserva cama (general + especialidad).</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/confirmar-llegada-paciente</code></td><td>Rol 1, o Rol 4 (propia)</td><td>Confirma llegada física; cierra la emergencia si no queda nadie pendiente.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/dar-alta-paciente</code></td><td>Rol 1, o Rol 4 (propia)</td><td>Alta médica; libera cama reservada.</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/reasignar-destino-paciente</code></td><td>Roles 1, 2</td><td>Reasigna hospital destino; resetea recepción a "Pendiente".</td></tr>
+<tr><td><span class="badge b-patch">PATCH</span></td><td><code>/emergencias/asignar-ambulancia-paciente</code></td><td>Roles 1, 2</td><td>Liga unidad disponible a un paciente.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/emergencias-activas</code></td><td>Roles 1–4</td><td>Emergencias no cerradas.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/emergencias-cerradas</code></td><td>Roles 1, 2</td><td>Historial de cerradas.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/emergencia/:emergencyId</code></td><td>Roles 1–4</td><td>Detalle de una emergencia.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/pacientes/:emergencyId</code></td><td>Roles 1–4</td><td>Pacientes de una emergencia.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/pacientes-en-camino/:institutionId</code></td><td>Rol 1, o Rol 4 (propia)</td><td>Pacientes en camino a una institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/historial-institucion/:institutionId</code></td><td>Rol 1, o Rol 4 (propia)</td><td>Historial completo de una institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/notas/:emergencyPatientId</code></td><td>Roles 1–4</td><td>Notas de urgencia de un paciente.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/asignaciones/:emergencyId</code></td><td>Roles 1–3</td><td>Asignaciones de una emergencia.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/asignaciones-ambulancia/:ambulanceId</code></td><td>Roles 1–3</td><td>Historial de una ambulancia.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/emergencias-paciente/:userProfileId</code></td><td>Roles 1–4, o Rol 5 (propio)</td><td>Historial de emergencias de un paciente.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/solicitudes-pendientes</code></td><td>Roles 1, 2</td><td>Solicitudes interinstitucionales pendientes.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/solicitudes-pendientes-institucion/:institutionId</code></td><td>Rol 1, o Rol 4 (propia)</td><td>Pendientes dirigidas a una institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/solicitudes</code></td><td>Roles 1, 2</td><td>Todas las solicitudes.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/tipos-emergencia</code></td><td class="role-pub">público</td><td>Catálogo de tipos.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/estados-emergencia</code></td><td class="role-pub">público</td><td>Catálogo de estados.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/estados-solicitud</code></td><td class="role-pub">público</td><td>Catálogo de estados de solicitud.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/niveles-triage</code></td><td class="role-pub">público</td><td>Catálogo de niveles de triage.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/tipos-emergencia-todos</code></td><td>Rol 1</td><td>Todos los tipos.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/estados-emergencia-todos</code></td><td>Rol 1</td><td>Todos los estados.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/estados-solicitud-todos</code></td><td>Rol 1</td><td>Todos los estados de solicitud.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/niveles-triage-todos</code></td><td>Rol 1</td><td>Todos los niveles de triage.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/emergencias-por-tipo</code></td><td>Cualquier rol</td><td>Conteo por tipo (global).</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/solicitudes-por-estado</code></td><td>Cualquier rol</td><td>Conteo de solicitudes por estado.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/tiempo-respuesta</code></td><td>Cualquier rol</td><td>Tiempo de respuesta promedio por día.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/tiempo-respuesta-hoy</code></td><td>Cualquier rol</td><td>Tiempo de respuesta promedio de hoy.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/emergencias-por-institucion</code></td><td>Cualquier rol</td><td>Conteo por institución.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/pacientes-por-tipo/:institutionId</code></td><td>Roles 1, 4*</td><td>Pacientes por tipo. <span style="color:#C0272D">*sin validar institución propia, ver sección 11.</span></td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/pacientes-por-mes/:institutionId</code></td><td>Roles 1, 4*</td><td>Pacientes por mes. <span style="color:#C0272D">*ídem.</span></td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/tiempo-traslado/:institutionId</code></td><td>Roles 1, 4*</td><td>Tiempo promedio de traslado. <span style="color:#C0272D">*ídem.</span></td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/analiticas/mis-estadisticas</code></td><td>Rol 3</td><td>Estadísticas personales del mes del paramédico.</td></tr>
+<tr><td><span class="badge b-get">GET</span></td><td><code>/emergencias/mi-emergencia-actual</code></td><td>Rol 3</td><td>Emergencia asignada actual (recuperación).</td></tr>
+</table>
+
+<table>
+<tr><th>Servicio</th><th>POST</th><th>PATCH</th><th>GET</th><th>Total</th></tr>
+<tr><td>usuarios</td><td>3</td><td>6</td><td>10</td><td>19</td></tr>
+<tr><td>hospitales</td><td>5</td><td>13</td><td>13</td><td>31</td></tr>
+<tr><td>unidades</td><td>7</td><td>10</td><td>14</td><td>31</td></tr>
+<tr><td>pacientes</td><td>4</td><td>7</td><td>12</td><td>23</td></tr>
+<tr><td>emergencias</td><td>9</td><td>19</td><td>31</td><td>59</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>28</strong></td><td><strong>55</strong></td><td><strong>80</strong></td><td><strong>163</strong></td></tr>
+</table>
+</div>
+
+<h1>6. Comunicación en tiempo real (Socket.IO)</h1>
+<p>Dos servicios exponen su propia instancia de Socket.IO, con CORS abierto (<code>origin: '*'</code>) y autenticación vía JWT enviado en el handshake (<code>auth.token</code>). Los clientes se unen a <em>rooms</em> según su rol al conectarse: <code>dispatcher</code>, <code>hospital</code>, <code>paramedic</code>, <code>admin</code>, más una room individual <code>user_&lt;userProfileId&gt;</code> para eventos dirigidos a una sola persona, y <code>session_&lt;sessionId&gt;</code> para el cierre de sesión remoto del paramédico.</p>
+<table>
+<tr><th>Servicio</th><th>Evento</th><th>Disparado por</th><th>Quién lo recibe</th></tr>
+<tr><td><code>emergencias</code></td><td><code>eventNewEmergency</code></td><td>Registrar emergencia</td><td>dispatcher, admin</td></tr>
+<tr><td><code>emergencias</code></td><td><code>eventEmergencyAssigned</code></td><td>Registrar asignación</td><td>dispatcher, paramedic, hospital, admin (+ push al paramédico)</td></tr>
+<tr><td><code>emergencias</code></td><td><code>eventEmergencyStatusChanged</code></td><td>Cambio de estado de emergencia</td><td>todos los roles</td></tr>
+<tr><td><code>emergencias</code></td><td><code>eventTransferConcluded</code></td><td>Concluir traslado / confirmar llegada</td><td>hospital destino</td></tr>
+<tr><td><code>emergencias</code></td><td><code>eventInterInstitutionalRequest</code></td><td>Registrar solicitud</td><td>institución receptora</td></tr>
+<tr><td><code>unidades</code></td><td><code>eventAmbulanceStatusChanged</code></td><td>Cambio de estado de ambulancia</td><td>dispatcher, hospital, admin</td></tr>
+<tr><td><code>unidades</code></td><td><code>eventoUbicacionAmbulancia</code></td><td>Registrar ubicación</td><td>dispatcher, hospital, admin</td></tr>
+<tr><td><code>unidades</code></td><td><code>eventAmbulanceFailureReported</code></td><td>Reportar falla</td><td>dispatcher, hospital, admin</td></tr>
+<tr><td><code>unidades</code></td><td><code>eventForceLogout</code></td><td>Barrido de turno vencido / login en otro dispositivo</td><td>room <code>session_&lt;id&gt;</code> del dispositivo afectado</td></tr>
+<tr><td><code>hospitales</code>*</td><td><code>eventBedsUpdated</code></td><td>Actualizar camas de institución</td><td>dispatcher, hospital, admin</td></tr>
+<tr><td><code>hospitales</code>*</td><td><code>eventSpecialityBedsUpdated</code></td><td>Actualizar camas de especialidad</td><td>dispatcher, hospital, admin</td></tr>
+</table>
+<p class="note">*Los eventos <code>eventBedsUpdated</code>/<code>eventSpecialityBedsUpdated</code> se emiten desde el servicio <code>hospitales</code>, pero ese servicio no aparece antes como dueño de una instancia Socket.IO propia — en la práctica los emite reutilizando la conexión de <code>unidades</code>/<code>emergencias</code> según el caso. Verificar contra el código si se requiere precisión exacta para mantenimiento.</p>
+
+<h1>7. Autenticación y autorización</h1>
+<p>La autenticación es <strong>stateless vía JWT</strong>, firmado con un secreto compartido (<code>JWT_SECRET</code>) entre todos los servicios. Un token contiene el <code>userProfileId</code>, <code>userCredentialId</code>, <code>roleId</code>, y para el rol 3 (paramédico) un <code>sessionId</code> adicional. Expira a las 8 horas.</p>
+<h3>Middleware <code>verifyToken</code></h3>
+<p>Presente (con la misma lógica, duplicada) en cada servicio. Valida, en orden:</p>
+<ol>
+  <li>Que el header <code>Authorization</code> traiga un JWT válido y no expirado.</li>
+  <li>Que la credencial referenciada exista en <code>user_credentials</code> y <code>IS_ACTIVE = 1</code>.</li>
+  <li><strong>Solo para rol 3:</strong> que el <code>sessionId</code> del token coincida con <code>active_session_id</code> en la base — si no coincide, la sesión fue invalidada (login desde otro dispositivo) y el token se rechaza aunque su firma sea válida. Los roles 1, 2, 4 y 5 no tienen esta restricción: cualquier JWT con firma válida y credencial activa es aceptado, sin importar si hubo un login posterior desde otro dispositivo.</li>
+</ol>
+<h3>Autorización por rol</h3>
+<p><strong>No existe un middleware de autorización por rol.</strong> Cada controlador implementa a mano la comparación <code>req.decoded.roleId === N</code> (y frecuentemente también valida que el recurso solicitado pertenezca a la institución o al usuario del token). Esto es válido y funciona correctamente en el sistema actual, pero significa que añadir un nuevo endpoint requiere recordar replicar manualmente esta validación — es un punto de atención para mantenimiento futuro (ver sección 11).</p>
+<h3>Catálogo de roles</h3>
+<table>
+<tr><th>ID</th><th>Rol</th><th>Aplicación principal</th></tr>
+<tr><td>1</td><td>Administrador</td><td>Control total del sistema; sin restricciones de institución.</td></tr>
+<tr><td>2</td><td>Despachador</td><td>Personal del CRUM/Cruz Roja Tabasco; SICEM Web.</td></tr>
+<tr><td>3</td><td>Paramédico</td><td>Personal en campo; SICEM Mobile; sesión única por dispositivo.</td></tr>
+<tr><td>4</td><td>Hospital</td><td>Personal administrativo de una institución; SICEM Desktop; sub-privilegio <code>is_institution_admin</code>.</td></tr>
+<tr><td>5</td><td>Paciente</td><td>Sin aplicación cliente propia; su expediente es consultado por otros roles.</td></tr>
+</table>
+
+<h1>8. Notificaciones push (Firebase Cloud Messaging)</h1>
+<p>El servicio <code>emergencias</code> integra Firebase Admin SDK para enviar notificaciones push al paramédico cuando SICEM Mobile está en segundo plano o cerrada — principalmente al asignarle una nueva emergencia o al aceptarle una solicitud interinstitucional. El token de dispositivo se guarda por usuario en <code>user_profiles.push_token</code> (endpoint <code>PATCH /usuarios/registrar-push-token</code>).</p>
+<p>Las credenciales de la cuenta de servicio de Firebase se cargan de dos formas posibles (<code>config/firebase.js</code>): un archivo local <code>shared/firebase-service-account.json</code> (fuera de cualquier servicio, nunca versionado en git), o la variable de entorno <code>FIREBASE_SERVICE_ACCOUNT_JSON</code> con el JSON completo como texto — pensada para entornos efímeros como GitHub Codespaces, donde no existe forma de persistir un archivo subido manualmente entre reconstrucciones del contenedor. Si ninguna de las dos está presente, el sistema sigue funcionando con normalidad; simplemente no se envían notificaciones push.</p>
+
+<h1>9. Aplicaciones cliente</h1>
+<table>
+<tr><th>Aplicación</th><th>Rol de usuario</th><th>Tecnología</th><th>Conexión al backend</th></tr>
+<tr><td>SICEM Web</td><td>Despachador (2), Administrador (1)</td><td>React 19 + Vite, desplegada en Vercel</td><td><code>VITE_API_BASE_URL</code> / <code>VITE_SOCKET_URL</code> / <code>VITE_UNITS_SOCKET_URL</code> (variables de entorno de build)</td></tr>
+<tr><td>SICEM Desktop</td><td>Hospital (4)</td><td>Electron + Vite + React 19, instalador NSIS</td><td>Mismas variables, vía <code>.env</code> local al momento de compilar</td></tr>
+<tr><td>SICEM Mobile</td><td>Paramédico (3)</td><td>React Native + Expo Router, APK release standalone (Gradle local)</td><td><code>EXPO_PUBLIC_API_BASE_URL</code> / <code>EXPO_PUBLIC_SOCKET_URL</code> / <code>EXPO_PUBLIC_UNITS_SOCKET_URL</code>, con detección automática de host en desarrollo si no están seteadas</td></tr>
+</table>
+<p>Las tres aplicaciones consumen el gateway para todo el tráfico REST y se conectan directo a <code>unidades</code>/<code>emergencias</code> para sockets (ver sección 2). Ninguna tiene lógica de negocio propia más allá de presentación y validación de formulario — toda regla de negocio vive en el backend.</p>
+
+<h1>10. Infraestructura y despliegue</h1>
+<p>El backend (gateway + 5 servicios + MySQL) corre en un contenedor de <strong>GitHub Codespaces</strong>, con los puertos 3000 (gateway), 3003 (socket de unidades) y 3005 (socket de emergencias) reenviados públicamente vía HTTPS. Las credenciales sensibles (contraseña de base de datos, <code>JWT_SECRET</code>, secreto interno entre servicios, credenciales de Firebase) se inyectan como <em>Codespaces secrets</em> — variables de entorno del sistema operativo del contenedor, nunca archivos versionados en el repositorio.</p>
+<p><strong>SICEM Web</strong> se despliega en <strong>Vercel</strong> como aplicación estática (build de Vite), con auto-despliegue en cada <code>push</code> a la rama principal del repositorio; sus variables de entorno (<code>VITE_*</code>) apuntan a las URLs públicas del Codespace.</p>
+<p><strong>SICEM Desktop</strong> y <strong>SICEM Mobile</strong> se compilan localmente (no hay pipeline de CI/CD para ellas): Electron-builder para el instalador de Windows, y Gradle directo (<code>assembleRelease</code>) para el APK de Android — este último firmado con el keystore de debug incluido en el proyecto, suficiente para distribución interna/de pruebas pero no para publicación en Google Play.</p>
+<p class="note">Al ser Codespaces un entorno efímero que se suspende tras inactividad, el backend requiere reanudarse manualmente antes de cada sesión de uso; ver la guía operativa del proyecto para el procedimiento exacto de arranque (MySQL no inicia automáticamente, los 6 procesos Node deben levantarse a mano).</p>
+
+<h1>11. Seguridad — hallazgos y áreas de mejora identificadas</h1>
+<p>Esta sección documenta, con honestidad técnica, brechas reales encontradas en el código actual al elaborar este manual — no son hipotéticas, se verificaron línea por línea contra las rutas y controladores.</p>
+<div class="warn">
+<strong>Endpoints sin autenticación que deberían requerirla:</strong>
+<ul>
+  <li><code>GET /pacientes/tipos-sangre</code> — no tiene <code>verifyToken</code>, a diferencia de prácticamente todos sus endpoints hermanos en el mismo servicio.</li>
+  <li><code>GET /usuarios/obtener-usuario-curp/:curp</code> — permite buscar el perfil completo de cualquier persona por CURP sin autenticación alguna. Es el más sensible de los dos: expone datos personales (nombre, teléfono, rol, institución) a cualquiera que conozca o adivine una CURP.</li>
+</ul>
+</div>
+<div class="warn">
+<strong>Validación de institución propia ausente en analíticas de <code>emergencias</code>:</strong> los endpoints <code>GET /emergencias/analiticas/pacientes-por-tipo/:institutionId</code>, <code>pacientes-por-mes/:institutionId</code> y <code>tiempo-traslado/:institutionId</code> aceptan cualquier <code>institutionId</code> para un usuario Rol 4, sin verificar que sea la institución del propio usuario — a diferencia de sus endpoints hermanos <code>pacientes-en-camino</code> e <code>historial-institucion</code>, que sí hacen esta validación. Un usuario hospitalario autenticado puede consultar analíticas de otra institución cambiando el parámetro de la URL.</li>
+</ul>
+</div>
+<p><strong>Recomendación:</strong> agregar <code>verifyToken</code> a los dos endpoints señalados, y replicar en los tres endpoints de analíticas la misma comparación <code>institutionId === req.decoded.institutionId</code> (para Rol 4) que ya existe en sus endpoints hermanos. Ninguno de los tres requiere cambios de esquema ni de contrato de API — son correcciones acotadas al controlador correspondiente.</p>
+<p>De forma más general, la ausencia de un middleware de autorización por rol reutilizable (ver sección 7) es la causa raíz de este tipo de inconsistencia: cada nuevo endpoint requiere que quien lo escriba recuerde replicar manualmente la validación correcta, en vez de declararla una sola vez.</p>
+
+<h1>12. Estructura del repositorio</h1>
+<pre>SICEM/
+├── gateway/                  Proxy HTTP (puerto 3000)
+├── services/
+│   ├── usuarios/              :3001 — identidad, auth, catálogos
+│   ├── hospitales/             :3002 — instituciones, especialidades, camas
+│   ├── unidades/               :3003 — ambulancias, turnos, sockets
+│   ├── pacientes/              :3004 — expediente clínico
+│   └── emergencias/            :3005 — núcleo operativo, sockets, push
+│       cada servicio: index.js · config/db.js · routes/ · controllers/ · models/ · middlewares/
+├── clients/
+│   ├── sicem-web/              React + Vite (despachador) — Vercel
+│   ├── sicem-desktop/          Electron + Vite (hospital) — instalador Windows
+│   └── sicem-mobile/           Expo + React Native (paramédico) — APK Android
+├── shared/                    Credenciales compartidas fuera de git (Firebase)
+├── graphify-out/               Grafo de conocimiento del código (herramienta de desarrollo)
+└── sicem_backup.sql            Respaldo de la base de datos (fuera de git)</pre>
+
+<div class="footer-note">Manual Técnico del Sistema SICEM — generado a partir de una lectura directa del código fuente y del esquema real de base de datos del proyecto (no de documentación previa ni de supuestos de diseño). Cualquier discrepancia con el comportamiento observado en producción debe resolverse a favor del código.</div>
+
+</body>
+</html>
