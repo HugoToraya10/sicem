@@ -14,7 +14,10 @@ function createWindow() {
         minHeight: 768,
         icon: path.join(__dirname, '../build/icon.ico'),
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
+            // vite-plugin-electron compila preload.js a preload.mjs (ESM) —
+            // el nombre del archivo generado no coincide con el del código
+            // fuente, hay que apuntar al que realmente queda en disco.
+            preload: path.join(__dirname, 'preload.mjs'),
             contextIsolation: true,
             nodeIntegration: false,
         },

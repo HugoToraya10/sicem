@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import InstitutionAdminRoute from './components/InstitutionAdminRoute'
@@ -24,7 +24,7 @@ const RootRedirect = () => {
 function App() {
     return (
         <AuthProvider>
-            <BrowserRouter>
+            <HashRouter>
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={<RootRedirect />} />
@@ -43,7 +43,7 @@ function App() {
                         </Route>
                     </Route>
                 </Routes>
-            </BrowserRouter>
+            </HashRouter>
         </AuthProvider>
     )
 }
