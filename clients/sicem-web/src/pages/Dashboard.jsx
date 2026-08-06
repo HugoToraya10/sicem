@@ -308,8 +308,14 @@ console.log('navLinks calculados:', navLinks)
     // pending_patients_count, un paciente rechazado (que además es más urgente
     // que uno simplemente pendiente) hacía desaparecer la emergencia justo
     // cuando más necesitaba que el despachador la viera.
+    // "Registrada" = sin ninguna unidad activa (se regresa sola a este estado
+    // al desasignar la última unidad — ver unassignAmbulance en emergencias)
+    // — una emergencia así tampoco va a ningún lado sin que el despachador
+    // haga algo, igual que un paciente sin aceptar.
     const needsAcceptanceEmergencies = sortByPriority(
-        emergencies.filter((em) => (em.pending_patients_count || 0) > 0 || (em.rejected_patients_count || 0) > 0)
+        emergencies.filter((em) =>
+            (em.pending_patients_count || 0) > 0 || (em.rejected_patients_count || 0) > 0 || em.status_name === 'Registrada'
+        )
     )
 
     return (

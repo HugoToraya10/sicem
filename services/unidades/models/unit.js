@@ -272,17 +272,30 @@ const getFailureReportContext = (ambulanceId, userProfileId, callback) => {
 // solo las de unidades de esa institución (uso: hospital).
 const getFailureReports = (institutionId, callback) => {
     const params = [];
-    let sql = `SELECT afr.ambulance_failure_report_id, afr.ambulance_id, afr.emergency_id,
-                    afr.note, afr.reported_at, a.unit_number, a.institution_id,
-                    up.first_name, up.first_surname
-                FROM ambulance_failure_reports afr
-                JOIN ambulances a ON afr.ambulance_id = a.ambulance_id
-                JOIN user_profiles up ON afr.user_profile_id = up.user_profile_id`;
+    // Solo el reporte MÁS RECIENTE por ambulancia (ROW_NUMBER) — si un
+    // paramédico manda el mismo reporte varias veces, antes salían todas las
+    // copias en la campana. still_assigned = si esa unidad TODAVÍA tiene una
+    // asignación abierta en esa emergencia (para no ofrecer "Desasignar" en
+    // un reporte que ya se resolvió).
+    let sql = `SELECT * FROM (
+                    SELECT afr.ambulance_failure_report_id, afr.ambulance_id, afr.emergency_id,
+                        afr.note, afr.reported_at, a.unit_number, a.institution_id,
+                        up.first_name, up.first_surname,
+                        EXISTS(
+                            SELECT 1 FROM assignments asg
+                            WHERE asg.ambulance_id = afr.ambulance_id AND asg.emergency_id = afr.emergency_id
+                                AND asg.unassigned_at IS NULL
+                        ) AS still_assigned,
+                        ROW_NUMBER() OVER (PARTITION BY afr.ambulance_id ORDER BY afr.reported_at DESC) AS rn
+                    FROM ambulance_failure_reports afr
+                    JOIN ambulances a ON afr.ambulance_id = a.ambulance_id
+                    JOIN user_profiles up ON afr.user_profile_id = up.user_profile_id
+                ) t WHERE rn = 1`;
     if (institutionId) {
-        sql += ` WHERE a.institution_id = ?`;
+        sql += ` AND institution_id = ?`;
         params.push(institutionId);
     }
-    sql += ` ORDER BY afr.reported_at DESC`;
+    sql += ` ORDER BY reported_at DESC`;
     db.query(sql, params, callback);
 }
 

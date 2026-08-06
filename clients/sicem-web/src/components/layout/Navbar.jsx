@@ -188,7 +188,7 @@ const Navbar = ({ userName, roleLabel, links }) => {
                                     <div className="navbar-bell-item-note">{r.note}</div>
                                     {r.emergency_id && (
                                         <div className="navbar-bell-item-actions">
-                                            {r.unassigned ? (
+                                            {(r.unassigned || r.still_assigned === false || r.still_assigned === 0) ? (
                                                 <span className="navbar-bell-item-done">✓ Unidad desasignada</span>
                                             ) : (
                                                 <>
