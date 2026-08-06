@@ -146,7 +146,22 @@ const FailureReportSection = ({ visible, onOpen, onClose, note, onChangeNote, on
 
 const AlertaScreen = () => {
     const { user, token, logout } = useAuth()
-    const { activeAmbulanceId, unitNumber, scheduledEnd, loading: shiftLoading, busy, startShift, endShift } = useAmbulance()
+    const { activeAmbulanceId, unitNumber, scheduledEnd, ambulanceStatusId, loading: shiftLoading, busy, startShift, endShift } = useAmbulance()
+    const [makingAvailable, setMakingAvailable] = useState(false)
+    // 5 = Fuera de servicio (por una falla reportada, o porque el hospital la
+    // sacó de servicio directo). Solo el propio paramédico puede regresarla a
+    // Disponible — ver PARAMEDIC_FORWARD_TRANSITIONS en services/unidades.
+    const handleMakeAvailable = () => {
+        setMakingAvailable(true)
+        fetch(`${API_BASE_URL}/unidades/actualizar-estado-ambulancia`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ ambulanceId: activeAmbulanceId, ambulanceStatusId: 1 }),
+        })
+            .then((res) => res.json().then((body) => { if (!res.ok) throw new Error(body.message || 'No se pudo actualizar.') }))
+            .catch((err) => Alert.alert('Error', err.message))
+            .finally(() => setMakingAvailable(false))
+    }
     const { pendingAlert, acceptedEmergency, acknowledgeAlert, connected } = useSocketAlerts()
     const router = useRouter()
     const [shiftError, setShiftError] = useState(null)
@@ -376,16 +391,26 @@ const AlertaScreen = () => {
                 </View>
             </View>
 
-            <View style={styles.idleBox}>
-                <Ionicons name="radio-outline" size={40} color="#2E7D32" />
-                <Text style={styles.hint}>Esperando asignación de emergencia...</Text>
-                {countdown && (
-                    <View style={styles.countdownPill}>
-                        <Ionicons name="time-outline" size={14} color="#555" />
-                        <Text style={styles.countdownText}>{countdown}</Text>
-                    </View>
-                )}
-            </View>
+            {parseInt(ambulanceStatusId) === 5 ? (
+                <View style={styles.outOfServiceBox}>
+                    <Ionicons name="alert-circle" size={40} color="#C0272D" />
+                    <Text style={styles.outOfServiceText}>Tu unidad está "Fuera de servicio" — no puede recibir emergencias hasta que la actives.</Text>
+                    <TouchableOpacity style={styles.makeAvailableButton} onPress={handleMakeAvailable} disabled={makingAvailable}>
+                        {makingAvailable ? <ActivityIndicator color="#fff" /> : <Text style={styles.makeAvailableButtonText}>Hacer disponible</Text>}
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <View style={styles.idleBox}>
+                    <Ionicons name="radio-outline" size={40} color="#2E7D32" />
+                    <Text style={styles.hint}>Esperando asignación de emergencia...</Text>
+                    {countdown && (
+                        <View style={styles.countdownPill}>
+                            <Ionicons name="time-outline" size={14} color="#555" />
+                            <Text style={styles.countdownText}>{countdown}</Text>
+                        </View>
+                    )}
+                </View>
+            )}
 
             <FailureReportSection
                 visible={failureModalVisible}
@@ -431,6 +456,10 @@ const styles = StyleSheet.create({
     onShiftDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#2E7D32' },
     onShiftPillText: { fontSize: 11, fontWeight: '700', color: '#2E7D32' },
     idleBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
+    outOfServiceBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14, paddingHorizontal: 24 },
+    outOfServiceText: { fontSize: 14, color: '#C0272D', textAlign: 'center', fontWeight: '600' },
+    makeAvailableButton: { backgroundColor: '#2E7D32', borderRadius: 8, paddingVertical: 12, paddingHorizontal: 24, minWidth: 180, alignItems: 'center' },
+    makeAvailableButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
     countdownPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#f0f0f0', borderRadius: 14, paddingVertical: 5, paddingHorizontal: 12, marginTop: 6 },
     countdownText: { fontSize: 12, color: '#555', fontWeight: '600' },
     endShiftButton: { borderWidth: 1, borderColor: '#C0272D', borderRadius: 8, padding: 12, alignItems: 'center' },
