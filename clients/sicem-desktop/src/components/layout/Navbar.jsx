@@ -105,6 +105,29 @@ const Navbar = ({ userName, roleLabel, links }) => {
             .finally(() => setUnassigningId(null))
     }
 
+    // Falla reportada SIN emergencia asociada (el paramédico no estaba en
+    // curso cuando reportó) — no hay nada que desasignar, pero el hospital
+    // igual necesita poder sacarla de servicio directo desde aquí.
+    const handleMarkOutOfService = (report) => {
+        if (!report.ambulance_id) return
+        if (!window.confirm(`¿Marcar la unidad ${report.unit_number || ''} como "Fuera de servicio"?`)) return
+        setUnassigningId(report.ambulance_failure_report_id)
+        fetch(`${API_BASE_URL}/unidades/actualizar-estado-ambulancia`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ ambulanceId: report.ambulance_id, ambulanceStatusId: 5 }),
+        })
+            .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
+            .then(({ ok, body }) => {
+                if (!ok) return alert(body.message || 'No se pudo actualizar el estado.')
+                setFailureReports((current) => current.map((r) =>
+                    r.ambulance_failure_report_id === report.ambulance_failure_report_id ? { ...r, unassigned: true } : r
+                ))
+            })
+            .catch(() => alert('No se pudo actualizar el estado. Intenta de nuevo.'))
+            .finally(() => setUnassigningId(null))
+    }
+
     const unreadCount = failureReports.filter((r) => new Date(r.reported_at) > lastSeen).length
 
     const toggleBell = () => {
@@ -200,6 +223,21 @@ const Navbar = ({ userName, roleLabel, links }) => {
                                                     disabled={unassigningId === r.ambulance_failure_report_id}
                                                 >
                                                     {unassigningId === r.ambulance_failure_report_id ? 'Desasignando…' : 'Desasignar de la emergencia'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {!r.emergency_id && (
+                                        <div className="navbar-bell-item-actions">
+                                            {r.unassigned ? (
+                                                <span className="navbar-bell-item-done">✓ Fuera de servicio</span>
+                                            ) : (
+                                                <button
+                                                    className="danger"
+                                                    onClick={() => handleMarkOutOfService(r)}
+                                                    disabled={unassigningId === r.ambulance_failure_report_id}
+                                                >
+                                                    {unassigningId === r.ambulance_failure_report_id ? 'Actualizando…' : 'Marcar Fuera de servicio'}
                                                 </button>
                                             )}
                                         </div>
