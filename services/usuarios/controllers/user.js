@@ -198,6 +198,7 @@ const login = (req, res) => {
 
   userModel.login(email, (error, result) => {
     if (error) {
+      console.log(error);
       return res.status(500).json({ message: "Error del servidor" });
     } else {
       if (result.length === 0) {
@@ -256,6 +257,7 @@ const login = (req, res) => {
                 const sessionId = require('crypto').randomUUID();
                 userModel.updateActiveSession(result[0].user_credential_id, sessionId, (eSession) => {
                   if (eSession) {
+                    console.log(error)
                     return res.status(500).json({message: "Error del servidor."});
                   }
                   sendToken(sessionId);

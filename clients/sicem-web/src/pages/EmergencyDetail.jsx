@@ -833,6 +833,13 @@ const EmergencyDetail = () => {
 
     const timeline = buildTimeline(emergencyData, assignments, patients, notesByPatient)
 
+    // Quien registró la(s) asignación(es) — el DESPACHADOR. Se muestra arriba, en el
+    // detalle de la emergencia (campo "Despachador"), no en cada tarjeta de ambulancia
+    // (ahí va quien CONDUCE la unidad, ver driver_* abajo).
+    const assignedBy = assignments[0]?.assigned_by_first_name
+        ? `${assignments[0].assigned_by_first_name} ${assignments[0].assigned_by_first_surname || ''}`.trim()
+        : null
+
     // Verde=Aceptada, ámbar=Pendiente, rojo=Rechazada — mismos tonos que el resto del
     // proyecto. Un reception_status_name vacío (dato sembrado de antes de esta columna)
     // se trata visualmente como Pendiente.
@@ -910,6 +917,10 @@ const EmergencyDetail = () => {
                     <div className="detail-field">
                         <span className="field-label">Teléfono</span>
                         <span className="field-value">{emergencyData.reporter_phone}</span>
+                    </div>
+                    <div className="detail-field">
+                        <span className="field-label">Despachador</span>
+                        <span className="field-value">{assignedBy || '—'}</span>
                     </div>
                     <div className="detail-field">
                         <span className="field-label">Pacientes reportados / registrados</span>
@@ -1015,7 +1026,7 @@ const EmergencyDetail = () => {
                                     <span className="assignment-unit">{a.unit_number}</span>
                                     <span className="assignment-plate">{a.license_plate}</span>
                                     <span className="assignment-paramedic">
-                                        {a.first_name ? `${a.first_name} ${a.first_surname}` : 'Sin paramédico asignado'}
+                                        {a.driver_first_name ? `${a.driver_first_name} ${a.driver_first_surname}` : 'Sin conductor con turno activo'}
                                     </span>
                                     {a.unassigned_at ? (
                                         <span className="assignment-tag">Desasignada</span>

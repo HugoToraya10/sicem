@@ -798,12 +798,28 @@ const getNotesByEmergencyPatient = (emergencyPatientId, callback) => {
 }
 
 // Asignaciones de una emergencia
+// Asignaciones de una emergencia. Dos JOINs a user_profiles:
+//  - up     = el DESPACHADOR que registró la asignación (a.user_profile_id) —
+//            se muestra arriba, en el detalle de la emergencia.
+//  - driver = el parámedico que CONDUCE la unidad ahora mismo, i.e. quien tiene
+//            TURNO ACTIVO (ambulance_shifts, shift_end IS NULL y no abandonado
+//            — mismo criterio NOT_STALE de services/unidades) en esa
+//            ambulancia. Es la persona que se muestra en cada tarjeta de
+//            ambulancia asignada, no el que la asignó.
 const getAssignmentsByEmergency = (emergencyId, callback) => {
     const sql = `SELECT a.*, amb.unit_number, amb.license_plate, amb.ambulance_status_id,
-                up.first_name, up.first_surname
+                up.first_name AS assigned_by_first_name, up.first_surname AS assigned_by_first_surname,
+                driver.first_name AS driver_first_name, driver.first_surname AS driver_first_surname
                 FROM assignments a
                 LEFT JOIN ambulances amb ON a.ambulance_id = amb.ambulance_id
                 LEFT JOIN user_profiles up ON a.user_profile_id = up.user_profile_id
+                LEFT JOIN ambulance_shifts ash ON ash.ambulance_id = a.ambulance_id
+                    AND ash.shift_end IS NULL
+                    AND (
+                        (ash.scheduled_end IS NOT NULL AND NOW() <= DATE_ADD(ash.scheduled_end, INTERVAL 1 MINUTE))
+                        OR (ash.scheduled_end IS NULL AND ash.shift_start > DATE_SUB(NOW(), INTERVAL 12 HOUR))
+                    )
+                LEFT JOIN user_profiles driver ON ash.user_profile_id = driver.user_profile_id
                 WHERE a.emergency_id = ?`;
     db.query(sql, [emergencyId], callback);
 }
