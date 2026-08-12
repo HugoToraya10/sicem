@@ -58,3 +58,4 @@
 }
 .history-resolution-pill.resolved { background: #e2efda; color: #276221; }
 .history-resolution-pill.forced { background: #f0f2f5; color: #8888a0; cursor: help; }
+.history-resolution-pill.pending { background: #fff3cd; color: #8a6d1a; }

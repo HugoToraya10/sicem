@@ -4,12 +4,24 @@ import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
+import { connectUnitsSocket } from '../sockets/unitsSocket'
 import './MyAmbulances.css'
 
 const MyAmbulances = () => {
     const { user, token } = useAuth()
     const [ambulances, setAmbulances] = useState([])
     const [statuses, setStatuses] = useState([])
+
+    // Tripulación (paramédicos vinculados a cada unidad, con su horario) y
+    // presencia en línea por socket — para el desglose de "Ver detalle".
+    const [crew, setCrew] = useState([])
+    const [onlineParamedicIds, setOnlineParamedicIds] = useState(new Set())
+    const [institutions, setInstitutions] = useState([])
+    const [expandedAmbulanceId, setExpandedAmbulanceId] = useState(null)
+
+    const toggleDetail = (ambulanceId) => {
+        setExpandedAmbulanceId((current) => current === ambulanceId ? null : ambulanceId)
+    }
 
     const fetchAmbulances = useCallback(() => {
         const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
@@ -34,6 +46,50 @@ const MyAmbulances = () => {
     }, [user, token])
 
     useEffect(() => { fetchAmbulances() }, [fetchAmbulances])
+
+    // Tripulación: paramédicos vinculados a cada ambulancia con su horario
+    // (endpoint de usuarios, permitido para rol 4 — hospital).
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/usuarios/tripulacion-ambulancias`, {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(({ data }) => setCrew((data || []).map(p => toLowerCaseKeys(p))))
+            .catch(error => console.error('Error consultando tripulación de ambulancias. ', error))
+    }, [token])
+
+    // Nombres de instituciones para el desglose de cada ambulancia.
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/usuarios/obtener-instituciones`, {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(({ institutions: inst }) => setInstitutions((inst || []).map(i => toLowerCaseKeys(i))))
+            .catch(error => console.error('Error consultando instituciones. ', error))
+    }, [token])
+
+    // Presencia en tiempo real: solo los paramédicos con el celular conectado
+    // al socket de unidades cuentan como en línea (mismo mecanismo que
+    // sicem-web). El backend envía el estado actual al conectar + cambios en vivo.
+    useEffect(() => {
+        const socket = connectUnitsSocket(token)
+        socket.on('eventParamedicPresence', ({ online }) => {
+            setOnlineParamedicIds(new Set((online || []).map((id) => String(id))))
+        })
+        socket.on('eventParamedicOnline', ({ userProfileId }) => {
+            setOnlineParamedicIds((prev) => new Set(prev).add(String(userProfileId)))
+        })
+        socket.on('eventParamedicOffline', ({ userProfileId }) => {
+            setOnlineParamedicIds((prev) => {
+                const next = new Set(prev)
+                next.delete(String(userProfileId))
+                return next
+            })
+        })
+        return () => socket.disconnect()
+    }, [token])
+
+    const institutionNameById = (id) => institutions.find((i) => String(i.institution_id) === String(id))?.name
 
     // Esta pantalla nunca se actualizaba sola — cualquier cosa que cambiara el
     // estado de una unidad propia (salir a una emergencia, volver, que la pida
@@ -76,7 +132,17 @@ const MyAmbulances = () => {
             <div className="section-title">Mis Ambulancias</div>
             <div className="my-ambulances-grid">
                 {ambulances.map((a) => (
-                    <AmbulanceStatusCard key={a.ambulance_id} ambulance={a} statuses={statuses} onUpdateStatus={handleUpdateStatus} />
+                    <AmbulanceStatusCard
+                        key={a.ambulance_id}
+                        ambulance={a}
+                        statuses={statuses}
+                        onUpdateStatus={handleUpdateStatus}
+                        crew={crew}
+                        onlineParamedicIds={onlineParamedicIds}
+                        institutionName={institutionNameById(a.institution_id)}
+                        detailOpen={expandedAmbulanceId === a.ambulance_id}
+                        onToggleDetail={() => toggleDetail(a.ambulance_id)}
+                    />
                 ))}
                 {ambulances.length === 0 && (
                     <p className="empty-state">Sin ambulancias disponibles para tu institución.</p>

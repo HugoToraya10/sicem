@@ -4,6 +4,7 @@ import AmbulanceAdminCard from '../components/hospitalAdmin/AmbulanceAdminCard'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
+import { connectUnitsSocket } from '../sockets/unitsSocket'
 import './HospitalAdmin.css'
 
 const TABS = ['Camas y Especialidades', 'Ambulancias', 'Empleados', 'Mi Institución']
@@ -120,6 +121,19 @@ const HospitalAdmin = () => {
     const [ambulanceStatuses, setAmbulanceStatuses] = useState([])
     const [showAmbulanceForm, setShowAmbulanceForm] = useState(false)
     const [ambulanceForm, setAmbulanceForm] = useState(emptyAmbulanceForm)
+    // Tripulación (paramédicos vinculados con su horario) + presencia en línea
+    // por socket — para el desglose de "Ver detalle" en la pestaña Ambulancias.
+    const [crew, setCrew] = useState([])
+    const [onlineParamedicIds, setOnlineParamedicIds] = useState(new Set())
+    const [expandedAmbulanceId, setExpandedAmbulanceId] = useState(null)
+
+    const toggleAmbulanceDetail = (ambulanceId) => {
+        setExpandedAmbulanceId((current) => current === ambulanceId ? null : ambulanceId)
+    }
+
+    // Resuelve la ambulancia asignada a un paramédico para mostrar el número de
+    // unidad Y la placa (no el ID interno, que no le dice nada a nadie).
+    const assignedAmbulance = (ambulanceId) => ambulances.find((a) => String(a.ambulance_id) === String(ambulanceId))
 
     const fetchAmbulances = useCallback(() => {
         Promise.all([
@@ -143,6 +157,35 @@ const HospitalAdmin = () => {
     }, [user, token])
 
     useEffect(() => { fetchAmbulances() }, [fetchAmbulances])
+
+    // Tripulación: paramédicos vinculados a cada ambulancia con su horario
+    // (endpoint de usuarios, permitido para rol 4 — hospital).
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/usuarios/tripulacion-ambulancias`, { headers })
+            .then(res => res.json())
+            .then(({ data }) => setCrew((data || []).map(p => toLowerCaseKeys(p))))
+            .catch(error => console.error('Error consultando tripulación de ambulancias. ', error))
+    }, [token])
+
+    // Presencia en tiempo real: solo los paramédicos con el celular conectado
+    // al socket de unidades cuentan como en línea (mismo mecanismo que sicem-web).
+    useEffect(() => {
+        const socket = connectUnitsSocket(token)
+        socket.on('eventParamedicPresence', ({ online }) => {
+            setOnlineParamedicIds(new Set((online || []).map((id) => String(id))))
+        })
+        socket.on('eventParamedicOnline', ({ userProfileId }) => {
+            setOnlineParamedicIds((prev) => new Set(prev).add(String(userProfileId)))
+        })
+        socket.on('eventParamedicOffline', ({ userProfileId }) => {
+            setOnlineParamedicIds((prev) => {
+                const next = new Set(prev)
+                next.delete(String(userProfileId))
+                return next
+            })
+        })
+        return () => socket.disconnect()
+    }, [token])
 
     const handleRegisterAmbulance = (e) => {
         e.preventDefault()
@@ -623,6 +666,10 @@ const HospitalAdmin = () => {
                                 types={ambulanceTypes}
                                 onUpdate={handleUpdateAmbulance}
                                 onToggleActive={handleToggleAmbulance}
+                                crew={crew}
+                                onlineParamedicIds={onlineParamedicIds}
+                                detailOpen={expandedAmbulanceId === a.ambulance_id}
+                                onToggleDetail={() => toggleAmbulanceDetail(a.ambulance_id)}
                             />
                         ))}
                         {ambulances.length === 0 && <p className="empty-state">Sin ambulancias registradas para tu institución.</p>}
@@ -765,12 +812,32 @@ const HospitalAdmin = () => {
                                                 <td>{u.first_name} {u.first_surname} {u.second_surname}</td>
                                                 <td>{u.email || '—'}</td>
                                                 <td>
-                                                    {isParamedic ? `Paramédico${u.assigned_ambulance_id ? ' (unidad #' + u.assigned_ambulance_id + ')' : ' (sin unidad)'}` : 'Empleado'}
-                                                    {isParamedic && u.shift_windows && u.shift_windows.length ? (
-                                                        <div className="hospital-admin-shift-hint">
-                                                            {u.shift_windows.map((w) => `${WEEKDAYS.find(d => d.value === parseInt(w.day))?.label} ${w.start}-${w.end}`).join(', ')}
-                                                        </div>
-                                                    ) : null}
+                                                    {isParamedic ? (
+                                                        (() => {
+                                                            const amb = assignedAmbulance(u.assigned_ambulance_id)
+                                                            return (
+                                                                <>
+                                                                    <div className="hospital-admin-employee-type">Paramédico</div>
+                                                                    {amb ? (
+                                                                        <div className="hospital-admin-ambulance-pill">
+                                                                            Unidad {amb.unit_number} · {amb.license_plate}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="hospital-admin-shift-hint">Sin ambulancia asignada</div>
+                                                                    )}
+                                                                    {u.shift_windows && u.shift_windows.length ? (
+                                                                        <div className="hospital-admin-shift-list">
+                                                                            {u.shift_windows.map((w) => (
+                                                                                <span key={w.day} className="hospital-admin-shift-pill">
+                                                                                    {WEEKDAYS.find(d => d.value === parseInt(w.day))?.label} {w.start}-{w.end}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : null}
+                                                                </>
+                                                            )
+                                                        })()
+                                                    ) : 'Empleado'}
                                                 </td>
                                                 <td>
                                                     <span className={`hospital-admin-status ${u.is_active ? 'status-active' : 'status-inactive'}`}>

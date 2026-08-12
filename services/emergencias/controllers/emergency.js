@@ -1075,6 +1075,22 @@ const getAllActiveEmergencies = (req, res) => {
     }
 }
 
+// Historial completo — solo admin y despachador
+const getAllEmergenciesCtrl = (req, res) => {
+    const allowedRoles = [1, 2];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    } else {
+        emergencyModel.getAllEmergencies((e, r) => {
+            if (e) {
+                return res.status(500).json({message: "Error del servidor."});
+            } else {
+                res.status(200).json({message: "Historial de emergencias", data: r});
+            }
+        });
+    }
+}
+
 // Historial — solo admin y despachador
 const getAllClosedEmergencies = (req, res) => {
     const allowedRoles = [1, 2];
@@ -1572,7 +1588,7 @@ module.exports = {
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
     confirmPatientReception, confirmPatientDelivery, dischargePatient, reassignPatientDestination, assignAmbulanceToPatient,
     // GET
-    getAllActiveEmergencies, getAllClosedEmergencies, getEmergencyById,
+    getAllActiveEmergencies, getAllEmergenciesCtrl, getAllClosedEmergencies, getEmergencyById,
     getPatientsByEmergency, getIncomingPatientsByInstitution, getPatientHistoryByInstitution, getNotesByEmergencyPatient, getAssignmentsByEmergency,
     getAssignmentsByAmbulance, getEmergenciesByPatient,
     getPendingInterInstitutionalRequests, getAllInterInstitutionalRequests, getPendingRequestsByReceivingInstitution,

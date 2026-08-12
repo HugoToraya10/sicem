@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
+import { generatePatientReport } from '../utils/generatePatientReport'
 import PatientDetailModal from '../components/patients/PatientDetailModal'
 import RejectReasonModal from '../components/patients/RejectReasonModal'
 import './History.css'
@@ -28,6 +29,15 @@ const STATUS_FILTERS = [
     { value: 'closedUnresolved', label: 'Cerrada sin resolver' },
 ]
 
+// Estado de la EMERGENCIA (no el del paciente): Concluidas = emergencia cerrada
+// (p.closed_at con valor); Pendientes = emergencia en curso (closed_at NULL).
+// Es otra dimensión, aparte del estado del paciente de arriba.
+const EMERGENCY_STATE_FILTERS = [
+    { value: 'all', label: 'Todas las emergencias' },
+    { value: 'concluidas', label: 'Solo emergencias concluidas' },
+    { value: 'pendientes', label: 'Solo emergencias pendientes' },
+]
+
 // Puro archivo: TODO lo que ha pasado por esta institución, con filtros —
 // para "qué necesito hacer ahora" está Pacientes en Camino (decisiones) y
 // Seguimiento (casos activos); aquí es para buscar/auditar/consultar.
@@ -36,10 +46,23 @@ const History = () => {
     const [patients, setPatients] = useState([])
     const [searchQuery, setSearchQuery] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
+    const [emergencyStateFilter, setEmergencyStateFilter] = useState('all')
     const [triageFilter, setTriageFilter] = useState('all')
     const [selectedPatient, setSelectedPatient] = useState(null)
     const [rejectingPatientId, setRejectingPatientId] = useState(null)
     const [triageCatalog, setTriageCatalog] = useState([])
+    const [generatingReportId, setGeneratingReportId] = useState(null)
+
+    // Genera y guarda en el dispositivo el reporte formal PDF de ese paciente.
+    // Mientras se genera, deshabilita el botón de esa fila para no repetir la
+    // consulta ni amontonar diálogos de guardado.
+    const handleGenerateReport = (p) => {
+        if (generatingReportId) return
+        setGeneratingReportId(p.emergency_patient_id)
+        generatePatientReport(p, token)
+            .catch((e) => alert(`No se pudo generar el reporte: ${e?.message || 'error desconocido'}`))
+            .finally(() => setGeneratingReportId(null))
+    }
 
     const fetchHistory = useCallback(() => {
         fetch(`${API_BASE_URL}/emergencias/historial-institucion/${user.institutionId}`, {
@@ -102,6 +125,12 @@ const History = () => {
     const visiblePatients = [...patients]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .filter((p) => statusFilter === 'all' || statusLabel(p).className === statusFilter)
+        .filter((p) => {
+            const closed = Boolean(p.closed_at)
+            if (emergencyStateFilter === 'concluidas') return closed
+            if (emergencyStateFilter === 'pendientes') return !closed
+            return true
+        })
         .filter((p) => triageFilter === 'all' || p.triage_level === triageFilter)
         .filter((p) => matchesSearch(p, searchQuery))
 
@@ -119,6 +148,11 @@ const History = () => {
                 />
                 <select className="history-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                     {STATUS_FILTERS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+                <select className="history-filter-select" value={emergencyStateFilter} onChange={(e) => setEmergencyStateFilter(e.target.value)}>
+                    {EMERGENCY_STATE_FILTERS.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                 </select>
@@ -141,6 +175,7 @@ const History = () => {
                             <th>Estado</th>
                             <th>Emergencia cerrada</th>
                             <th></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -156,6 +191,15 @@ const History = () => {
                                     <td><span className={`history-status-pill ${status.className}`}>{status.text}</span></td>
                                     <td>{p.closed_at ? new Date(p.closed_at).toLocaleString('es-MX') : '—'}</td>
                                     <td><button className="btn-detail" onClick={(e) => { e.stopPropagation(); setSelectedPatient(p) }}>Ver detalle</button></td>
+                                    <td>
+                                        <button
+                                            className="btn-detail"
+                                            onClick={(e) => { e.stopPropagation(); handleGenerateReport(p) }}
+                                            disabled={generatingReportId !== null}
+                                        >
+                                            {generatingReportId === p.emergency_patient_id ? 'Generando...' : 'Generar reporte'}
+                                        </button>
+                                    </td>
                                 </tr>
                             )
                         })}
@@ -163,7 +207,7 @@ const History = () => {
                 </table>
                 {visiblePatients.length === 0 && (
                     <p className="empty-state">
-                        {searchQuery || statusFilter !== 'all' || triageFilter !== 'all' ? 'Sin resultados para este filtro.' : 'Sin historial de pacientes todavía.'}
+                        {searchQuery || statusFilter !== 'all' || emergencyStateFilter !== 'all' || triageFilter !== 'all' ? 'Sin resultados para este filtro.' : 'Sin historial de pacientes todavía.'}
                     </p>
                 )}
             </div>

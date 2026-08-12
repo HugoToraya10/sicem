@@ -45,6 +45,9 @@ const Users = () => {
     const [roles, setRoles] = useState([]);
     const [institutions, setInstitutions] = useState([]);
     const [crumAmbulances, setCrumAmbulances] = useState([]);
+    // Ambulancias completas (no solo CRUM) — para resolver el unit_number de
+    // la ambulancia asignada a un paramédico en su fila de detalle de horario.
+    const [ambulances, setAmbulances] = useState([]);
 
     const [showForm, setShowForm] = useState(false);
     const [editingUserProfileId, setEditingUserProfileId] = useState(null);
@@ -58,6 +61,10 @@ const Users = () => {
 
     const [expandedUserId, setExpandedUserId] = useState(null);
     const [userDetail, setUserDetail] = useState(null);
+
+    // Detalle de horario/turno de un paramédico (rol 3) — ambulancia asignada
+    // + sus ventanas de turno. Se abre con su botón "Horario".
+    const [paramedicScheduleUserId, setParamedicScheduleUserId] = useState(null);
 
     const [statusFilter, setStatusFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -79,6 +86,13 @@ const Users = () => {
     }
 
     const visibleUsers = filterByStatus(users, statusFilter).filter(u => matchesSearch(u, searchQuery))
+
+    const weekdayLabel = (day) => WEEKDAYS.find((d) => d.value === parseInt(day))?.label || day
+    const formatSchedule = (shiftWindows) => {
+        if (!shiftWindows || shiftWindows.length === 0) return 'Sin horario asignado'
+        return shiftWindows.map((w) => `${weekdayLabel(w.day)} ${w.start}-${w.end}`).join(' · ')
+    }
+    const ambulanceUnitById = (id) => ambulances.find((a) => String(a.ambulance_id) === String(id))?.unit_number
 
     //---------------------------------consultar, gets--------------------------------------------------
 
@@ -106,7 +120,22 @@ const Users = () => {
         fetchCredentialHistory(u.user_credential_id)
     }
 
+    const toggleParamedicSchedule = (u) => {
+        setParamedicScheduleUserId((current) => current === u.user_profile_id ? null : u.user_profile_id)
+    }
+
     useEffect(() => { fetchUsers() }, []);
+
+    // Ambulancias completas para resolver el número de unidad en el detalle de
+    // horario de los paramédicos (Ambulances.jsx usa el mismo endpoint admin).
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/unidades/ambulancias-todas`, {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(({ data }) => setAmbulances((data || []).map(a => toLowerCaseKeys(a))))
+            .catch(error => console.error('Error consultando ambulancias. ', error))
+    }, []);
 
     useEffect(() => {
         fetch(`${API_BASE_URL}/usuarios/obtener-roles`, {
@@ -679,6 +708,9 @@ const Users = () => {
                                             <button className="users-edit-btn" onClick={() => openEditForm(u)}>Editar</button>
                                             <button className="users-cred-btn" onClick={() => openCredentialsForm(u)} disabled={!u.user_credential_id}>Credenciales</button>
                                             <button className="users-cred-btn" onClick={() => toggleCredentialHistory(u)} disabled={!u.user_credential_id}>Historial</button>
+                                            {parseInt(u.role_id) === 3 && (
+                                                <button className="users-cred-btn" onClick={() => toggleParamedicSchedule(u)}>Horario</button>
+                                            )}
                                             <button
                                                 className="users-toggle-btn"
                                                 onClick={() => handleToggleActive(u)}
@@ -709,6 +741,21 @@ const Users = () => {
                                                             </button>
                                                         </span>
                                                     )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {paramedicScheduleUserId === u.user_profile_id && (
+                                        <tr className="users-detail-row">
+                                            <td colSpan={7}>
+                                                <div className="users-detail-content">
+                                                    <span>
+                                                        <strong>Ambulancia asignada:</strong>{' '}
+                                                        {u.assigned_ambulance_id
+                                                            ? (ambulanceUnitById(u.assigned_ambulance_id) || `#${u.assigned_ambulance_id}`)
+                                                            : 'Sin ambulancia asignada'}
+                                                    </span>
+                                                    <span><strong>Horario / turnos:</strong> {formatSchedule(u.shift_windows)}</span>
                                                 </div>
                                             </td>
                                         </tr>

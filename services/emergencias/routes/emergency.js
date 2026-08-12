@@ -37,6 +37,7 @@ router.patch('/asignar-ambulancia-paciente', middleware.verifyToken, emergencyCo
 
 // -------------- gets ---------------------------------
 router.get('/emergencias-activas', middleware.verifyToken, emergencyController.getAllActiveEmergencies); // ✅ Dashboard.jsx
+router.get('/emergencias', middleware.verifyToken, emergencyController.getAllEmergenciesCtrl); // ✅ History.jsx (sicem-web) — todas (activas + cerradas)
 router.get('/emergencias-cerradas', middleware.verifyToken, emergencyController.getAllClosedEmergencies); // TODO
 router.get('/emergencia/:emergencyId', middleware.verifyToken, emergencyController.getEmergencyById); // ✅ EmergencyDetail.jsx
 router.get('/pacientes/:emergencyId', middleware.verifyToken, emergencyController.getPatientsByEmergency); // ✅ EmergencyDetail.jsx

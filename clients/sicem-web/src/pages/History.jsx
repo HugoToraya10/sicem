@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
 import { getNavLinks } from '../utils/Navlinks';
+import { generateEmergencyReport } from '../utils/generateEmergencyReport';
 import '../pages/admin/Institutions.css';
 import './History.css';
 import {API_BASE_URL} from '../config/api'
@@ -37,6 +38,15 @@ const RESOLUTION_FILTERS = [
     { value: 'forced', label: 'Cerradas sin resolver' },
 ]
 
+// Estado de la EMERGENCIA (no es lo mismo que la resolución): si cerró o no.
+// "Pendientes" = en curso (closed_at NULL); "Concluidas" = cerrada (closed_at
+// con valor). "Todas" = ambas.
+const STATE_FILTERS = [
+    { value: 'all', label: 'Todas las emergencias' },
+    { value: 'concluidas', label: 'Solo concluidas' },
+    { value: 'pendientes', label: 'Solo pendientes' },
+]
+
 const History = () => {
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
@@ -47,13 +57,32 @@ const History = () => {
     const [accessDenied, setAccessDenied] = useState(false);
     const [search, setSearch] = useState('');
     const [resolutionFilter, setResolutionFilter] = useState('all');
+    const [stateFilter, setStateFilter] = useState('all');
     const [triageFilter, setTriageFilter] = useState('all');
     const [triageCatalog, setTriageCatalog] = useState([]);
+    const [generatingReportId, setGeneratingReportId] = useState(null);
+
+    // Genera y guarda en el dispositivo el reporte formal PDF de esa emergencia.
+    const handleGenerateReport = (em) => {
+        if (generatingReportId) return
+        setGeneratingReportId(em.emergency_id)
+        generateEmergencyReport(em, token)
+            .catch((e) => alert(`No se pudo generar el reporte: ${e?.message || 'error desconocido'}`))
+            .finally(() => setGeneratingReportId(null))
+    }
 
     const visibleEmergencies = emergencies
         .filter((em) => {
-            if (resolutionFilter === 'resolved') return !em.close_reason
-            if (resolutionFilter === 'forced') return Boolean(em.close_reason)
+            const closed = Boolean(em.closed_at)
+            if (stateFilter === 'concluidas') return closed
+            if (stateFilter === 'pendientes') return !closed
+            return true
+        })
+        .filter((em) => {
+            // La resolución solo es un concepto de emergencias concluidas;
+            // una pendiente no tiene close_reason y no debe caer en "Resueltas".
+            if (resolutionFilter === 'resolved') return Boolean(em.closed_at) && !em.close_reason
+            if (resolutionFilter === 'forced') return Boolean(em.closed_at) && Boolean(em.close_reason)
             return true
         })
         .filter((em) => triageFilter === 'all' || em.triage_level === triageFilter)
@@ -64,7 +93,7 @@ const History = () => {
         })
 
     useEffect(() => {
-        fetch(`${API_BASE_URL}/emergencias/emergencias-cerradas`, {
+        fetch(`${API_BASE_URL}/emergencias/emergencias`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => {
@@ -114,6 +143,11 @@ const History = () => {
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                             </select>
+                            <select className="status-filter-select" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+                                {STATE_FILTERS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                            </select>
                             <select className="status-filter-select" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
                                 <option value="all">Todos los niveles de triage</option>
                                 {triageCatalog.map((t) => (
@@ -153,7 +187,9 @@ const History = () => {
                                             <td>{formatDateTime(em.closed_at)}</td>
                                             <td><span className="history-duration">{formatDuration(em.created_at, em.closed_at)}</span></td>
                                             <td>
-                                                {em.close_reason ? (
+                                                {!em.closed_at ? (
+                                                    <span className="history-resolution-pill pending">Pendiente</span>
+                                                ) : em.close_reason ? (
                                                     <span className="history-resolution-pill forced" title={em.close_reason}>Sin resolver</span>
                                                 ) : (
                                                     <span className="history-resolution-pill resolved">Resuelta</span>
@@ -163,6 +199,13 @@ const History = () => {
                                                 <button className="institutions-edit-btn" onClick={() => navigate(`/emergencias/${em.emergency_id}`)}>
                                                     Ver detalle
                                                 </button>
+                                                <button
+                                                    className="institutions-edit-btn"
+                                                    onClick={() => handleGenerateReport(em)}
+                                                    disabled={generatingReportId !== null}
+                                                >
+                                                    {generatingReportId === em.emergency_id ? 'Generando...' : 'Generar reporte'}
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -170,7 +213,7 @@ const History = () => {
                             </table>
                             {visibleEmergencies.length === 0 && (
                                 <p className="institutions-empty">
-                                    {emergencies.length === 0 ? 'No hay emergencias cerradas todavía.' : 'No hay emergencias que coincidan con los filtros.'}
+                                    {emergencies.length === 0 ? 'No hay emergencias registradas todavía.' : 'No hay emergencias que coincidan con los filtros.'}
                                 </p>
                             )}
                         </div>

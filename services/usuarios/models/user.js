@@ -192,6 +192,20 @@ const getCityById = (cityId, callback) => {
     db.query(sql, [cityId], callback);
 }
 
+// Paramédicos (rol 3) con la ambulancia a la que están vinculados
+// (assigned_ambulance_id) y su horario de turnos (shift_windows, string JSON).
+// Se usa en sicem-web (Ambulances.jsx) para mostrar, por unidad, quiénes la
+// conducen aunque no estén en línea. La presencia EN LÍNEA no se calcula aquí:
+// active_session_id nunca se limpia al cerrar sesión (sería un dato falso);
+// se resuelve en tiempo real por el socket del servicio de unidades.
+const getAllParamedics = (callback) => {
+    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname,
+                t1.assigned_ambulance_id, t1.shift_windows
+                FROM user_profiles t1
+                WHERE t1.role_id = 3`;
+    db.query(sql, callback);
+}
+
 const getUserByCURP = (curp, callback) => {
     const sql = `SELECT user_profile_id, first_name, first_surname, second_surname,
                 phone_number, birth_date, curp
@@ -223,4 +237,4 @@ module.exports = { getUserInstitutionInfo, getUserInstitutionInfoByCredentialId,
                 createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
                 editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP, getUserRole, updatePatientCurp,
                 getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
-                updatePushToken, updateActiveSession }
+                updatePushToken, updateActiveSession, getAllParamedics }

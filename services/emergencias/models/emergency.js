@@ -623,6 +623,20 @@ const getAllActiveEmergencies = (callback) => {
     db.query(sql, callback);
 }
 
+// Historial completo de emergencias: TANTO activas (closed_at NULL) como
+// cerradas. Mismo shape que getAllClosedEmergencies para que el historial web
+// pueda filtrar por estado (Todas / Concluidas / Pendientes) en el cliente.
+const getAllEmergencies = (callback) => {
+    const sql = `SELECT e.*, et.name AS type_name, es.name AS status_name,
+                tl.level AS triage_level, tl.color AS triage_color_name, tl.hex_color AS triage_hex_color
+                FROM emergencies e
+                LEFT JOIN emergency_types et ON e.emergency_type_id = et.emergency_type_id
+                LEFT JOIN emergency_statuses es ON e.emergency_status_id = es.emergency_status_id
+                LEFT JOIN triage_levels tl ON e.triage_level_id = tl.triage_level_id
+                ORDER BY e.created_at DESC`;
+    db.query(sql, callback);
+}
+
 // Historial de emergencias cerradas
 const getAllClosedEmergencies = (callback) => {
     const sql = `SELECT e.*, et.name AS type_name, es.name AS status_name,
@@ -652,12 +666,21 @@ const getEmergencyById = (emergencyId, callback) => {
 // nombre de la institución destino actual — sin excluir nada por estado, el
 // despachador necesita ver TODOS los estados (incluyendo Rechazada) para saber
 // a quién reasignar.
+// Trae además los datos clínicos del expediente (peso, talla, alergias,
+// padecimientos, medicamentos, notas) y la conclusión del parámedico, para que
+// el reporte formal PDF del historial muestre por paciente la MISMA información
+// que el reporte del desktop (que los obtiene de otro query).
 const getPatientsByEmergency = (emergencyId, callback) => {
     const sql = `SELECT ep.*, up.first_name, up.first_surname, up.second_surname,
                 up.curp, up.phone_number, cr.blood_type_id, bt.blood_type,
+                cr.weight, cr.height, cr.notes AS clinical_record_notes,
                 rs.name AS reception_status_name, di.name AS destination_institution_name,
                 di.latitude AS destination_latitude, di.longitude AS destination_longitude,
-                sp.name AS speciality_name, amb.unit_number
+                sp.name AS speciality_name, amb.unit_number,
+                MAX(a.paramedic_concluded_at) AS paramedic_concluded_at,
+                GROUP_CONCAT(DISTINCT pa.name SEPARATOR ', ') AS allergies,
+                GROUP_CONCAT(DISTINCT pc.name SEPARATOR ', ') AS conditions,
+                GROUP_CONCAT(DISTINCT pm.name SEPARATOR ', ') AS medications
                 FROM emergencies_patients ep
                 LEFT JOIN user_profiles up ON ep.user_profile_id = up.user_profile_id
                 LEFT JOIN clinical_records cr ON up.user_profile_id = cr.user_profile_id
@@ -666,7 +689,12 @@ const getPatientsByEmergency = (emergencyId, callback) => {
                 LEFT JOIN institutions di ON ep.destination_institution_id = di.institution_id
                 LEFT JOIN specialities sp ON ep.destination_speciality_id = sp.speciality_id
                 LEFT JOIN ambulances amb ON ep.ambulance_id = amb.ambulance_id
-                WHERE ep.emergency_id = ?`;
+                LEFT JOIN patient_allergies pa ON cr.clinical_record_id = pa.clinical_record_id AND pa.is_active = 1
+                LEFT JOIN patient_conditions pc ON cr.clinical_record_id = pc.clinical_record_id AND pc.is_active = 1
+                LEFT JOIN patient_medications pm ON cr.clinical_record_id = pm.clinical_record_id AND pm.is_active = 1
+                LEFT JOIN assignments a ON a.ambulance_id = ep.ambulance_id AND a.emergency_id = ep.emergency_id AND a.unassigned_at IS NULL
+                WHERE ep.emergency_id = ?
+                GROUP BY ep.emergency_patient_id`;
     db.query(sql, [emergencyId], callback);
 }
 
@@ -1227,7 +1255,7 @@ module.exports = {
     confirmPatientDelivery, dischargePatient, getUndeliveredPendingCount, closeEmergencyRaw,
     decrementInstitutionBeds, incrementInstitutionBeds, decrementSpecialityBeds, incrementSpecialityBeds, getAcceptedUndeliveredPatients,
     // GET
-    getAllActiveEmergencies, getAllClosedEmergencies, getEmergencyById,
+    getAllActiveEmergencies, getAllEmergencies, getAllClosedEmergencies, getEmergencyById,
     getPatientsByEmergency, getIncomingPatientsByInstitution, getPatientHistoryByInstitution, getNotesByEmergencyPatient, getAssignmentsByEmergency,
     getAssignmentsByAmbulance, getEmergenciesByPatient,
     getPendingInterInstitutionalRequests, getAllInterInstitutionalRequests,

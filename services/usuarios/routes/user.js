@@ -32,5 +32,6 @@ router.get('/ciudades/:stateId', userController.getCitiesByState); // TODO
 router.get('/ciudad/:cityId', userController.getCityById); // ✅ HospitalAdmin.jsx (pre-seleccionar estado/ciudad de una dirección ya guardada)
 router.get('/obtener-usuario-curp/:curp', userController.getUserByCURP);
 router.get('/historial-cuenta/:userCredentialId', middleware.verifyToken, userController.getCredentialHistory);
+router.get('/tripulacion-ambulancias', middleware.verifyToken, userController.getAmbulanceCrew); // ✅ Ambulances.jsx
 
 module.exports = router

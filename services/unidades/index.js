@@ -24,6 +24,32 @@ const io = new Server(server, {
 
 setIo(io);
 
+// Presencia en tiempo real de paramédicos EN LÍNEA (socket conectado al
+// servicio de unidades). Se usa en sicem-web (Ambulances.jsx) para pintar el
+// puntito verde SOLO en los que de verdad tienen su celular conectado ahora
+// mismo — el contador por usuario protege el caso de que un mismo paramédico
+// tenga dos sockets abiertos (cierra uno y el otro sigue valiendo).
+const onlineParamedicCounts = new Map(); // userProfileId -> nº de sockets abiertos
+const socketToUser = new Map(); // socket.id -> userProfileId
+
+const addOnlineParamedic = (io, userProfileId) => {
+    const prev = onlineParamedicCounts.get(userProfileId) || 0;
+    onlineParamedicCounts.set(userProfileId, prev + 1);
+    if (prev === 0) {
+        io.to('admin').to('despachador').emit('eventParamedicOnline', { userProfileId: parseInt(userProfileId) });
+    }
+}
+
+const removeOnlineParamedic = (io, userProfileId) => {
+    const prev = onlineParamedicCounts.get(userProfileId) || 0;
+    if (prev <= 1) {
+        onlineParamedicCounts.delete(userProfileId);
+        io.to('admin').to('despachador').emit('eventParamedicOffline', { userProfileId: parseInt(userProfileId) });
+    } else {
+        onlineParamedicCounts.set(userProfileId, prev - 1);
+    }
+}
+
 io.on('connection', (socket) => {
     console.log(`cliente ${socket.id} conectado`)
     const token = socket.handshake.auth.token;
@@ -69,12 +95,26 @@ io.on('connection', (socket) => {
                 default: socket.disconnect();
                     break;
             }
+            // Presencia en línea: un paramédico conectado cuenta como en línea;
+            // admin/despachador/hospital reciben el estado actual al conectar
+            // para poder pintar los puntitos sin recargar.
+            if (parseInt(roleId) === 3) {
+                socketToUser.set(socket.id, userProfileId);
+                addOnlineParamedic(io, userProfileId);
+            } else if ([1, 2, 4].includes(parseInt(roleId))) {
+                socket.emit('eventParamedicPresence', { online: [...onlineParamedicCounts.keys()] });
+            }
             console.log(`Rooms del socket ${socket.id}:`, socket.rooms)
         }
     })
 
     socket.on('disconnect', () => {
         console.log(`Usuario ${socket.id} desconectado.`)
+        const uid = socketToUser.get(socket.id);
+        if (uid !== undefined) {
+            socketToUser.delete(socket.id);
+            removeOnlineParamedic(io, uid);
+        }
     })
 })
 

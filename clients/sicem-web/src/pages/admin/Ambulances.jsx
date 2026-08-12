@@ -5,6 +5,7 @@ import Navbar from '../../components/layout/Navbar';
 import { getNavLinks } from '../../utils/Navlinks';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
+import { connectUnitsSocket } from '../../sockets/unitsSocket';
 import './Ambulances.css';
 import {API_BASE_URL} from '../../config/api'
 
@@ -50,6 +51,16 @@ const Ambulances = () => {
     const [historyAmbulanceId, setHistoryAmbulanceId] = useState(null);
     const [ambulanceHistory, setAmbulanceHistory] = useState([]);
 
+    // Tripulación: paramédicos vinculados a cada ambulancia (aunque no estén
+    // logueados), con su horario de turnos y si tienen sesión activa.
+    const [crew, setCrew] = useState([]);
+    const [crewAmbulanceId, setCrewAmbulanceId] = useState(null);
+
+    // Paramédicos EN LÍNEA ahora mismo (socket del servicio de unidades) — el
+    // único indicador real: active_session_id de BD nunca se limpia al cerrar
+    // sesión, por eso no sirve (ver getAmbulanceCrew en usuarios).
+    const [onlineParamedicIds, setOnlineParamedicIds] = useState(new Set());
+
     // Búsqueda por número de unidad o placa
     const [searchMode, setSearchMode] = useState(null); // 'unitNumber' | 'licensePlate' | null
     const [searchQuery, setSearchQuery] = useState('');
@@ -66,6 +77,33 @@ const Ambulances = () => {
         return list
     }
 
+    // ¿El paramédico debería estar de turno AHORA? Compara la hora actual
+    // contra su shift_windows del día de hoy (mismo criterio que isWithinSchedule
+    // en services/unidades: 1=lunes..7=domingo, y rangos que cruzan medianoche).
+    const isOnScheduleNow = (shiftWindows) => {
+        if (!shiftWindows || shiftWindows.length === 0) return false
+        const now = new Date()
+        const jsDay = now.getDay()
+        const isoDay = jsDay === 0 ? 7 : jsDay
+        const todayWindow = shiftWindows.find((w) => parseInt(w.day) === isoDay)
+        if (!todayWindow) return false
+        const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+        const nowMinutes = now.getHours() * 60 + now.getMinutes()
+        const startMinutes = toMinutes(todayWindow.start)
+        const endMinutes = toMinutes(todayWindow.end)
+        return startMinutes <= endMinutes
+            ? (nowMinutes >= startMinutes && nowMinutes <= endMinutes)
+            : (nowMinutes >= startMinutes || nowMinutes <= endMinutes)
+    }
+
+    const WEEKDAY_LABELS = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom' }
+    const formatSchedule = (shiftWindows) => {
+        if (!shiftWindows || shiftWindows.length === 0) return 'Sin horario asignado'
+        return shiftWindows
+            .map((w) => `${WEEKDAY_LABELS[parseInt(w.day)] || w.day} ${w.start}-${w.end}`)
+            .join(' · ')
+    }
+
     //---------------------------------consultar, gets--------------------------------------------------
 
     const fetchAmbulances = () => {
@@ -77,6 +115,37 @@ const Ambulances = () => {
             .catch(error => console.error('Error consultando ambulancias. ', error))
     }
     useEffect(() => { fetchAmbulances() }, []);
+
+    const fetchCrew = () => {
+        fetch(`${API_BASE_URL}/usuarios/tripulacion-ambulancias`, {
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
+        })
+            .then(res => res.json())
+            .then(({ data }) => setCrew((data || []).map(p => toLowerCaseKeys(p))))
+            .catch(error => console.error('Error consultando tripulación de ambulancias. ', error))
+    }
+    useEffect(() => { fetchCrew() }, []);
+
+    // Presencia en tiempo real de paramédicos en línea. El backend mantiene en
+    // el socket de unidades quién tiene el celular conectado ahora mismo y
+    // avisa al room 'admin' (y 'despachador') con el estado actual + cambios.
+    useEffect(() => {
+        const socket = connectUnitsSocket(token)
+        socket.on('eventParamedicPresence', ({ online }) => {
+            setOnlineParamedicIds(new Set((online || []).map((id) => String(id))))
+        })
+        socket.on('eventParamedicOnline', ({ userProfileId }) => {
+            setOnlineParamedicIds((prev) => new Set(prev).add(String(userProfileId)))
+        })
+        socket.on('eventParamedicOffline', ({ userProfileId }) => {
+            setOnlineParamedicIds((prev) => {
+                const next = new Set(prev)
+                next.delete(String(userProfileId))
+                return next
+            })
+        })
+        return () => socket.disconnect()
+    }, [token]);
 
     const fetchTypes = () => {
         fetch(`${API_BASE_URL}/unidades/tipos-ambulancia-todos`, {
@@ -114,6 +183,10 @@ const Ambulances = () => {
             .then(parseResponse)
             .then(({ data }) => setAmbulanceHistory((data || []).map(a => toLowerCaseKeys(a))))
             .catch(error => { console.error('Error consultando historial de la ambulancia. ', error); alert(error.message) })
+    }
+
+    const toggleCrew = (amb) => {
+        setCrewAmbulanceId((current) => current === amb.ambulance_id ? null : amb.ambulance_id)
     }
 
     //---------------------------------ambulancias: registrar / buscar / activar--------------------------------------------------
@@ -452,12 +525,42 @@ const Ambulances = () => {
                                             </td>
                                             <td>
                                                 <button className="ambulances-toggle-btn" onClick={() => openEditAmbulance(amb)}>Editar</button>
+                                                <button className="ambulances-toggle-btn" onClick={() => toggleCrew(amb)}>Tripulación</button>
                                                 <button className="ambulances-toggle-btn" onClick={() => toggleAmbulanceHistory(amb)}>Historial</button>
                                                 <button className="ambulances-toggle-btn" onClick={() => handleToggleActive(amb)}>
                                                     {amb.is_active ? 'Desactivar' : 'Activar'}
                                                 </button>
                                             </td>
                                         </tr>
+                                        {crewAmbulanceId === amb.ambulance_id && (
+                                            <tr>
+                                                <td colSpan={7}>
+                                                    <div className="ambulance-crew">
+                                                        <strong>Paramédicos que conducen esta unidad:</strong>
+                                                        {crew.filter((p) => p.assigned_ambulance_id && String(p.assigned_ambulance_id) === String(amb.ambulance_id)).length === 0 ? (
+                                                            <span className="ambulance-crew-empty">Esta unidad no tiene paramédicos vinculados.</span>
+                                                        ) : (
+                                                            crew.filter((p) => p.assigned_ambulance_id && String(p.assigned_ambulance_id) === String(amb.ambulance_id)).map((p) => {
+                                                                const isOnline = onlineParamedicIds.has(String(p.user_profile_id))
+                                                                return (
+                                                                    <div key={p.user_profile_id} className="ambulance-crew-row">
+                                                                        {isOnline && <span className="crew-online-dot" title="Conectado ahora mismo" />}
+                                                                        <span className={`crew-name ${isOnScheduleNow(p.shift_windows) ? 'crew-on-schedule' : ''}`}>
+                                                                            {p.first_name} {p.first_surname}
+                                                                        </span>
+                                                                        <span className="crew-schedule">{formatSchedule(p.shift_windows)}</span>
+                                                                        <span className="crew-shift-state">
+                                                                            {isOnScheduleNow(p.shift_windows) ? '· En horario de turno' : '· Fuera de turno'}
+                                                                        </span>
+                                                                        {isOnline && <span className="crew-online-label">En línea</span>}
+                                                                    </div>
+                                                                )
+                                                            })
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
                                         {historyAmbulanceId === amb.ambulance_id && (
                                             <tr>
                                                 <td colSpan={7}>

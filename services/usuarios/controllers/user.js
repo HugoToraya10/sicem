@@ -796,6 +796,31 @@ const registerPushToken = (req, res) => {
 }
 
 
+// Paramédicos y su ambulancia vinculada — para que sicem-web (Ambulances.jsx)
+// muestre por unidad quiénes la conducen, aunque no estén logueados. Devuelve
+// shift_windows ya parseado a array. El estado EN LÍNEA no va aquí (sale del
+// socket de unidades en tiempo real, no de BD — ver getAllParamedics). Solo
+// admin (y admin de institución) pueden ver este detalle de personal.
+const getAmbulanceCrew = (req, res) => {
+  const allowedRoles = [1, 4];
+  if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+    return res.status(403).json({ message: "Acceso denegado." });
+  }
+  userModel.getAllParamedics((e, r) => {
+    if (e) {
+      return res.status(500).json({ message: "Error del servidor." });
+    }
+    const data = (r || []).map((p) => ({
+      user_profile_id: p.user_profile_id,
+      first_name: p.first_name,
+      first_surname: p.first_surname,
+      assigned_ambulance_id: p.assigned_ambulance_id,
+      shift_windows: p.shift_windows ? JSON.parse(p.shift_windows) : null,
+    }));
+    res.status(200).json({ message: "Tripulación de ambulancias", data });
+  });
+}
+
 module.exports = { register, login, registerPatient, toggleActiveUser, toggleInstitutionAdmin, editUserProfile, editUserCredentials, getUserByCURP, updatePatientCurp,
                   getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
-                  registerPushToken};
+                  registerPushToken, getAmbulanceCrew};
