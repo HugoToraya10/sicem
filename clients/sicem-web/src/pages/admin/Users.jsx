@@ -67,6 +67,7 @@ const Users = () => {
     const [paramedicScheduleUserId, setParamedicScheduleUserId] = useState(null);
 
     const [statusFilter, setStatusFilter] = useState('all');
+    const [roleFilter, setRoleFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
 
     const [historyUserId, setHistoryUserId] = useState(null);
@@ -78,6 +79,11 @@ const Users = () => {
         return list
     }
 
+    const filterByRole = (list, roleId) => {
+        if (!roleId || roleId === 'all') return list
+        return list.filter(item => parseInt(item.role_id) === parseInt(roleId))
+    }
+
     const matchesSearch = (u, query) => {
         if (!query.trim()) return true
         const q = query.trim().toLowerCase()
@@ -85,7 +91,7 @@ const Users = () => {
         return name.includes(q) || (u.email || '').toLowerCase().includes(q) || (u.curp || '').toLowerCase().includes(q)
     }
 
-    const visibleUsers = filterByStatus(users, statusFilter).filter(u => matchesSearch(u, searchQuery))
+    const visibleUsers = filterByRole(filterByStatus(users, statusFilter), roleFilter).filter(u => matchesSearch(u, searchQuery))
 
     const weekdayLabel = (day) => WEEKDAYS.find((d) => d.value === parseInt(day))?.label || day
     const formatSchedule = (shiftWindows) => {
@@ -667,6 +673,14 @@ const Users = () => {
                 )}
 
                 <div className="users-filter-row">
+                    <select className="status-filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                        <option value="all">Todos los roles</option>
+                        <option value="1">Administrador</option>
+                        <option value="2">Despachador</option>
+                        <option value="3">Paramédico</option>
+                        <option value="4">Hospital</option>
+                        <option value="5">Paciente</option>
+                    </select>
                     <select className="status-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         <option value="all">Todos</option>
                         <option value="active">Activos</option>

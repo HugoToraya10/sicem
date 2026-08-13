@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/HospitalAdmin.jsx": {
-    "mtime": 1786647480.8338037,
-    "ast_hash": "dcb0b13c0975a1c1a4ed5d22832ad3cc",
+    "mtime": 1786650278.606045,
+    "ast_hash": "434676e23cd87363621f08e74baf5c3d",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/IncomingPatients.jsx": {
@@ -300,7 +300,7 @@
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Users.jsx": {
-    "mtime": 1786647503.4215462,
+    "mtime": 1786649770.619869,
     "ast_hash": "fe63c392e181bf957277bf7c00a4fd22",
     "semantic_hash": ""
   },
@@ -505,8 +505,8 @@
     "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
   },
   "services/usuarios/controllers/user.js": {
-    "mtime": 1786499855.396837,
-    "ast_hash": "4aaafbc8e33cf3566f4a91d9e6110b1e",
+    "mtime": 1786651737.981029,
+    "ast_hash": "ebb12fd4cc3ef6a896d56565ef6f763a",
     "semantic_hash": ""
   },
   "services/usuarios/index.js": {
@@ -520,8 +520,8 @@
     "semantic_hash": ""
   },
   "services/usuarios/models/user.js": {
-    "mtime": 1786499848.178881,
-    "ast_hash": "e2c1a4fc0000229e67f43afddf6cdb91",
+    "mtime": 1786651637.7648842,
+    "ast_hash": "0b4c23d2533c208eced6d5e289911f08",
     "semantic_hash": ""
   },
   "services/usuarios/package.json": {

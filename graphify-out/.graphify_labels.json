@@ -37,7 +37,7 @@
   "35": "Ambulances.jsx",
   "36": "hospitales/config/db.js",
   "37": "routes/unit.js",
-  "38": "routes/user.js",
+  "38": "usuarios/middlewares/auth.js",
   "39": "gateway/index.js",
   "40": "closeEmergencyRaw",
   "41": "Aprende SICEM: de lo más simple a lo más complejo",

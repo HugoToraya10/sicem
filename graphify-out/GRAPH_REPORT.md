@@ -1,16 +1,16 @@
 # Graph Report - SICEM  (2026-08-13)
 
 ## Corpus Check
-- 155 files · ~494,351 words
+- 155 files · ~494,952 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1332 nodes · 1929 edges · 103 communities (71 shown, 32 thin omitted)
-- Extraction: 78% EXTRACTED · 22% INFERRED · 0% AMBIGUOUS · INFERRED: 415 edges (avg confidence: 0.51)
+- 1338 nodes · 1941 edges · 103 communities (71 shown, 32 thin omitted)
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 416 edges (avg confidence: 0.51)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `89931fb2`
+- Built from commit: `dfb9f783`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -53,7 +53,7 @@
 - Ambulances.jsx
 - hospitales/config/db.js
 - routes/unit.js
-- routes/user.js
+- usuarios/middlewares/auth.js
 - gateway/index.js
 - closeEmergencyRaw
 - Aprende SICEM: de lo más simple a lo más complejo
@@ -202,8 +202,8 @@ Cohesion: 0.09
 Nodes (22): dependencies, bcrypt, cors, dotenv, express, jsonwebtoken, mysql2, devDependencies (+14 more)
 
 ### Community 17 - "controllers/user.js"
-Cohesion: 0.09
-Nodes (11): bcrypt, createUserWithCredentials(), editUserProfile(), getAllUsers(), getUserById(), jwt, parseShiftWindowsRow(), register() (+3 more)
+Cohesion: 0.08
+Nodes (16): bcrypt, checkShiftConflict(), createUserWithCredentials(), editUserProfile(), getAllUsers(), getUserById(), intervalOverlap(), jwt (+8 more)
 
 ### Community 19 - "usuarios/package.json"
 Cohesion: 0.09
@@ -262,8 +262,8 @@ Cohesion: 0.12
 Nodes (14): setIo(), app, cors, db, express, http, io, jwt (+6 more)
 
 ### Community 33 - "usuarios/index.js"
-Cohesion: 0.22
-Nodes (7): connection, mysql, app, cors, db, express, userRoutes
+Cohesion: 0.18
+Nodes (9): app, cors, db, express, userRoutes, express, middleware, router (+1 more)
 
 ### Community 34 - "Dashboard.jsx"
 Cohesion: 0.15
@@ -281,9 +281,9 @@ Nodes (4): connection, mysql, db, jwt
 Cohesion: 0.17
 Nodes (8): connection, mysql, db, jwt, express, middleware, router, unitController
 
-### Community 38 - "routes/user.js"
-Cohesion: 0.22
-Nodes (7): db, jwt, verifyToken(), express, middleware, router, userController
+### Community 38 - "usuarios/middlewares/auth.js"
+Cohesion: 0.29
+Nodes (5): connection, mysql, db, jwt, verifyToken()
 
 ### Community 39 - "gateway/index.js"
 Cohesion: 0.40
@@ -425,9 +425,9 @@ Nodes (5): scripts, build, dev, lint, preview
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Aprende SICEM: de lo más simple a lo más complejo` connect `Aprende SICEM: de lo más simple a lo más complejo` to `Nivel 1 — JavaScript moderno`, `Nivel 7 — Tiempo real: Socket.IO`, `Nivel 6 — Enrutamiento en React (React Router)`, `Nivel 11 — Infraestructura: variables de entorno, CORS, Codespaces`, `Nivel 5 — React: Hooks y Context API`, `Nivel 3 — Autenticación: JWT, middleware, roles`, `Nivel 8 — Las 3 plataformas y sus diferencias reales`, `Nivel 2 — Backend: Express, rutas, controladores, modelos`, `Nivel 9 — Herramientas de build (Vite, Metro)`, `Nivel 4 — Frontend: React desde cero`, `Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto)`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **Why does `plugins` connect `useAuth` to `expo`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `Aprende SICEM: de lo más simple a lo más complejo` connect `Aprende SICEM: de lo más simple a lo más complejo` to `Nivel 1 — JavaScript moderno`, `Nivel 7 — Tiempo real: Socket.IO`, `Nivel 6 — Enrutamiento en React (React Router)`, `Nivel 11 — Infraestructura: variables de entorno, CORS, Codespaces`, `Nivel 5 — React: Hooks y Context API`, `Nivel 3 — Autenticación: JWT, middleware, roles`, `Nivel 8 — Las 3 plataformas y sus diferencias reales`, `Nivel 2 — Backend: Express, rutas, controladores, modelos`, `Nivel 9 — Herramientas de build (Vite, Metro)`, `Nivel 4 — Frontend: React desde cero`, `Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto)`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `postCreate.sh script`, `PORTS`, `startDb.sh script` to the rest of the system?**
   _470 weakly-connected nodes found - possible documentation gaps or missing edges._

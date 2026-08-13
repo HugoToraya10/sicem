@@ -3,6 +3,62 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { verifyToken } = require("../middlewares/auth");
 
+// Convertir "HH:MM" a minutos desde la medianoche, para poder comparar rangos.
+const timeToMinutes = (t) => {
+  const [h, m] = String(t || '').split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return 0;
+  return h * 60 + m;
+};
+
+// ¿Dos ventanas [day,start,end] se llegan a cruzar en algún minuto?
+// Igual que isWithinSchedule en el servicio de unidades, soporta turnos que
+// cruzan medianoche (ej. 20:00-04:00): si start > end la ventana cubre
+// [start..23:59] ∪ [00:00..end]. Horarios pegados (08:00-16:00 y 16:00-23:59)
+// NO cuentan como cruce.
+const intervalOverlap = (aStart, aEnd, bStart, bEnd) => {
+  const bothNormal = aStart <= aEnd && bStart <= bEnd;
+  if (bothNormal) return aStart < bEnd && bStart < aEnd;
+  if (aStart > aEnd && bStart <= bEnd) { // solo A cruza medianoche
+    return (bStart < aEnd) || (bEnd > aStart);
+  }
+  if (aStart <= aEnd && bStart > bEnd) { // solo B cruza medianoche
+    return (aStart < bEnd) || (aEnd > bStart);
+  }
+  return true; // ambos cruzan medianoche: comparten el madrugón siempre
+};
+
+const windowsOverlap = (w1, w2) => {
+  if (parseInt(w1.day) !== parseInt(w2.day)) return false;
+  return intervalOverlap(
+    timeToMinutes(w1.start), timeToMinutes(w1.end),
+    timeToMinutes(w2.start), timeToMinutes(w2.end)
+  );
+};
+
+// ¿Algún turno de "candidate" cruza con algún turno de "other"?
+const shiftConflictExists = (candidate, other) =>
+  candidate.some((a) => other.some((b) => a && b && a.start && a.end && b.start && b.end && windowsOverlap(a, b)));
+
+// Ejecuta onOk si el paramédico con estos turnos/ambulancia NO se pisa el
+// horario con otro paramédico ya asignado a la misma unidad; si lo hace,
+// llama onConflict. excludeUserProfileId evita que un paramédico se
+// auto-bloquee al editarse (su turno actual se compara contra los demás).
+const checkShiftConflict = (ambulanceId, shiftWindows, excludeUserProfileId, onOk, onConflict) => {
+  if (!ambulanceId || !shiftWindows || !shiftWindows.length) return onOk();
+  userModel.getParamedicsByAmbulance(ambulanceId, (e, rows) => {
+    if (e) return onConflict("Error al validar el horario. Intenta de nuevo.");
+    const others = (rows || [])
+      .filter((r) => !excludeUserProfileId || parseInt(r.user_profile_id) !== parseInt(excludeUserProfileId))
+      .map((r) => {
+        try { return JSON.parse(r.shift_windows) || []; } catch { return []; }
+      });
+    if (others.some((other) => shiftConflictExists(shiftWindows, other))) {
+      return onConflict("Esa ambulancia ya tiene otro paramédico asignado con turnos que se pisan a la misma hora. Elige otra unidad u otro horario.");
+    }
+    onOk();
+  });
+};
+
 
 
 //función utilizada para reutilizarla en los controllers register y registerPatient
@@ -79,6 +135,17 @@ const createUserWithCredentials = (req, res) => {
         proceed();
       }
     });
+  } else if (parseInt(roleId) === 3 && assignedAmbulanceId && shiftWindows && shiftWindows.length) {
+    // Dos paramédicos no pueden compartir la misma ambulancia a las mismas
+    // horas — validamos contra la tripulación ya asignada a esa unidad antes
+    // de crear el perfil (aplica a register rol 1 y rol 4 por igual).
+    checkShiftConflict(
+      assignedAmbulanceId,
+      shiftWindows,
+      null,
+      proceed,
+      (msg) => res.status(400).json({ message: msg })
+    );
   } else {
     proceed();
   }
@@ -471,7 +538,13 @@ const editUserProfile = (req, res) => {
       userModel.getAmbulanceInstitutionInfo(newAmbulanceId, (e, r) => {
         if (e || r.length === 0) return res.status(404).json({message: "Ambulancia no encontrada."});
         if (!r[0].is_crum_institution) return res.status(400).json({message: "Desde aquí solo puedes asignar paramédicos a ambulancias de instituciones CRUM."});
-        editProfile(targetUserProfileId, req.body.institutionId, newRoleId, newAmbulanceId, newShiftWindows);
+        const save = () => editProfile(targetUserProfileId, req.body.institutionId, newRoleId, newAmbulanceId, newShiftWindows);
+        if (newShiftWindows && newShiftWindows.length) {
+          checkShiftConflict(newAmbulanceId, newShiftWindows, targetUserProfileId, save,
+            (msg) => res.status(400).json({ message: msg }));
+        } else {
+          save();
+        }
       });
     } else {
       editProfile(targetUserProfileId, req.body.institutionId, newRoleId, newAmbulanceId, newShiftWindows);
@@ -534,7 +607,13 @@ const editUserProfile = (req, res) => {
         userModel.getAmbulanceInstitutionInfo(newAmbulanceId, (e2, r2) => {
           if (e2 || r2.length === 0) return res.status(404).json({message: "Ambulancia no encontrada."});
           if (parseInt(r2[0].institution_id) !== parseInt(caller.institution_id)) return res.status(403).json({message: "Solo puedes asignar ambulancias de tu propia institución."});
-          editProfile(targetUserProfileId, target.institution_id, requestedRole, newAmbulanceId, newShiftWindows);
+          const save = () => editProfile(targetUserProfileId, target.institution_id, requestedRole, newAmbulanceId, newShiftWindows);
+          if (newShiftWindows && newShiftWindows.length) {
+            checkShiftConflict(newAmbulanceId, newShiftWindows, targetUserProfileId, save,
+              (msg) => res.status(400).json({ message: msg }));
+          } else {
+            save();
+          }
         });
       });
     });

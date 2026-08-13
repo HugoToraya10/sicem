@@ -232,9 +232,19 @@ const updatePatientCurp = (userProfileId, curp, callback) => {
     db.query(sql, [curp, userProfileId], callback);
 }
 
+// Paramédicos (rol 3) asignados a UNA ambulancia puntual, con su horario
+// (shift_windows, string JSON) — para detectar solapamientos de turno: dos
+// paramédicos no deben compartir la misma unidad a las mismas horas.
+const getParamedicsByAmbulance = (ambulanceId, callback) => {
+    const sql = `SELECT user_profile_id, assigned_ambulance_id, shift_windows
+                FROM user_profiles
+                WHERE role_id = 3 AND assigned_ambulance_id = ?`;
+    db.query(sql, [ambulanceId], callback);
+}
+
 module.exports = { getUserInstitutionInfo, getUserInstitutionInfoByCredentialId, toggleInstitutionAdmin, getInstitutionCrumFlag,
                 getAmbulanceInstitutionInfo,
                 createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
                 editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP, getUserRole, updatePatientCurp,
                 getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
-                updatePushToken, updateActiveSession, getAllParamedics }
+                updatePushToken, updateActiveSession, getAllParamedics, getParamedicsByAmbulance }
