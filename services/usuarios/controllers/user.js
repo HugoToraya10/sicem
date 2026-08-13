@@ -521,8 +521,12 @@ const editUserProfile = (req, res) => {
           return editProfile(targetUserProfileId, target.institution_id, requestedRole, null, null);
         }
         // Si el body no trae un campo nuevo, conserva el que ya tenía — así un
-        // PATCH que no lo toca no lo borra por accidente.
-        const newAmbulanceId = req.body.assignedAmbulanceId || target.assigned_ambulance_id;
+        // PATCH que no lo toca no lo borra por accidente. PERO si el cliente
+        // manda assignedAmbulanceId vacío explícitamente ('' o null), eso es una
+        // DESASIGNACIÓN: se deja al paramédico sin ambulancia (estado válido).
+        const newAmbulanceId = req.body.assignedAmbulanceId !== undefined
+            ? req.body.assignedAmbulanceId
+            : target.assigned_ambulance_id;
         const newShiftWindows = req.body.shiftWindows !== undefined ? req.body.shiftWindows : parseStoredWindows(target.shift_windows);
         if (!newAmbulanceId) {
           return editProfile(targetUserProfileId, target.institution_id, requestedRole, null, newShiftWindows);

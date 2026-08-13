@@ -5,8 +5,8 @@
     "semantic_hash": "c1a3b6b56600453c8961910b1fe8539e"
   },
   ".claude/settings.local.json": {
-    "mtime": 1785971811.6408496,
-    "ast_hash": "9c39495cf38d2b3b43978aa07fc594cb",
+    "mtime": 1785977094.1810358,
+    "ast_hash": "32aeaf5a4781d7daf1f41ab9e9124524",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/main.js": {
@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/package.json": {
-    "mtime": 1785929462.7509975,
-    "ast_hash": "9d64b598b478dab2d552692b8e8d3ea3",
+    "mtime": 1786564861.5810935,
+    "ast_hash": "7b27a48f9f5aa607f21d2b10169d0e2a",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/preload.js": {
@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/ambulances/AmbulanceStatusCard.jsx": {
-    "mtime": 1785972280.1811664,
-    "ast_hash": "826543f7a170e38b96fd07f39f154417",
+    "mtime": 1786501173.8687155,
+    "ast_hash": "9912b9c22bf355bc475c26c0f74e1340",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/capacity/SpecialtyCapacityCard.jsx": {
@@ -50,9 +50,9 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/hospitalAdmin/AmbulanceAdminCard.jsx": {
-    "mtime": 1784713741.1850548,
-    "ast_hash": "4b33c924ee1d998495b470c6fdd35701",
-    "semantic_hash": "4b33c924ee1d998495b470c6fdd35701"
+    "mtime": 1786562226.7468722,
+    "ast_hash": "b0b6fe3cab4d23f6b5bcbc7a5dbcdcda",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/hospitalAdmin/SpecialityAdminCard.jsx": {
     "mtime": 1784702958.2158406,
@@ -60,8 +60,8 @@
     "semantic_hash": "59bcdebdf29057839ff36533ac9eff9d"
   },
   "clients/sicem-desktop/src/components/layout/Navbar.jsx": {
-    "mtime": 1785974160.9942148,
-    "ast_hash": "6aea2c0126f4f763832651b49c712b18",
+    "mtime": 1785975407.7764876,
+    "ast_hash": "b2082763a7543010d668eaed4f9378aa",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/map/MapArea.jsx": {
@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/History.jsx": {
-    "mtime": 1785923039.089283,
-    "ast_hash": "c2e236a92b922119401bc41d8802514c",
+    "mtime": 1786577030.7834098,
+    "ast_hash": "579a678ae7a12fa7bdcab7377f2662ef",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/HospitalAdmin.jsx": {
-    "mtime": 1785922969.4676242,
-    "ast_hash": "6e5c10fe85724aab83b3f4a127b74179",
+    "mtime": 1786650278.606045,
+    "ast_hash": "434676e23cd87363621f08e74baf5c3d",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/IncomingPatients.jsx": {
@@ -135,8 +135,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/MyAmbulances.jsx": {
-    "mtime": 1785972265.3256288,
-    "ast_hash": "ae1209f9b884d856082ff24a47106f1c",
+    "mtime": 1786500804.6853456,
+    "ast_hash": "413f519536775226b7e6ae0cb77c8a91",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/Tracking.jsx": {
@@ -200,9 +200,9 @@
     "semantic_hash": "3aa4b57d7f08181d86bde52a4dcb7f22"
   },
   "clients/sicem-web/package.json": {
-    "mtime": 1784358357.5041668,
-    "ast_hash": "b83355f237ea3929fc644bcc2e2bd940",
-    "semantic_hash": "b83355f237ea3929fc644bcc2e2bd940"
+    "mtime": 1786575661.1807153,
+    "ast_hash": "e41675e12edebf379c26204d4083128e",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/App.jsx": {
     "mtime": 1785926229.695303,
@@ -215,8 +215,8 @@
     "semantic_hash": "81cf21b32d465b3b5ec82f217df7b1de"
   },
   "clients/sicem-web/src/components/layout/Navbar.jsx": {
-    "mtime": 1785974182.323034,
-    "ast_hash": "24cd438f62190ed393c6f509c2e823fa",
+    "mtime": 1785974966.133054,
+    "ast_hash": "af32249a19752f3a544861f3654e8543",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/components/map/MapArea.jsx": {
@@ -240,18 +240,18 @@
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Dashboard.jsx": {
-    "mtime": 1785922989.9983706,
-    "ast_hash": "ab64f47d8d8b8d9feb7b01f6e9eb5efe",
+    "mtime": 1785974998.9245286,
+    "ast_hash": "358377a92c9e1889e3a1afd4d9952499",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/EmergencyDetail.jsx": {
-    "mtime": 1785973887.6577213,
-    "ast_hash": "63cd551ee711646464b1d8aa21acc102",
+    "mtime": 1786497293.510781,
+    "ast_hash": "6b3e9301f59478a0abcff5b344b04d34",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/History.jsx": {
-    "mtime": 1785922998.5877645,
-    "ast_hash": "ccacea30506a1004d56a25489d7f5594",
+    "mtime": 1786577013.2480004,
+    "ast_hash": "e6bd05aced13cd7f6a928daa2cf65f68",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Hospitals.jsx": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Ambulances.jsx": {
-    "mtime": 1785923005.8382914,
-    "ast_hash": "6616fc38492adcb976316452de8a4573",
+    "mtime": 1786500159.049628,
+    "ast_hash": "48a83477d4ccafe7773efdbcb3f26b1c",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/EmergencyCatalogs.jsx": {
@@ -300,8 +300,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Users.jsx": {
-    "mtime": 1785923001.3654466,
-    "ast_hash": "5959f6e571d84c3e4b01246547c6f7fc",
+    "mtime": 1786649770.619869,
+    "ast_hash": "fe63c392e181bf957277bf7c00a4fd22",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/sockets/emergencySocket.js": {
@@ -355,8 +355,8 @@
     "semantic_hash": "6ec4909bd3cb6a86dbec7468b1ae7c59"
   },
   "services/emergencias/controllers/emergency.js": {
-    "mtime": 1785974129.0935054,
-    "ast_hash": "fc3beafb57af901fad70432dc2455ba8",
+    "mtime": 1786576974.8914323,
+    "ast_hash": "58a997779d254a857d2bc2f2ef2b8b61",
     "semantic_hash": ""
   },
   "services/emergencias/index.js": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "services/emergencias/models/emergency.js": {
-    "mtime": 1785973798.2143705,
-    "ast_hash": "ff11382450860e75f3d33ab96a294b3d",
+    "mtime": 1786577387.6669645,
+    "ast_hash": "f209fb1750c8c6d9ed562615d74f490a",
     "semantic_hash": ""
   },
   "services/emergencias/package.json": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "services/emergencias/routes/emergency.js": {
-    "mtime": 1785872554.7586622,
-    "ast_hash": "972fb8c8b416dc6b1cf63bb9d907267d",
+    "mtime": 1786576977.2875426,
+    "ast_hash": "6bae389c5a3e1aae1f320b2b179836e2",
     "semantic_hash": ""
   },
   "services/hospitales/config/db.js": {
@@ -475,8 +475,8 @@
     "semantic_hash": ""
   },
   "services/unidades/index.js": {
-    "mtime": 1785825268.6455078,
-    "ast_hash": "12a1676315d49fd36cdb6bfd133f617b",
+    "mtime": 1786647473.9887862,
+    "ast_hash": "c9052f8924c9ea5bca02afbafb99a263",
     "semantic_hash": ""
   },
   "services/unidades/middlewares/auth.js": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "services/unidades/models/unit.js": {
-    "mtime": 1785972213.9515517,
-    "ast_hash": "7b8e0eac4a0918478dfac6d856a01991",
+    "mtime": 1785974948.6621046,
+    "ast_hash": "167dbf9c235248066e1b7f0b6a050fe8",
     "semantic_hash": ""
   },
   "services/unidades/package.json": {
@@ -505,8 +505,8 @@
     "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
   },
   "services/usuarios/controllers/user.js": {
-    "mtime": 1785905798.0426025,
-    "ast_hash": "5b737d82aff34135db054a04461e5b03",
+    "mtime": 1786650285.6214182,
+    "ast_hash": "47462904c68f926b610fcb814f1f332b",
     "semantic_hash": ""
   },
   "services/usuarios/index.js": {
@@ -520,8 +520,8 @@
     "semantic_hash": ""
   },
   "services/usuarios/models/user.js": {
-    "mtime": 1785905759.1393874,
-    "ast_hash": "a5fb2ccb242795f2cb027e00a096c126",
+    "mtime": 1786499848.178881,
+    "ast_hash": "e2c1a4fc0000229e67f43afddf6cdb91",
     "semantic_hash": ""
   },
   "services/usuarios/package.json": {
@@ -530,8 +530,8 @@
     "semantic_hash": "59b2489807786aa7f801c9cd6207d473"
   },
   "services/usuarios/routes/user.js": {
-    "mtime": 1785905805.765802,
-    "ast_hash": "ce3c3bd8978057b946da24a560dcb0f1",
+    "mtime": 1786498826.162716,
+    "ast_hash": "f2f982bed1d475c18775d633a0ee0fcb",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
@@ -680,8 +680,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/index.js": {
-    "mtime": 1785907684.9395025,
-    "ast_hash": "666bc98db84d8a8b3ea109f099cad78c",
+    "mtime": 1785975716.9509175,
+    "ast_hash": "923e29b2322452944eb4b6e0badc95fd",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/notas.js": {
@@ -900,8 +900,8 @@
     "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
-    "mtime": 1785967943.2379663,
-    "ast_hash": "6baa8cc657ec005c7dd9b3b84350dbc1",
+    "mtime": 1786494606.3402095,
+    "ast_hash": "585ec96909c44093e52805182e70f6be",
     "semantic_hash": ""
   },
   ".devcontainer/postCreate.sh": {
@@ -917,6 +917,56 @@
   "Guias/Empaquetado_Desktop_y_Mobile.md": {
     "mtime": 1785971029.0788922,
     "ast_hash": "45e25996ab9d0500f19649fb88c2af1d",
+    "semantic_hash": ""
+  },
+  ".devcontainer/startDb.sh": {
+    "mtime": 1786494606.3402095,
+    "ast_hash": "782c8352a4e2065ba80b3f08b794c53b",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/generatePatientReport.js": {
+    "mtime": 1786577793.0211234,
+    "ast_hash": "296c712ac30811cd09b982c822297bb3",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/generateEmergencyReport.js": {
+    "mtime": 1786577795.5313902,
+    "ast_hash": "1c219683232041e8977e2cfe46b3ef92",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/public/assets/SALUD_Logo_(2024).png": {
+    "mtime": 1786574508.1448846,
+    "ast_hash": "e2374d32a5ef32ae7fd9b3af3108ca0a",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/public/assets/SALUD_Logo_(2024).png": {
+    "mtime": 1786574508.1448846,
+    "ast_hash": "e2374d32a5ef32ae7fd9b3af3108ca0a",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/assets/units/advanced_life_support.png": {
+    "mtime": 1783972442.9580147,
+    "ast_hash": "c092079d3da1e9a4cfc42fceb4b357d5",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/assets/units/basic_life_support.png": {
+    "mtime": 1783972451.935878,
+    "ast_hash": "380da497fe8cadbd5d6f7952a4139711",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/assets/units/intensive_care.png": {
+    "mtime": 1783972395.368179,
+    "ast_hash": "db8a71b9db211e1e439d411dc7152f41",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/assets/units/neonatal.png": {
+    "mtime": 1783972419.676203,
+    "ast_hash": "f6a5f7e8ac31221942e319e605cfdd5f",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/assets/units/transport.png": {
+    "mtime": 1783972428.6014135,
+    "ast_hash": "db3b41453f4858928743d7eb3f7c83f5",
     "semantic_hash": ""
   }
 }

@@ -566,11 +566,16 @@ const Users = () => {
                                         <label>Ambulancia asignada</label>
                                         <select value={form.assignedAmbulanceId} onChange={(e) => handleFieldChange('assignedAmbulanceId', e.target.value)} required>
                                             <option value="">Selecciona una ambulancia (institución CRUM)</option>
-                                            {crumAmbulances.map((amb) => (
+                                            {[
+                                                ...crumAmbulances,
+                                                ...(form.assignedAmbulanceId && !crumAmbulances.some(a => String(a.ambulance_id) === String(form.assignedAmbulanceId))
+                                                    ? [ambulances.find(a => String(a.ambulance_id) === String(form.assignedAmbulanceId))].filter(Boolean)
+                                                    : []),
+                                            ].map((amb) => (
                                                 <option key={amb.ambulance_id} value={amb.ambulance_id}>{amb.unit_number}</option>
                                             ))}
                                         </select>
-                                        <p className="users-form-hint">Solo se listan unidades de instituciones CRUM. Cambiar esto reasigna al paramédico a otra unidad — útil si la que tenía se dio de baja.</p>
+                                        <p className="users-form-hint">Lista las unidades CRUM. Si el paramédico ya tiene una ambulancia asignada (aunque no sea CRUM), también aparece aquí y queda preseleccionada para no tener que cambiarla.</p>
                                     </div>
                                 </div>
 

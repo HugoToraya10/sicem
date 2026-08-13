@@ -137,7 +137,7 @@ const HospitalAdmin = () => {
 
     const fetchAmbulances = useCallback(() => {
         Promise.all([
-            fetch(`${API_BASE_URL}/unidades/ambulancias-disponibles/${user.institutionId}`, { headers }).then(res => res.json()),
+            fetch(`${API_BASE_URL}/unidades/mis-ambulancias`, { headers }).then(res => res.json()),
             fetch(`${API_BASE_URL}/unidades/tipos-ambulancia`, { headers }).then(res => res.json()),
             fetch(`${API_BASE_URL}/unidades/estados-ambulancia`, { headers }).then(res => res.json()),
         ])
@@ -363,10 +363,8 @@ const HospitalAdmin = () => {
 
     const handleUpdateEmployeeProfile = (e) => {
         e.preventDefault()
-        if (parseInt(editEmployeeForm.roleId) === 3 && !editEmployeeForm.assignedAmbulanceId) {
-            alert('Selecciona a qué ambulancia queda asignado este paramédico.')
-            return
-        }
+        // La ambulancia NO es obligatoria al editar: se puede desasignar
+        // (dejar al paramédico sin unidad — estado válido, se asigna después).
         // No se manda institutionId — el backend lo preserva tal cual para este
         // caso (admin editando a OTRO empleado propio). roleId SÍ se manda ahora
         // — permite pasar de empleado administrativo a paramédico o viceversa.
@@ -889,12 +887,12 @@ const HospitalAdmin = () => {
                                                                 {parseInt(editEmployeeForm.roleId) === 3 && (
                                                                     <div className="hospital-admin-field">
                                                                         <label>Ambulancia asignada</label>
-                                                                        <select value={editEmployeeForm.assignedAmbulanceId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, assignedAmbulanceId: e.target.value }))} required>
-                                                                            <option value="">Selecciona una ambulancia</option>
-                                                                            {ambulances.map((amb) => (
-                                                                                <option key={amb.ambulance_id} value={amb.ambulance_id}>{amb.unit_number}</option>
-                                                                            ))}
-                                                                        </select>
+<select value={editEmployeeForm.assignedAmbulanceId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, assignedAmbulanceId: e.target.value }))}>
+                                            <option value="">Sin ambulancia</option>
+                                            {ambulances.map((amb) => (
+                                                <option key={amb.ambulance_id} value={amb.ambulance_id}>{amb.unit_number}</option>
+                                            ))}
+                                        </select>
                                                                     </div>
                                                                 )}
                                                             </div>

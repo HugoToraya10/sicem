@@ -99,8 +99,21 @@ io.on('connection', (socket) => {
             // admin/despachador/hospital reciben el estado actual al conectar
             // para poder pintar los puntitos sin recargar.
             if (parseInt(roleId) === 3) {
-                socketToUser.set(socket.id, userProfileId);
-                addOnlineParamedic(io, userProfileId);
+                // Un paramédico SIN ambulancia asignada no debe emitir presencia:
+                // no hay unidad a la que vincular su ubicación, así que se filtra
+                // en el origen. Aún así conserva su socket (rooms) para poder
+                // recibir avisos de cierre de sesión u otros mensajes.
+                db.query(
+                    'SELECT assigned_ambulance_id FROM user_profiles WHERE user_profile_id = ?',
+                    [userProfileId],
+                    (_e, rows) => {
+                        const hasAmbulance = rows && rows.length > 0 && rows[0].assigned_ambulance_id != null;
+                        if (hasAmbulance) {
+                            socketToUser.set(socket.id, userProfileId);
+                            addOnlineParamedic(io, userProfileId);
+                        }
+                    }
+                );
             } else if ([1, 2, 4].includes(parseInt(roleId))) {
                 socket.emit('eventParamedicPresence', { online: [...onlineParamedicCounts.keys()] });
             }
