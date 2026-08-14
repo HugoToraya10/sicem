@@ -74,6 +74,7 @@ const createUserWithCredentials = (req, res) => {
     institutionId,
     birthDate,
     cveUnicaRegistroPob,
+    identificationNumber,
     emergencyContact,
     emergencyPhone,
     assignedAmbulanceId,
@@ -102,6 +103,7 @@ const createUserWithCredentials = (req, res) => {
             phone,
             birthDate,
             cveUnicaRegistroPob,
+            identificationNumber,
             emergencyContact,
             emergencyPhone,
             isParamedic ? assignedAmbulanceId : null,
@@ -220,6 +222,7 @@ const registerPatient = (req, res) => {
     institutionId,
     birthDate,
     cveUnicaRegistroPob,
+    identificationNumber,
     emergencyContact,
     emergencyPhone,
   } = req.body;
@@ -239,6 +242,7 @@ const registerPatient = (req, res) => {
       phone,
       birthDate,
       cveUnicaRegistroPob,
+      identificationNumber,
       emergencyContact,
       emergencyPhone,
       null,
@@ -256,6 +260,70 @@ const registerPatient = (req, res) => {
       }
     );
   }
+};
+
+// Paciente que reclama una CURP que ya existe en el sistema (registrada por un
+// paramédico o el hospital, sin credenciales propias): crea credenciales nuevas
+// (email+contraseña) y las vincula al perfil de paciente que ya estaba ahí.
+const claimAccountByCurp = (req, res) => {
+  const { curp, email, password } = req.body;
+  if (!curp || !curp.trim() || !email || !password) {
+    return res.status(400).json({ message: "Faltan datos: curp, email y password son obligatorios." });
+  }
+  const cleanCurp = curp.trim().toUpperCase();
+
+  userModel.getUserByCURP(cleanCurp, (e, r) => {
+    if (e) {
+      console.log(e);
+      return res.status(500).json({ message: "Error del servidor." });
+    }
+    if (r.length === 0) {
+      return res.status(404).json({ message: "No existe ningún perfil registrado con esa CURP." });
+    }
+    const profile = r[0];
+    if (parseInt(profile.role_id) !== 5) {
+      return res.status(400).json({ message: "Esa CURP no corresponde a un paciente." });
+    }
+    if (profile.user_credential_id) {
+      return res.status(409).json({ message: "Esa CURP ya tiene credenciales vinculadas — inicia sesión con tu correo y contraseña." });
+    }
+
+    bcrypt.hash(password, 10, (hashErr, hash) => {
+      if (hashErr) {
+        return res.status(500).json({ message: "Error encriptando." });
+      }
+      userModel.createCredential(email, hash, (eCred, result) => {
+        if (eCred) {
+          if (eCred.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ message: "Ya existe una cuenta con ese correo electrónico." });
+          }
+          console.log(eCred);
+          return res.status(500).json({ message: "Error creando credenciales." });
+        }
+const newCredentialId = result.insertId;
+      userModel.linkCredentialToProfile(profile.user_profile_id, newCredentialId, (eLink) => {
+        if (eLink) {
+          console.log(eLink);
+          return res.status(500).json({ message: "Error vinculando credenciales al perfil." });
+        }
+        const done = () => res.status(201).json({ message: "Cuenta creada y vinculada a tu CURP. Ya puedes iniciar sesión.", userProfileId: profile.user_profile_id });
+        if (!req.body.institutionId) return done();
+        userModel.getInstitutionCrumFlag(req.body.institutionId, (eInst, rInst) => {
+          if (eInst || rInst.length === 0) return done();
+          userModel.editUserProfile(
+            profile.user_profile_id, req.body.institutionId, profile.role_id,
+            profile.first_name, profile.first_surname, profile.second_surname,
+            profile.phone_number, profile.birth_date, profile.curp,
+            profile.identification_number, profile.emergency_contact, profile.emergency_phone,
+            profile.assigned_ambulance_id,
+            profile.shift_windows ? JSON.parse(profile.shift_windows) : null,
+            (eEd) => { if (eEd) console.log(eEd); done(); }
+          );
+        });
+      });
+      });
+    });
+  });
 };
 
 //este es un controller para verificar las credenciales del usuario (en caso de tener)
@@ -502,11 +570,12 @@ const editUserProfile = (req, res) => {
           phone,
           birthDate,
           cveUnicaRegistroPob,
+          identificationNumber,
           emergencyContact,
           emergencyPhone } = req.body
 
     userModel.editUserProfile(userProfileId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
-    birthDate, cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, (e, r) => {
+    birthDate, cveUnicaRegistroPob, identificationNumber, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, (e, r) => {
       if (e) {
         console.log(e)
         return res.status(500).json({message: "Error actualizando datos."})
@@ -554,15 +623,27 @@ const editUserProfile = (req, res) => {
 
   if (req.decoded.userProfileId === targetUserProfileId) {
     // Auto-edición: cualquier rol autenticado puede editar sus propios datos
-    // de contacto, pero nunca su propio institutionId, roleId,
-    // assigned_ambulance_id, ni horario — todos esos son exclusivos de un
-    // admin (ver comentario arriba de editProfile).
+    // de contacto, pero nunca su propio roleId, assigned_ambulance_id, ni
+    // horario — todos esos son exclusivos de un admin (ver comentario arriba
+    // de editProfile). La EXCEPCIÓN es la institución de afiliación del
+    // paciente (rol 5): el paciente puede cambiar a cuál institución está
+    // afiliado (es SU dato de afiliación, no un privilegio administrativo).
+    // Los demás roles siguen sin poder tocarla — se preserva la de BD.
     userModel.getUserById(targetUserProfileId, (e, r) => {
       if (e || r.length === 0) {
         return res.status(500).json({message: "Error del servidor."});
       }
       const self = r[0];
-      editProfile(targetUserProfileId, self.institution_id, self.role_id, self.assigned_ambulance_id, parseStoredWindows(self.shift_windows));
+      if (parseInt(self.role_id) === 5 && req.body.institutionId) {
+        userModel.getInstitutionCrumFlag(req.body.institutionId, (eInst, rInst) => {
+          if (eInst || rInst.length === 0) {
+            return res.status(400).json({message: "Institución de afiliación no válida."});
+          }
+          editProfile(targetUserProfileId, req.body.institutionId, self.role_id, self.assigned_ambulance_id, parseStoredWindows(self.shift_windows));
+        });
+      } else {
+        editProfile(targetUserProfileId, self.institution_id, self.role_id, self.assigned_ambulance_id, parseStoredWindows(self.shift_windows));
+      }
     });
     return;
   }
@@ -824,6 +905,25 @@ const getUserByCURP = (req, res) => {
     });
 }
 
+// Pacientes (rol 5) con su institución de afiliación — para la pantalla de
+// sicem-desktop de pacientes afiliados, con búsqueda por texto (nombre,
+// apellidos, CURP, identificación) y filtro opcional por institución. Solo
+// admin (rol 1) y personal de hospital (rol 4).
+const getPatients = (req, res) => {
+    const allowedRoles = [1, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."});
+    }
+    const { q, institutionId } = req.query;
+    userModel.searchPatients(q, institutionId, (e, r) => {
+        if (e) {
+            console.log(e);
+            return res.status(500).json({message: "Error del servidor."});
+        }
+        res.status(200).json({message: "Pacientes", data: r});
+    });
+}
+
 // Rol 3 (paramédico) corrigiendo/llenando la CURP de un paciente que trae
 // registrado — a veces llega vacía o como "No tiene" desde sicem-web/desktop,
 // y en escena es el paramédico quien puede leerla del documento físico o
@@ -904,6 +1004,6 @@ const getAmbulanceCrew = (req, res) => {
   });
 }
 
-module.exports = { register, login, registerPatient, toggleActiveUser, toggleInstitutionAdmin, editUserProfile, editUserCredentials, getUserByCURP, updatePatientCurp,
+module.exports = { register, login, registerPatient, claimAccountByCurp, toggleActiveUser, toggleInstitutionAdmin, editUserProfile, editUserCredentials, getUserByCURP, updatePatientCurp, getPatients,
                   getAllUsers, getUserById, getCredentialHistory, getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
                   registerPushToken, getAmbulanceCrew};

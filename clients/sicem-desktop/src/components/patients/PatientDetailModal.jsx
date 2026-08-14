@@ -188,6 +188,12 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
                                 Triage {patient.triage_level} · {patient.triage_color_name}
                             </span>
                         )}
+                        {Boolean(patient.patient_institution_id)
+                            && parseInt(patient.patient_institution_id) !== parseInt(user?.institutionId) && (
+                            <span className="other-inst-badge" title={`Este paciente está afiliado a ${patient.patient_institution_name || 'otra institución'}`}>
+                                Afiliado a: {patient.patient_institution_name || 'otra institución'}
+                            </span>
+                        )}
                         {deliveredAt && <span className="delivered-badge">✓ Entregado</span>}
                         {dischargedAt && <span className="discharged-badge">✓ Dado de alta</span>}
                     </div>
@@ -215,6 +221,9 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
                             <h5>Traslado</h5>
                             <p>Unidad {patient.unit_number || 'sin asignar'} · {patient.institution_name || '—'}</p>
                             <p>CURP: {patient.curp || 'Sin identificar'}</p>
+                            {patient.patient_institution_name && (
+                                <p>Afiliado a: {patient.patient_institution_name} {patient.patient_identification_number ? `(${patient.patient_identification_number})` : ''}</p>
+                            )}
                         </div>
 
                         <div className="modal-section">

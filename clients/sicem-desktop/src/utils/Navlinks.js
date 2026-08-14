@@ -3,6 +3,7 @@
 // más adelante si el rol admin necesita pantallas extra aquí también.
 const baseNavLinks = [
     { to: '/pacientes-en-camino', label: 'Pacientes en Camino' },
+    { to: '/pacientes', label: 'Pacientes' },
     { to: '/seguimiento', label: 'Seguimiento' },
     { to: '/solicitudes-unidad', label: 'Solicitudes de Unidad' },
     { to: '/capacidad', label: 'Capacidad' },

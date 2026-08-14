@@ -39,6 +39,17 @@
 }
 .modal-header-info { display: flex; align-items: center; gap: 12px; }
 .modal-header h3 { font-size: 18px; color: #1a1a2e; font-weight: 700; }
+.other-inst-badge {
+    display: inline-block;
+    background: #ede7f6;
+    color: #6a1b9a;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 10px;
+    margin-left: 8px;
+    white-space: nowrap;
+}
 .modal-close {
     background: none; border: none; font-size: 24px; line-height: 1;
     cursor: pointer; color: #888;

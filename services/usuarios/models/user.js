@@ -48,12 +48,12 @@ const createCredential = (email, passwordHash, callback) => {
 }
 
 const createProfile = (userCredentialId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
-                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, callback) => {
+                    birth, cveUnicaRegistroPob, identificationNumber, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, callback) => {
     const sql = `INSERT INTO user_profiles (user_credential_id, institution_id, role_id, first_name, first_surname,
-    second_surname, phone_number, birth_date, curp, emergency_contact, emergency_phone, assigned_ambulance_id, shift_windows, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
+    second_surname, phone_number, birth_date, curp, identification_number, emergency_contact, emergency_phone, assigned_ambulance_id, shift_windows, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`;
 
     const values = [userCredentialId, institutionId, roleId, firstName, firstSurname, secondSurname, phone,
-                    birth, cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId || null,
+                    birth, cveUnicaRegistroPob, identificationNumber || null, emergencyContact, emergencyPhone, assignedAmbulanceId || null,
                     shiftWindows && shiftWindows.length ? JSON.stringify(shiftWindows) : null]
 
     db.query(sql, values, callback);
@@ -105,13 +105,13 @@ const getCredentialHistory = (userCredentialId, callback) => {
 // (paramédico), pero se guardan tal cual vengan — el controller es quien
 // decide cuándo forzarlos a NULL (ej. si el rol editado ya no es paramédico).
 const editUserProfile = (userProfileId, institutionId, roleId, firstName, firstSurname, secondSurname, phone, birth,
-    cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, callback) => {
+    cveUnicaRegistroPob, identificationNumber, emergencyContact, emergencyPhone, assignedAmbulanceId, shiftWindows, callback) => {
     const sql = `UPDATE user_profiles SET institution_id = ?, role_id = ?, first_name = ?, first_surname = ?, second_surname = ?,
-    phone_number = ?, birth_date = ?, curp = ?, emergency_contact = ?, emergency_phone = ?, assigned_ambulance_id = ?,
+    phone_number = ?, birth_date = ?, curp = ?, identification_number = ?, emergency_contact = ?, emergency_phone = ?, assigned_ambulance_id = ?,
     shift_windows = ?, updated_at = NOW() WHERE user_profile_id = ?`;
 
     const values = [institutionId, roleId, firstName, firstSurname, secondSurname, phone, birth,
-    cveUnicaRegistroPob, emergencyContact, emergencyPhone, assignedAmbulanceId || null,
+    cveUnicaRegistroPob, identificationNumber || null, emergencyContact, emergencyPhone, assignedAmbulanceId || null,
     shiftWindows && shiftWindows.length ? JSON.stringify(shiftWindows) : null, userProfileId]
 
     db.query(sql, values, callback)
@@ -138,7 +138,7 @@ const updatePushToken = (userProfileId, pushToken, callback) => {
 
 const getAllUsers = (callback) => {
     const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
-                t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
+                t1.phone_number, t1.birth_date, t1.curp, t1.identification_number, t1.emergency_contact, t1.emergency_phone,
                 t2.email, t2.is_active, t2.user_credential_id,
                 t1.institution_id, t1.role_id, t1.is_institution_admin, t1.assigned_ambulance_id,
                 t1.shift_windows
@@ -149,7 +149,7 @@ const getAllUsers = (callback) => {
 
 const getUserById = (userProfileId, callback) => {
     const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
-                t1.phone_number, t1.birth_date, t1.curp, t1.emergency_contact, t1.emergency_phone,
+                t1.phone_number, t1.birth_date, t1.curp, t1.identification_number, t1.emergency_contact, t1.emergency_phone,
                 t2.email, t2.is_active, t2.user_credential_id,
                 t1.institution_id, t1.role_id, t1.is_institution_admin, t1.assigned_ambulance_id,
                 t1.shift_windows
@@ -208,9 +208,38 @@ const getAllParamedics = (callback) => {
 
 const getUserByCURP = (curp, callback) => {
     const sql = `SELECT user_profile_id, first_name, first_surname, second_surname,
-                phone_number, birth_date, curp
-                FROM user_profiles WHERE curp = ?`;
+                phone_number, birth_date, curp, identification_number, institution_id,
+                role_id, user_credential_id
+                FROM user_profiles WHERE UPPER(curp) = UPPER(?)`;
     db.query(sql, [curp], callback);
+}
+
+// Búsqueda de pacientes (rol 5) para sicem-desktop — permite filtrar por
+// texto libre (nombre, apellidos, CURP, identificación de afiliación) y por
+// institución de afiliación. Pensado para la pantalla de pacientes afiliados.
+const searchPatients = (q, institutionId, callback) => {
+    const params = []
+    let where = `WHERE t1.role_id = 5`
+    if (institutionId) {
+        where += ` AND t1.institution_id = ?`
+        params.push(institutionId)
+    }
+    if (q && q.trim()) {
+        where += ` AND (t1.first_name LIKE ? OR t1.first_surname LIKE ? OR t1.second_surname LIKE ?
+                    OR t1.curp LIKE ? OR t1.identification_number LIKE ?)`
+        const like = `%${q.trim()}%`
+        params.push(like, like, like, like, like)
+    }
+    const sql = `SELECT t1.user_profile_id, t1.first_name, t1.first_surname, t1.second_surname,
+                t1.phone_number, t1.birth_date, t1.curp, t1.identification_number, t1.institution_id,
+                t2.email, i.name AS institution_name
+                FROM user_profiles t1
+                LEFT JOIN user_credentials t2 ON t1.user_credential_id = t2.user_credential_id
+                LEFT JOIN institutions i ON t1.institution_id = i.institution_id
+                ${where}
+                ORDER BY t1.first_name ASC
+                LIMIT 100`
+    db.query(sql, params, callback)
 }
 
 // Rol del usuario objetivo — para que el controller pueda validar que un
@@ -242,9 +271,19 @@ const getParamedicsByAmbulance = (ambulanceId, callback) => {
     db.query(sql, [ambulanceId], callback);
 }
 
+// Vincula credenciales recién creadas a un perfil de paciente ya existente
+// (sin user_credential_id) — el "reclamar" una CURP que un paramédico o el
+// hospital registró previamente. Solo se aplica si el perfil sigue sin
+// credenciales, para no pisar un vínculo que ya exista.
+const linkCredentialToProfile = (userProfileId, userCredentialId, callback) => {
+    const sql = `UPDATE user_profiles SET user_credential_id = ?, updated_at = NOW()
+                WHERE user_profile_id = ? AND user_credential_id IS NULL`;
+    db.query(sql, [userCredentialId, userProfileId], callback);
+}
+
 module.exports = { getUserInstitutionInfo, getUserInstitutionInfoByCredentialId, toggleInstitutionAdmin, getInstitutionCrumFlag,
                 getAmbulanceInstitutionInfo,
                 createCredential, createProfile, login, toggleActiveUser, requestUserStatus, getCredentialHistory,
                 editUserProfile, editUserCredentials, getAllUsers, getUserById, getUserByCURP, getUserRole, updatePatientCurp,
                 getAllRoles, getAllInstitutions, getAllInstitutionTypes, getAllStates, getCitiesByState, getCityById,
-                updatePushToken, updateActiveSession, getAllParamedics, getParamedicsByAmbulance }
+                updatePushToken, updateActiveSession, getAllParamedics, getParamedicsByAmbulance, searchPatients, linkCredentialToProfile }

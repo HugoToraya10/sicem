@@ -37,7 +37,7 @@
   "35": "Ambulances.jsx",
   "36": "hospitales/config/db.js",
   "37": "routes/unit.js",
-  "38": "usuarios/middlewares/auth.js",
+  "38": "routes/user.js",
   "39": "gateway/index.js",
   "40": "closeEmergencyRaw",
   "41": "Aprende SICEM: de lo más simple a lo más complejo",
@@ -97,9 +97,13 @@
   "95": "AmbulanceStatusCard.jsx",
   "96": "sicem-web/package.json",
   "97": "scripts",
-  "98": "leaflet",
+  "98": "jspdf",
   "99": "react",
   "100": "react-is",
   "101": "eslint-plugin-react-refresh",
-  "102": "startDb.sh"
+  "102": "startDb.sh",
+  "103": "sicem-pacientes/package.json",
+  "104": "Plan — Paciente fuera de institución: afiliación + página pública",
+  "105": "sicem-pacientes/src/App.jsx",
+  "106": "sicem-pacientes/vite.config.js"
 }

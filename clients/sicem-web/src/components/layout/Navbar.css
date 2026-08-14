@@ -230,6 +230,15 @@
     border-bottom: 1px solid #2a2a45;
 }
 
+.navbar-bell-subtitle {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #8a8ab0;
+    padding: 8px 12px 2px;
+}
+
 .navbar-bell-empty {
     padding: 16px 12px;
     font-size: 12px;

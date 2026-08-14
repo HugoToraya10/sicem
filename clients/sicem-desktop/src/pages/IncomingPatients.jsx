@@ -243,6 +243,7 @@ const IncomingPatients = () => {
                             <IncomingPatientCard
                                 key={p.emergency_patient_id}
                                 patient={p}
+                                hospitalInstitutionId={user.institutionId}
                                 onViewDetail={handleViewDetail}
                                 onAccept={handleAccept}
                                 onReject={handleReject}

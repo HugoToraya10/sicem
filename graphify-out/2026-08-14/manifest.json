@@ -25,8 +25,8 @@
     "semantic_hash": "b3df3da4402fe6441a521730014fbe9a"
   },
   "clients/sicem-desktop/src/App.jsx": {
-    "mtime": 1785969131.5314317,
-    "ast_hash": "30309511810723fb53fbc33b0b89e271",
+    "mtime": 1786705544.6981168,
+    "ast_hash": "f1bba399f9f1cb5fabc34dd698f7d85d",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/InstitutionAdminRoute.jsx": {
@@ -70,13 +70,13 @@
     "semantic_hash": "35e786a0e272c4df278d168804e65dad"
   },
   "clients/sicem-desktop/src/components/patients/IncomingPatientCard.jsx": {
-    "mtime": 1785908430.0972054,
-    "ast_hash": "a13fe905ca10911cac9a3ec006474a34",
+    "mtime": 1786705294.6914673,
+    "ast_hash": "b9d90e0f82615b4659806b5c6aa46439",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/patients/PatientDetailModal.jsx": {
-    "mtime": 1785922998.7682853,
-    "ast_hash": "d62888719cd4e8f3de9ca4e2c294aca3",
+    "mtime": 1786705322.3471854,
+    "ast_hash": "b6dbe6a4dbc670fbf8529bf01bb7aa3d",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/patients/RejectReasonModal.jsx": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/IncomingPatients.jsx": {
-    "mtime": 1785922927.3808422,
-    "ast_hash": "526bc8c9a6290b4a6013dede288e9a74",
+    "mtime": 1786705307.7411509,
+    "ast_hash": "788d4ebc78c37cbd64425f6dab2f8075",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/IncomingUnitRequests.jsx": {
@@ -150,9 +150,9 @@
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/utils/Navlinks.js": {
-    "mtime": 1784769238.6084816,
-    "ast_hash": "a9f3b959c36e2c49a89e4b5ba47cc217",
-    "semantic_hash": "a9f3b959c36e2c49a89e4b5ba47cc217"
+    "mtime": 1786705535.3268073,
+    "ast_hash": "c99485505da8c140fbc31dd4e2465784",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/utils/formatData.js": {
     "mtime": 1784598534.683304,
@@ -215,8 +215,8 @@
     "semantic_hash": "81cf21b32d465b3b5ec82f217df7b1de"
   },
   "clients/sicem-web/src/components/layout/Navbar.jsx": {
-    "mtime": 1786701103.415135,
-    "ast_hash": "c74a45aab72bab493c047b4e6c9318f3",
+    "mtime": 1786705784.109162,
+    "ast_hash": "2f25445f67efce6c71ccb6b0f5681278",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/components/map/MapArea.jsx": {
@@ -240,8 +240,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Dashboard.jsx": {
-    "mtime": 1785974998.9245286,
-    "ast_hash": "358377a92c9e1889e3a1afd4d9952499",
+    "mtime": 1786702961.2632284,
+    "ast_hash": "d19b5694a672225f42505589d071a798",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/EmergencyDetail.jsx": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Institutions.jsx": {
-    "mtime": 1786702320.9136977,
-    "ast_hash": "a5471847c00905bfc78318ef2a2357e7",
+    "mtime": 1786702477.197203,
+    "ast_hash": "27927cb810ce820aa5429db189da2cba",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Patients.jsx": {
@@ -355,8 +355,8 @@
     "semantic_hash": "6ec4909bd3cb6a86dbec7468b1ae7c59"
   },
   "services/emergencias/controllers/emergency.js": {
-    "mtime": 1786576974.8914323,
-    "ast_hash": "58a997779d254a857d2bc2f2ef2b8b61",
+    "mtime": 1786705756.924822,
+    "ast_hash": "c9dd8ad5cfe06147c9f69d0046fca3e2",
     "semantic_hash": ""
   },
   "services/emergencias/index.js": {
@@ -370,8 +370,8 @@
     "semantic_hash": ""
   },
   "services/emergencias/models/emergency.js": {
-    "mtime": 1786701055.0402489,
-    "ast_hash": "a7ab551f91e9f1ba5d09d2dd4f99f270",
+    "mtime": 1786705748.6666727,
+    "ast_hash": "d64bffc14d34edcc315a69019fe58550",
     "semantic_hash": ""
   },
   "services/emergencias/package.json": {
@@ -505,8 +505,8 @@
     "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
   },
   "services/usuarios/controllers/user.js": {
-    "mtime": 1786651737.981029,
-    "ast_hash": "ebb12fd4cc3ef6a896d56565ef6f763a",
+    "mtime": 1786705370.9869504,
+    "ast_hash": "412e202c92760484c6ec982edc70e7f8",
     "semantic_hash": ""
   },
   "services/usuarios/index.js": {
@@ -520,8 +520,8 @@
     "semantic_hash": ""
   },
   "services/usuarios/models/user.js": {
-    "mtime": 1786651637.7648842,
-    "ast_hash": "0b4c23d2533c208eced6d5e289911f08",
+    "mtime": 1786705361.636753,
+    "ast_hash": "7ad9408624ef2ec419d076ebbc736c48",
     "semantic_hash": ""
   },
   "services/usuarios/package.json": {
@@ -530,8 +530,8 @@
     "semantic_hash": "59b2489807786aa7f801c9cd6207d473"
   },
   "services/usuarios/routes/user.js": {
-    "mtime": 1786498826.162716,
-    "ast_hash": "f2f982bed1d475c18775d633a0ee0fcb",
+    "mtime": 1786705375.361884,
+    "ast_hash": "c2101c971545cdd061066893ccea0a04",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
@@ -755,8 +755,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/paciente.js": {
-    "mtime": 1785905876.6795106,
-    "ast_hash": "694f99edf9b5b7fe23f30aa68a21734d",
+    "mtime": 1786705717.062572,
+    "ast_hash": "04979af009d50af8229318be6d483e32",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/stats.js": {
@@ -967,6 +967,41 @@
   "clients/sicem-web/src/assets/units/transport.png": {
     "mtime": 1783972428.6014135,
     "ast_hash": "db3b41453f4858928743d7eb3f7c83f5",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/pages/Patients.jsx": {
+    "mtime": 1786705524.7114065,
+    "ast_hash": "57d8ef96ade75f9f39c9c961ab943bf1",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/package.json": {
+    "mtime": 1786705084.7166426,
+    "ast_hash": "eac6312229bb8b1a5ada9743a1f1c032",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/App.jsx": {
+    "mtime": 1786705831.2400882,
+    "ast_hash": "3e3e65af9b0014e7c7a2fc1686e420d6",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/main.jsx": {
+    "mtime": 1786705108.634509,
+    "ast_hash": "7659180e125ef2ae58796d5eda861912",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/vite.config.js": {
+    "mtime": 1786705088.0163944,
+    "ast_hash": "7e8d2d2a67cf6717bea85b97e1fd198c",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/index.html": {
+    "mtime": 1786705093.1919417,
+    "ast_hash": "16e0ad529879d23baf396ebf3968f0d1",
+    "semantic_hash": ""
+  },
+  "docs/plan-paciente-institucion.md": {
+    "mtime": 1786705861.1664553,
+    "ast_hash": "0004b905dc9021acd69286150aaeea3d",
     "semantic_hash": ""
   }
 }

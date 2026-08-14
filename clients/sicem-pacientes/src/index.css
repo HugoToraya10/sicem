@@ -1,0 +1,44 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: #0f172a;
+  color: #0f172a;
+}
+.screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+}
+.logo { font-size: 28px; font-weight: 800; color: #2563eb; letter-spacing: 2px; }
+.tagline { margin: 4px 0 20px; color: #64748b; font-size: 14px; }
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab {
+  flex: 1; padding: 10px; border: 1px solid #e2e8f0; background: #f8fafc;
+  border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: #475569;
+}
+.tab.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.field span { font-size: 12px; font-weight: 600; color: #475569; }
+.field input, .field select {
+  padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;
+}
+.btn {
+  width: 100%; margin-top: 8px; padding: 11px; border: none; border-radius: 10px;
+  background: #2563eb; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.btn.ghost { margin-top: 8px; background: #f1f5f9; color: #334155; }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+.err { background: #fee2e2; color: #b91c1c; border-radius: 8px; padding: 10px; font-size: 13px; margin: 4px 0 12px; }
+.ok { background: #dcfce7; color: #15803d; border-radius: 8px; padding: 10px; font-size: 13px; margin: 4px 0 12px; }
+h2 { margin: 0 0 16px; }

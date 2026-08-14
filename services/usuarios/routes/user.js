@@ -6,6 +6,7 @@ const middleware = require('../middlewares/auth');
 //post
 router.post('/registro', middleware.verifyToken, userController.register); // TODO
 router.post('/registro-paciente', userController.registerPatient); // TODO
+router.post('/vincular-cuenta-curp', userController.claimAccountByCurp); // sicem-pacientes — reclamar CURP existente
 
 //updates
 router.patch('/actualizar-credenciales', middleware.verifyToken, userController.editUserCredentials); // TODO
@@ -31,6 +32,7 @@ router.get('/estados', userController.getAllStates); // TODO
 router.get('/ciudades/:stateId', userController.getCitiesByState); // TODO
 router.get('/ciudad/:cityId', userController.getCityById); // ✅ HospitalAdmin.jsx (pre-seleccionar estado/ciudad de una dirección ya guardada)
 router.get('/obtener-usuario-curp/:curp', userController.getUserByCURP);
+router.get('/pacientes', middleware.verifyToken, userController.getPatients); // sicem-desktop — pacientes afiliados
 router.get('/historial-cuenta/:userCredentialId', middleware.verifyToken, userController.getCredentialHistory);
 router.get('/tripulacion-ambulancias', middleware.verifyToken, userController.getAmbulanceCrew); // ✅ Ambulances.jsx
 

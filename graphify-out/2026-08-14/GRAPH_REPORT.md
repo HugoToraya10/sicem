@@ -1,16 +1,16 @@
 # Graph Report - SICEM  (2026-08-14)
 
 ## Corpus Check
-- 155 files · ~495,065 words
+- 161 files · ~498,421 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1338 nodes · 1943 edges · 103 communities (71 shown, 32 thin omitted)
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 416 edges (avg confidence: 0.51)
+- 1380 nodes · 1988 edges · 107 communities (74 shown, 33 thin omitted)
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 419 edges (avg confidence: 0.51)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `234fe083`
+- Built from commit: `99ff8864`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -114,10 +114,13 @@
 - react-is
 - eslint-plugin-react-refresh
 - startDb.sh
+- sicem-pacientes/package.json
+- Plan — Paciente fuera de institución: afiliación + página pública
+- sicem-pacientes/src/App.jsx
 
 ## God Nodes (most connected - your core abstractions)
 1. `useAuth()` - 31 edges
-2. `useAuth()` - 29 edges
+2. `useAuth()` - 31 edges
 3. `useAuth()` - 28 edges
 4. `getNavLinks()` - 27 edges
 5. `toLowerCaseKeys()` - 27 edges
@@ -147,11 +150,11 @@
 - **SICEM Client Applications (Dispatcher/Hospital/Paramedic)** — sicem_handoff_sicem_web_client, sicem_handoff_sicem_desktop_client, sicem_handoff_sicem_mobile_client [EXTRACTED 1.00]
 - **SICEM Backend Microservices (SOA)** — sicem_handoff_gateway_service, sicem_handoff_usuarios_service, sicem_handoff_hospitales_service, sicem_handoff_unidades_service, sicem_handoff_pacientes_service, sicem_handoff_emergencias_service [EXTRACTED 1.00]
 
-## Communities (103 total, 32 thin omitted)
+## Communities (107 total, 33 thin omitted)
 
 ### Community 0 - "useAuth"
 Cohesion: 0.07
-Nodes (59): App(), RootRedirect(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), formatSchedule(), isOnScheduleNow() (+51 more)
+Nodes (60): App(), RootRedirect(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), formatSchedule(), isOnScheduleNow() (+52 more)
 
 ### Community 2 - "controllers/emergency.js"
 Cohesion: 0.03
@@ -266,8 +269,8 @@ Cohesion: 0.18
 Nodes (9): app, cors, db, express, userRoutes, express, middleware, router (+1 more)
 
 ### Community 34 - "Dashboard.jsx"
-Cohesion: 0.31
-Nodes (8): EmergencyCard(), severityColor, Dashboard(), formatElapsed(), isStalled(), priorityScore(), roleLabels, sortByPriority()
+Cohesion: 0.29
+Nodes (9): EmergencyCard(), severityColor, Dashboard(), formatElapsed(), formatResponseTime(), isStalled(), priorityScore(), roleLabels (+1 more)
 
 ### Community 35 - "Ambulances.jsx"
 Cohesion: 0.18
@@ -417,25 +420,33 @@ Nodes (4): name, private, type, version
 Cohesion: 0.40
 Nodes (5): scripts, build, dev, lint, preview
 
+### Community 103 - "sicem-pacientes/package.json"
+Cohesion: 0.11
+Nodes (18): dependencies, react, react-dom, devDependencies, vite, @vitejs/plugin-react, react, react-dom (+10 more)
+
+### Community 104 - "Plan — Paciente fuera de institución: afiliación + página pública"
+Cohesion: 0.18
+Nodes (10): Dependencias, Estado actual, Fase 1 — Base de datos ✅ (IMPLEMENTADA), Fase 2 — Página pública de captura + login ✅ (IMPLEMENTADA), Fase 3 — sicem-desktop: pantalla de pacientes + detección ✅ (IMPLEMENTADA), Fase 4 — sicem-mobile: reasignar destino ✅ (IMPLEMENTADA), Fase 5 — sicem-web: reasignación ✅ (IMPLEMENTADA), Flujo final (visión de las 5 fases) (+2 more)
+
 ## Knowledge Gaps
-- **470 isolated node(s):** `postCreate.sh script`, `PORTS`, `startDb.sh script`, `__dirname`, `name` (+465 more)
+- **491 isolated node(s):** `postCreate.sh script`, `PORTS`, `startDb.sh script`, `__dirname`, `name` (+486 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **33 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `plugins` connect `useAuth` to `expo`?**
+- **Why does `expo` connect `expo` to `useAuth`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Why does `Aprende SICEM: de lo más simple a lo más complejo` connect `Aprende SICEM: de lo más simple a lo más complejo` to `Nivel 1 — JavaScript moderno`, `Nivel 7 — Tiempo real: Socket.IO`, `Nivel 6 — Enrutamiento en React (React Router)`, `Nivel 11 — Infraestructura: variables de entorno, CORS, Codespaces`, `Nivel 5 — React: Hooks y Context API`, `Nivel 3 — Autenticación: JWT, middleware, roles`, `Nivel 8 — Las 3 plataformas y sus diferencias reales`, `Nivel 2 — Backend: Express, rutas, controladores, modelos`, `Nivel 9 — Herramientas de build (Vite, Metro)`, `Nivel 4 — Frontend: React desde cero`, `Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto)`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `plugins` connect `useAuth` to `expo`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `postCreate.sh script`, `PORTS`, `startDb.sh script` to the rest of the system?**
-  _470 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _491 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useAuth` be split into smaller, more focused modules?**
-  _Cohesion score 0.06716604244694133 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06593406593406594 - nodes in this community are weakly interconnected._
 - **Should `models/emergency.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.022988505747126436 - nodes in this community are weakly interconnected._
 - **Should `controllers/emergency.js` be split into smaller, more focused modules?**
   _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._
-- **Should `devDependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._

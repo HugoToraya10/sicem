@@ -7,7 +7,7 @@ const formatElapsed = (createdAt) => {
     return `${Math.floor(minutes / 60)}h ${minutes % 60}min`
 }
 
-const IncomingPatientCard = ({ patient, onViewDetail, onAccept, onReject }) => {
+const IncomingPatientCard = ({ patient, hospitalInstitutionId, onViewDetail, onAccept, onReject }) => {
     const fullName = [patient.first_name, patient.first_surname, patient.second_surname]
         .filter(Boolean).join(' ') || 'Paciente no identificado'
 
@@ -20,6 +20,12 @@ const IncomingPatientCard = ({ patient, onViewDetail, onAccept, onReject }) => {
 
     const isPending = parseInt(patient.reception_status_id) === 1
     const hasMultiplePatients = parseInt(patient.num_patients) > 1
+
+    // Detección de afiliación (Fase 3): si el paciente tiene institución de
+    // afiliación distinta a la que lo va a recibir, es "de otra institución"
+    // y conviene que el hospital lo sepa (y en su caso se reasigne el destino).
+    const isOtherInstitution = Boolean(patient.patient_institution_id)
+        && parseInt(patient.patient_institution_id) !== parseInt(hospitalInstitutionId)
 
     const elapsedMinutes = patient.created_at ? (Date.now() - new Date(patient.created_at).getTime()) / 60000 : null
     // "Vencido" = ya lleva esperando más del tiempo máximo que su propio nivel
@@ -61,9 +67,14 @@ const IncomingPatientCard = ({ patient, onViewDetail, onAccept, onReject }) => {
                             +{parseInt(patient.num_patients) - 1} más
                         </span>
                     )}
+                    {isOtherInstitution && (
+                        <span className="pc-other-inst-badge" title={`Este paciente está afiliado a ${patient.patient_institution_name || 'otra institución'}`}>
+                            Afiliado a: {patient.patient_institution_name || 'otra institución'}
+                        </span>
+                    )}
                 </div>
                 <div className="pc-type">{patient.description || 'Sin descripción'}</div>
-                <div className="pc-detail">{unitLabel} · CURP: {patient.curp || 'Sin CURP'}</div>
+                <div className="pc-detail">{unitLabel} · CURP: {patient.curp || 'Sin CURP'}{patient.patient_identification_number && ` · ID: ${patient.patient_identification_number}`}</div>
             </div>
 
             <div className="pc-tags">

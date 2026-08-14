@@ -101,5 +101,9 @@
   "99": "react",
   "100": "react-is",
   "101": "eslint-plugin-react-refresh",
-  "102": "startDb.sh"
+  "102": "startDb.sh",
+  "103": "sicem-pacientes/package.json",
+  "104": "Plan — Paciente fuera de institución: afiliación + página pública",
+  "105": "sicem-pacientes/src/App.jsx",
+  "106": "sicem-pacientes/vite.config.js"
 }

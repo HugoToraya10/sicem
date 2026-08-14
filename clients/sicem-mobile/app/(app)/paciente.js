@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
 import { useAuth } from '../../context/AuthContext'
@@ -25,6 +25,36 @@ const PacienteScreen = () => {
     const [searching, setSearching] = useState(false)
     const [found, setFound] = useState(null) // null=no buscado, true/false=resultado
     const [profile, setProfile] = useState(null)
+
+    // Reasignación de destino por el paramédico (Fase 4): cuando el paciente
+    // pertenece a otra institución, el paramédico lo manda a donde corresponde.
+    const [institutions, setInstitutions] = useState([])
+    const [reassigningPatientId, setReassigningPatientId] = useState(null)
+    const [reassigningBusy, setReassigningBusy] = useState(false)
+
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/usuarios/obtener-instituciones`)
+            .then((res) => res.json())
+            .then(({ institutions }) => setInstitutions((institutions || []).map(toLowerCaseKeys)))
+            .catch((err) => console.error('Error recuperando instituciones. ', err))
+    }, [])
+
+    const handleReassign = (emergencyPatientId, newDestinationInstitutionId) => {
+        setReassigningBusy(true)
+        fetch(`${API_BASE_URL}/emergencias/reasignar-destino-paciente`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ emergencyPatientId, newDestinationInstitutionId })
+        })
+            .then((res) => res.json())
+            .then((body) => {
+                if (!res.ok) throw new Error(body.message || 'No se pudo reasignar el destino')
+                setReassigningPatientId(null)
+                fetchEmergencyPatients()
+            })
+            .catch((err) => Alert.alert('No se pudo reasignar', err.message || 'Intenta de nuevo.'))
+            .finally(() => setReassigningBusy(false))
+    }
 
     const fetchEmergencyPatients = () => {
         if (!acceptedEmergency?.emergencyId) { setEmergencyPatients([]); return }
@@ -91,26 +121,56 @@ const PacienteScreen = () => {
                     {!loadingEmergencyPatients && emergencyPatients.length === 0 && (
                         <Text style={styles.hint}>Todavía no hay pacientes registrados en esta emergencia.</Text>
                     )}
-                    {emergencyPatients.map((p) => (
-                        <TouchableOpacity
-                            key={p.emergency_patient_id}
-                            style={styles.patientRow}
-                            onPress={() => goToExpediente(p.user_profile_id, p.first_name, p.first_surname, p.second_surname, p.emergency_patient_id, p.curp)}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.patientRowName}>
-                                    {p.first_name ? `${p.first_name} ${p.first_surname || ''}` : 'Paciente no identificado'}
-                                    {String(p.ambulance_id) === String(activeAmbulanceId) && <Text style={styles.mineTag}> · tu unidad</Text>}
-                                </Text>
-                                <Text style={styles.patientRowMeta}>
-                                    CURP: {p.curp || 'sin registrar'}
-                                    {'\n'}{p.destination_institution_name ? `→ ${p.destination_institution_name}` : 'Sin hospital destino'}
-                                    {p.reception_status_name ? ` · ${p.reception_status_name}` : ''}
-                                </Text>
+                    {emergencyPatients.map((p) => {
+                        const isMine = String(p.ambulance_id) === String(activeAmbulanceId)
+                        const canReassign = isMine && !p.delivered_at && !p.discharged_at
+                        return (
+                            <View key={p.emergency_patient_id}>
+                                <TouchableOpacity
+                                    style={styles.patientRow}
+                                    onPress={() => goToExpediente(p.user_profile_id, p.first_name, p.first_surname, p.second_surname, p.emergency_patient_id, p.curp)}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.patientRowName}>
+                                            {p.first_name ? `${p.first_name} ${p.first_surname || ''}` : 'Paciente no identificado'}
+                                            {isMine && <Text style={styles.mineTag}> · tu unidad</Text>}
+                                        </Text>
+                                        <Text style={styles.patientRowMeta}>
+                                            CURP: {p.curp || 'sin registrar'}
+                                            {'\n'}{p.destination_institution_name ? `→ ${p.destination_institution_name}` : 'Sin hospital destino'}
+                                            {p.reception_status_name ? ` · ${p.reception_status_name}` : ''}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.chevron}>›</Text>
+                                </TouchableOpacity>
+
+                                {canReassign && reassigningPatientId === p.emergency_patient_id && (
+                                    <View style={styles.reassignBox}>
+                                        <Text style={styles.reassignTitle}>¿A dónde llevas al paciente?</Text>
+                                        {institutions.map((inst) => (
+                                            <TouchableOpacity
+                                                key={inst.institution_id}
+                                                style={styles.reassignOption}
+                                                onPress={() => handleReassign(p.emergency_patient_id, inst.institution_id)}
+                                                disabled={reassigningBusy}
+                                            >
+                                                <Text style={styles.reassignOptionText}>{inst.name}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                        <TouchableOpacity style={styles.reassignCancel} onPress={() => setReassigningPatientId(null)} disabled={reassigningBusy}>
+                                            <Text style={styles.reassignCancelText}>Cancelar</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
+                                {canReassign && reassigningPatientId !== p.emergency_patient_id && (
+                                    <TouchableOpacity style={styles.linkButton} onPress={() => setReassigningPatientId(p.emergency_patient_id)}>
+                                        <Text style={styles.linkButtonText}>↦ Cambiar destino de este paciente</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
-                            <Text style={styles.chevron}>›</Text>
-                        </TouchableOpacity>
-                    ))}
+                        )
+                    })}
                     <TouchableOpacity
                         style={styles.linkButton}
                         onPress={() => router.push({ pathname: '/registrar-paciente', params: { emergencyId: acceptedEmergency.emergencyId } })}
@@ -181,6 +241,12 @@ const styles = StyleSheet.create({
     chevron: { fontSize: 22, color: '#ccc', marginLeft: 8 },
     linkButton: { marginTop: 12, padding: 6 },
     linkButtonText: { color: '#1565C0', fontSize: 13, fontWeight: '600' },
+    reassignBox: { borderWidth: 1, borderColor: '#b39ddb', borderRadius: 8, padding: 10, marginTop: 8, backgroundColor: '#f3eefb' },
+    reassignTitle: { fontSize: 12, fontWeight: '700', color: '#6a1b9a', marginBottom: 8 },
+    reassignOption: { paddingVertical: 8, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#e0d4f0' },
+    reassignOptionText: { fontSize: 13, color: '#222' },
+    reassignCancel: { marginTop: 8, padding: 6, alignItems: 'center' },
+    reassignCancelText: { color: '#888', fontSize: 13, fontWeight: '600' },
 })
 
 export default PacienteScreen

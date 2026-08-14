@@ -475,12 +475,21 @@ const getRequestStatusIdByName = (name, callback) => {
 // antes de confirmar/rechazar su recepción, y para saber a quién avisar por socket.
 const getEmergencyPatientById = (emergencyPatientId, callback) => {
     const sql = `SELECT ep.emergency_id, ep.destination_institution_id, ep.destination_speciality_id,
-                ep.reception_status_id, ep.delivered_at, ep.discharged_at, ep.ambulance_id, e.closed_at, rs.name AS reception_status_name
+                ep.reception_status_id, ep.delivered_at, ep.discharged_at, ep.ambulance_id, e.closed_at, rs.name AS reception_status_name,
+                up.first_name, up.first_surname, up.second_surname
                 FROM emergencies_patients ep
                 JOIN emergencies e ON ep.emergency_id = e.emergency_id
                 LEFT JOIN request_statuses rs ON ep.reception_status_id = rs.request_status_id
+                LEFT JOIN user_profiles up ON ep.user_profile_id = up.user_profile_id
                 WHERE ep.emergency_patient_id = ?`;
     db.query(sql, [emergencyPatientId], callback);
+}
+
+// Ambulancia que tiene asignada un usuario (rol 3) — para validar que un
+// paramédico solo reasigne el destino de pacientes que van en SU unidad.
+const getAssignedAmbulanceByUserProfile = (userProfileId, callback) => {
+    const sql = `SELECT assigned_ambulance_id FROM user_profiles WHERE user_profile_id = ?`;
+    db.query(sql, [userProfileId], callback);
 }
 
 // Confirma o rechaza la recepción. El WHERE vuelve a exigir que el destino
@@ -715,6 +724,8 @@ const getIncomingPatientsByInstitution = (institutionId, callback) => {
                 e.latitude AS emergency_latitude, e.longitude AS emergency_longitude,
                 e.reporter_name, e.reporter_phone, e.num_patients,
                 up.first_name, up.first_surname, up.second_surname, up.curp,
+                up.institution_id AS patient_institution_id, up.identification_number AS patient_identification_number,
+                pinst.name AS patient_institution_name,
                 amb.unit_number, i.name AS institution_name, rs.name AS reception_status_name,
                 sp.name AS speciality_name,
                 tl.level AS triage_level, tl.color AS triage_color_name, tl.hex_color AS triage_hex_color,
@@ -727,6 +738,7 @@ const getIncomingPatientsByInstitution = (institutionId, callback) => {
                 FROM emergencies_patients ep
                 JOIN emergencies e ON ep.emergency_id = e.emergency_id
                 LEFT JOIN user_profiles up ON ep.user_profile_id = up.user_profile_id
+                LEFT JOIN institutions pinst ON up.institution_id = pinst.institution_id
                 LEFT JOIN ambulances amb ON ep.ambulance_id = amb.ambulance_id
                 LEFT JOIN institutions i ON amb.institution_id = i.institution_id
                 LEFT JOIN request_statuses rs ON ep.reception_status_id = rs.request_status_id
@@ -787,6 +799,8 @@ const getPatientHistoryByInstitution = (institutionId, callback) => {
                 e.latitude AS emergency_latitude, e.longitude AS emergency_longitude,
                 e.reporter_name, e.reporter_phone, e.num_patients,
                 up.first_name, up.first_surname, up.second_surname, up.curp,
+                up.institution_id AS patient_institution_id, up.identification_number AS patient_identification_number,
+                pinst.name AS patient_institution_name,
                 amb.unit_number, i.name AS institution_name, rs.name AS reception_status_name,
                 sp.name AS speciality_name,
                 tl.level AS triage_level, tl.color AS triage_color_name, tl.hex_color AS triage_hex_color,
@@ -799,6 +813,7 @@ const getPatientHistoryByInstitution = (institutionId, callback) => {
                 FROM emergencies_patients ep
                 JOIN emergencies e ON ep.emergency_id = e.emergency_id
                 LEFT JOIN user_profiles up ON ep.user_profile_id = up.user_profile_id
+                LEFT JOIN institutions pinst ON up.institution_id = pinst.institution_id
                 LEFT JOIN ambulances amb ON ep.ambulance_id = amb.ambulance_id
                 LEFT JOIN institutions i ON amb.institution_id = i.institution_id
                 LEFT JOIN request_statuses rs ON ep.reception_status_id = rs.request_status_id
@@ -1254,6 +1269,7 @@ module.exports = {
     updateEmergencyType, updateEmergencyStatusCatalog, updateRequestStatus, updateTriageLevel,
     // Confirmación de recepción / reasignación de destino / entrega física
     getInstitutionIdByUserProfile, getAmbulanceInstitutionIds, getOpenAssignmentId, getEmergencyIdByAssignment, countActiveAssignments, getRequestStatusIdByName, getEmergencyPatientById,
+    getAssignedAmbulanceByUserProfile,
     updatePatientReceptionStatus, reassignPatientDestination, assignAmbulanceToPatient,
     confirmPatientDelivery, dischargePatient, getUndeliveredPendingCount, closeEmergencyRaw,
     decrementInstitutionBeds, incrementInstitutionBeds, decrementSpecialityBeds, incrementSpecialityBeds, getAcceptedUndeliveredPatients,

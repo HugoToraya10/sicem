@@ -4,6 +4,7 @@ import PrivateRoute from './components/PrivateRoute'
 import InstitutionAdminRoute from './components/InstitutionAdminRoute'
 import Login from './pages/Login'
 import IncomingPatients from './pages/IncomingPatients'
+import Patients from './pages/Patients'
 import Tracking from './pages/Tracking'
 import IncomingUnitRequests from './pages/IncomingUnitRequests'
 import Capacity from './pages/Capacity'
@@ -31,6 +32,7 @@ function App() {
 
                     <Route element={<PrivateRoute />}>
                         <Route path="/pacientes-en-camino" element={<IncomingPatients />} />
+                        <Route path="/pacientes" element={<Patients />} />
                         <Route path="/seguimiento" element={<Tracking />} />
                         <Route path="/solicitudes-unidad" element={<IncomingUnitRequests />} />
                         <Route path="/capacidad" element={<Capacity />} />

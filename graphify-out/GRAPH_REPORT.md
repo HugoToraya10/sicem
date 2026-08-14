@@ -1,16 +1,16 @@
 # Graph Report - SICEM  (2026-08-14)
 
 ## Corpus Check
-- 155 files · ~495,151 words
+- 162 files · ~499,313 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1339 nodes · 1945 edges · 103 communities (71 shown, 32 thin omitted)
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 416 edges (avg confidence: 0.51)
+- 1384 nodes · 1995 edges · 107 communities (75 shown, 32 thin omitted)
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 421 edges (avg confidence: 0.51)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `234fe083`
+- Built from commit: `99ff8864`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -53,7 +53,7 @@
 - Ambulances.jsx
 - hospitales/config/db.js
 - routes/unit.js
-- usuarios/middlewares/auth.js
+- routes/user.js
 - gateway/index.js
 - closeEmergencyRaw
 - Aprende SICEM: de lo más simple a lo más complejo
@@ -109,15 +109,18 @@
 - AmbulanceStatusCard.jsx
 - sicem-web/package.json
 - scripts
-- leaflet
+- jspdf
 - react
 - react-is
 - eslint-plugin-react-refresh
 - startDb.sh
+- sicem-pacientes/package.json
+- Plan — Paciente fuera de institución: afiliación + página pública
+- sicem-pacientes/src/App.jsx
 
 ## God Nodes (most connected - your core abstractions)
 1. `useAuth()` - 31 edges
-2. `useAuth()` - 29 edges
+2. `useAuth()` - 31 edges
 3. `useAuth()` - 28 edges
 4. `getNavLinks()` - 27 edges
 5. `toLowerCaseKeys()` - 27 edges
@@ -147,11 +150,11 @@
 - **SICEM Client Applications (Dispatcher/Hospital/Paramedic)** — sicem_handoff_sicem_web_client, sicem_handoff_sicem_desktop_client, sicem_handoff_sicem_mobile_client [EXTRACTED 1.00]
 - **SICEM Backend Microservices (SOA)** — sicem_handoff_gateway_service, sicem_handoff_usuarios_service, sicem_handoff_hospitales_service, sicem_handoff_unidades_service, sicem_handoff_pacientes_service, sicem_handoff_emergencias_service [EXTRACTED 1.00]
 
-## Communities (103 total, 32 thin omitted)
+## Communities (107 total, 32 thin omitted)
 
 ### Community 0 - "useAuth"
 Cohesion: 0.07
-Nodes (59): App(), RootRedirect(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), formatSchedule(), isOnScheduleNow() (+51 more)
+Nodes (60): App(), RootRedirect(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), formatSchedule(), isOnScheduleNow() (+52 more)
 
 ### Community 2 - "controllers/emergency.js"
 Cohesion: 0.03
@@ -167,7 +170,7 @@ Nodes (10): db, logAllergyHistory(), logConditionHistory(), logMedicationHistory
 
 ### Community 5 - "dependencies"
 Cohesion: 0.12
-Nodes (17): dependencies, jspdf, react, react-dom, react-is, react-leaflet, react-router-dom, recharts (+9 more)
+Nodes (17): dependencies, leaflet, react, react-dom, react-is, react-leaflet, react-router-dom, recharts (+9 more)
 
 ### Community 8 - "dependencies"
 Cohesion: 0.04
@@ -203,7 +206,7 @@ Nodes (22): dependencies, bcrypt, cors, dotenv, express, jsonwebtoken, mysql2, d
 
 ### Community 17 - "controllers/user.js"
 Cohesion: 0.08
-Nodes (16): bcrypt, checkShiftConflict(), createUserWithCredentials(), editUserProfile(), getAllUsers(), getUserById(), intervalOverlap(), jwt (+8 more)
+Nodes (18): bcrypt, checkShiftConflict(), claimAccountByCurp(), createUserWithCredentials(), editUserProfile(), getAllUsers(), getUserByCURP(), getUserById() (+10 more)
 
 ### Community 19 - "usuarios/package.json"
 Cohesion: 0.09
@@ -262,8 +265,8 @@ Cohesion: 0.12
 Nodes (14): setIo(), app, cors, db, express, http, io, jwt (+6 more)
 
 ### Community 33 - "usuarios/index.js"
-Cohesion: 0.18
-Nodes (9): app, cors, db, express, userRoutes, express, middleware, router (+1 more)
+Cohesion: 0.22
+Nodes (7): connection, mysql, app, cors, db, express, userRoutes
 
 ### Community 34 - "Dashboard.jsx"
 Cohesion: 0.29
@@ -281,9 +284,9 @@ Nodes (4): connection, mysql, db, jwt
 Cohesion: 0.17
 Nodes (8): connection, mysql, db, jwt, express, middleware, router, unitController
 
-### Community 38 - "usuarios/middlewares/auth.js"
-Cohesion: 0.29
-Nodes (5): connection, mysql, db, jwt, verifyToken()
+### Community 38 - "routes/user.js"
+Cohesion: 0.22
+Nodes (7): db, jwt, verifyToken(), express, middleware, router, userController
 
 ### Community 39 - "gateway/index.js"
 Cohesion: 0.40
@@ -417,25 +420,37 @@ Nodes (4): name, private, type, version
 Cohesion: 0.40
 Nodes (5): scripts, build, dev, lint, preview
 
+### Community 103 - "sicem-pacientes/package.json"
+Cohesion: 0.11
+Nodes (18): dependencies, react, react-dom, devDependencies, vite, @vitejs/plugin-react, react, react-dom (+10 more)
+
+### Community 104 - "Plan — Paciente fuera de institución: afiliación + página pública"
+Cohesion: 0.18
+Nodes (10): Dependencias, Estado actual, Fase 1 — Base de datos ✅ (IMPLEMENTADA), Fase 2 — Página pública de captura + login ✅ (IMPLEMENTADA), Fase 3 — sicem-desktop: pantalla de pacientes + detección ✅ (IMPLEMENTADA), Fase 4 — sicem-mobile: reasignar destino ✅ (IMPLEMENTADA), Fase 5 — sicem-web: reasignación ✅ (IMPLEMENTADA), Flujo final (visión de las 5 fases) (+2 more)
+
+### Community 105 - "sicem-pacientes/src/App.jsx"
+Cohesion: 0.43
+Nodes (3): App(), emptyForm, toLowerCaseKeys()
+
 ## Knowledge Gaps
-- **470 isolated node(s):** `postCreate.sh script`, `PORTS`, `startDb.sh script`, `__dirname`, `name` (+465 more)
+- **491 isolated node(s):** `postCreate.sh script`, `PORTS`, `startDb.sh script`, `__dirname`, `name` (+486 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `expo` connect `expo` to `useAuth`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Why does `Aprende SICEM: de lo más simple a lo más complejo` connect `Aprende SICEM: de lo más simple a lo más complejo` to `Nivel 1 — JavaScript moderno`, `Nivel 7 — Tiempo real: Socket.IO`, `Nivel 6 — Enrutamiento en React (React Router)`, `Nivel 11 — Infraestructura: variables de entorno, CORS, Codespaces`, `Nivel 5 — React: Hooks y Context API`, `Nivel 3 — Autenticación: JWT, middleware, roles`, `Nivel 8 — Las 3 plataformas y sus diferencias reales`, `Nivel 2 — Backend: Express, rutas, controladores, modelos`, `Nivel 9 — Herramientas de build (Vite, Metro)`, `Nivel 4 — Frontend: React desde cero`, `Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto)`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Why does `plugins` connect `useAuth` to `expo`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `postCreate.sh script`, `PORTS`, `startDb.sh script` to the rest of the system?**
-  _470 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _491 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `useAuth` be split into smaller, more focused modules?**
-  _Cohesion score 0.06716604244694133 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06593406593406594 - nodes in this community are weakly interconnected._
 - **Should `models/emergency.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.022988505747126436 - nodes in this community are weakly interconnected._
 - **Should `controllers/emergency.js` be split into smaller, more focused modules?**
   _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._
-- **Should `devDependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._

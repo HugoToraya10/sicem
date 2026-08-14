@@ -21,6 +21,11 @@ const Navbar = ({ userName, roleLabel, links }) => {
     // depender de haber estado viendo la pantalla en el instante exacto.
     const [failureReports, setFailureReports] = useState([])
     const [bellOpen, setBellOpen] = useState(false)
+    // Reasignaciones de destino hechas por un paramédico (Fase 4/5) — cuando
+    // un paramédico en campo cambia a dónde va un paciente (p. ej. a su
+    // institución de afiliación), el despachador se entera aquí y puede abrir
+    // la emergencia para reasignar/re-confirmar.
+    const [destinationReassignments, setDestinationReassignments] = useState([])
     const [lastSeen, setLastSeen] = useState(() => {
         const stored = localStorage.getItem(LAST_SEEN_KEY_PREFIX + (user?.profileId || ''))
         return stored ? new Date(stored) : new Date(0)
@@ -77,10 +82,20 @@ const Navbar = ({ userName, roleLabel, links }) => {
                     : r
             ))
         })
+        emergencySocket.on('eventDestinationReassigned', (data) => {
+            setDestinationReassignments((current) => [{
+                destination_reassignment_id: `dest-${Date.now()}`,
+                emergency_id: data.emergencyId,
+                destination_institution_id: data.destinationInstitutionId,
+                patient_name: data.patientName || null,
+                reported_at: data.reportedAt || new Date().toISOString(),
+            }, ...current])
+        })
         return () => { unitsSocket.disconnect(); emergencySocket.disconnect() }
     }, [token])
 
     const unreadCount = failureReports.filter((r) => new Date(r.reported_at) > lastSeen).length
+        + destinationReassignments.filter((r) => new Date(r.reported_at) > lastSeen).length
 
     const toggleBell = () => {
         const opening = !bellOpen
@@ -152,9 +167,37 @@ const Navbar = ({ userName, roleLabel, links }) => {
                     </button>
                     {bellOpen && (
                         <div className="navbar-bell-panel">
-                            <div className="navbar-bell-title">Fallas reportadas</div>
-                            {failureReports.length === 0 && (
-                                <div className="navbar-bell-empty">Sin reportes por ahora.</div>
+                            <div className="navbar-bell-title">Notificaciones</div>
+                            {destinationReassignments.length > 0 && (
+                                <>
+                                    <div className="navbar-bell-subtitle">Reasignaciones del paramédico</div>
+                                    {destinationReassignments.map((r) => (
+                                        <div key={r.destination_reassignment_id} className="navbar-bell-item">
+                                            <div className="navbar-bell-item-header">
+                                                <strong>Destino reasignado</strong>
+                                                <span>{new Date(r.reported_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                            <div className="navbar-bell-item-who">
+                                                {r.patient_name ? `${r.patient_name} — el paramédico cambió su destino.` : 'El paramédico cambió el destino de un paciente.'}
+                                            </div>
+                                            {r.emergency_id && (
+                                                <div className="navbar-bell-item-actions">
+                                                    <button
+                                                        onClick={() => { navigate(`/emergencias/${r.emergency_id}`); setBellOpen(false) }}
+                                                    >
+                                                        Ver emergencia
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                            {destinationReassignments.length > 0 && failureReports.length > 0 && (
+                                <div className="navbar-bell-subtitle">Fallas reportadas</div>
+                            )}
+                            {failureReports.length === 0 && destinationReassignments.length === 0 && (
+                                <div className="navbar-bell-empty">Sin notificaciones por ahora.</div>
                             )}
                             {failureReports.map((r) => (
                                 <div key={r.ambulance_failure_report_id} className="navbar-bell-item">

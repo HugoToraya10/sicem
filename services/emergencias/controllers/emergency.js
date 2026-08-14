@@ -899,28 +899,73 @@ const dischargePatient = (req, res) => {
 // un paciente ya registrado. Resetea reception_status_id a "Pendiente" y avisa por
 // socket al hospital NUEVO reutilizando eventPatientRegistered — el mismo evento que
 // IncomingPatients.jsx (sicem-desktop) ya escucha y ya compara contra su institución.
+// Desde Fase 4 también lo puede hacer el paramédico (rol 3, sicem-mobile), pero
+// solo para pacientes que van en SU propia ambulancia y sin cambiar la unidad.
 const reassignPatientDestination = (req, res) => {
     const io = configSocket.getIo();
-    const allowedRoles = [1, 2];
+    const allowedRoles = [1, 2, 3];
     if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
         return res.status(403).json({message: "Acceso denegado."});
-    } else {
-        const { emergencyPatientId, newDestinationInstitutionId, newAmbulanceId } = req.body;
+    }
+    const { emergencyPatientId, newDestinationInstitutionId } = req.body;
+    const isParamedic = parseInt(req.decoded.roleId) === 3;
+
+    const performReassign = () => {
         emergencyModel.reassignPatientDestination(req.body, (e, r) => {
             if (e) {
                 return res.status(500).json({message: "Error del servidor."});
             } else {
                 emergencyModel.getEmergencyPatientById(emergencyPatientId, (e2, r2) => {
                     const emergencyId = (!e2 && r2.length > 0) ? r2[0].emergency_id : null;
+                    const patient = (!e2 && r2.length > 0) ? r2[0] : null;
                     io.to('hospital').emit('eventPatientRegistered', {
                         emergencyId, emergencyPatientId,
                         destinationInstitutionId: newDestinationInstitutionId,
-                        ambulanceId: newAmbulanceId
+                        ambulanceId: req.body.newAmbulanceId
                     });
+                    // Fase 5: si fue el PARAMÉDICO quien reasignó, se le avisa al
+                    // despachador (sicem-web) para que se entere por la campana y
+                    // pueda abrir la emergencia ("Ver emergencia") y reasignar.
+                    if (isParamedic) {
+                        const patientName = patient
+                            ? [patient.first_name, patient.first_surname, patient.second_surname].filter(Boolean).join(' ')
+                            : null;
+                        io.to('admin').to('dispatcher').emit('eventDestinationReassigned', {
+                            emergencyId, emergencyPatientId,
+                            destinationInstitutionId: newDestinationInstitutionId,
+                            patientName,
+                            reportedAt: new Date().toISOString(),
+                        });
+                    }
                     res.status(200).json({message: "Destino reasignado con éxito."});
                 });
             }
         });
+    }
+
+    // Paramédico en campo: valida que el paciente vaya en SU ambulancia, que la
+    // emergencia siga abierta y que aún no haya sido entregado/dado de alta.
+    // La ambulancia NO se puede cambiar desde el móvil — sigue siendo su unidad.
+    if (isParamedic) {
+        emergencyModel.getEmergencyPatientById(emergencyPatientId, (e, r) => {
+            if (e || r.length === 0) {
+                return res.status(404).json({message: "Paciente no encontrado."});
+            }
+            const patient = r[0];
+            if (patient.closed_at || patient.delivered_at || patient.discharged_at) {
+                return res.status(400).json({message: "Este paciente ya fue entregado, dado de alta o la emergencia está cerrada."});
+            }
+            emergencyModel.getAssignedAmbulanceByUserProfile(req.decoded.userProfileId, (e2, r2) => {
+                const myAmbulance = (!e2 && r2.length > 0) ? r2[0].assigned_ambulance_id : null;
+                if (!myAmbulance || !patient.ambulance_id || parseInt(patient.ambulance_id) !== parseInt(myAmbulance)) {
+                    return res.status(403).json({message: "Solo puedes reasignar el destino de pacientes que van en tu propia ambulancia."});
+                }
+                req.body.newAmbulanceId = null;
+                performReassign();
+            });
+        });
+    } else {
+        performReassign();
     }
 }
 
