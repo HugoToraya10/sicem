@@ -430,9 +430,9 @@
     "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
   },
   "services/pacientes/controllers/patient.js": {
-    "mtime": 1784511195.9623194,
-    "ast_hash": "f11ddd5c3f8ac5fdb7febdd114be48b1",
-    "semantic_hash": "f11ddd5c3f8ac5fdb7febdd114be48b1"
+    "mtime": 1786712714.1589289,
+    "ast_hash": "eb5b09551824143220936a4d2a7cb774",
+    "semantic_hash": ""
   },
   "services/pacientes/index.js": {
     "mtime": 1783183986.427564,
@@ -445,9 +445,9 @@
     "semantic_hash": ""
   },
   "services/pacientes/models/patient.js": {
-    "mtime": 1784511178.884246,
-    "ast_hash": "0dfb77bbffc34ac7373bb560ce7bacb5",
-    "semantic_hash": "0dfb77bbffc34ac7373bb560ce7bacb5"
+    "mtime": 1786713538.3317244,
+    "ast_hash": "094f2ea48a0b3a6335f450ea5b1bfa8a",
+    "semantic_hash": ""
   },
   "services/pacientes/package.json": {
     "mtime": 1783183986.414987,
@@ -505,8 +505,8 @@
     "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
   },
   "services/usuarios/controllers/user.js": {
-    "mtime": 1786709015.645402,
-    "ast_hash": "441f958bb88b177b100f1927a54461fc",
+    "mtime": 1786711086.358511,
+    "ast_hash": "cbe20162b03c8e8746cbe55c46ca078f",
     "semantic_hash": ""
   },
   "services/usuarios/index.js": {
@@ -980,8 +980,8 @@
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/src/App.jsx": {
-    "mtime": 1786709512.7803612,
-    "ast_hash": "e55e250bb4b86ec784a09ab59b2a02e7",
+    "mtime": 1786713160.9844484,
+    "ast_hash": "916751e8760e5e06cb68b72d9325c05f",
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/src/main.jsx": {

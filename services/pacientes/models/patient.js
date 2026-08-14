@@ -124,28 +124,66 @@ const updateClinicalRecord = (data, callback) => {
         clinicalRecordId, bloodTypeId, weight, height, gender, birthplace,
         maritalStatus, occupation, religion, notes
     } = data;
-    const sql = `UPDATE clinical_records SET blood_type_id = ?, weight = ?, height = ?, gender = ?, birthplace = ?,
-                marital_status = ?, occupation = ?, religion = ?, notes = ?, updated_at = NOW()
-                WHERE clinical_record_id = ?`;
-    db.query(sql, [bloodTypeId, weight, height, gender, birthplace, maritalStatus, occupation, religion, notes, clinicalRecordId], callback);
+    // Actualización parcial: solo toca las columnas que vienen definidas en el
+    // body. Si no, un PATCH con un solo campo pisaría (con null) el resto.
+    const sets = [];
+    const values = [];
+    const add = (col, val) => { if (val !== undefined) { sets.push(`${col} = ?`); values.push(val); } };
+    add('blood_type_id', bloodTypeId);
+    add('weight', weight);
+    add('height', height);
+    add('gender', gender);
+    add('birthplace', birthplace);
+    add('marital_status', maritalStatus);
+    add('occupation', occupation);
+    add('religion', religion);
+    add('notes', notes);
+    if (sets.length === 0) return callback(null, { affectedRows: 0 });
+    sets.push('updated_at = NOW()');
+    values.push(clinicalRecordId);
+    const sql = `UPDATE clinical_records SET ${sets.join(', ')} WHERE clinical_record_id = ?`;
+    db.query(sql, values, callback);
 }
 
 const updateAllergy = (data, callback) => {
     const { patientAllergyId, name, severity } = data;
-    const sql = `UPDATE patient_allergies SET name = ?, severity = ? WHERE patient_allergy_id = ?`;
-    db.query(sql, [name, severity, patientAllergyId], callback);
+    const sets = [];
+    const values = [];
+    const add = (col, val) => { if (val !== undefined) { sets.push(`${col} = ?`); values.push(val); } };
+    add('name', name);
+    add('severity', severity);
+    if (sets.length === 0) return callback(null, { affectedRows: 0 });
+    values.push(patientAllergyId);
+    const sql = `UPDATE patient_allergies SET ${sets.join(', ')} WHERE patient_allergy_id = ?`;
+    db.query(sql, values, callback);
 }
 
 const updateCondition = (data, callback) => {
     const { patientConditionId, name, diagnosedAt, notes } = data;
-    const sql = `UPDATE patient_conditions SET name = ?, diagnosed_at = ?, notes = ? WHERE patient_condition_id = ?`;
-    db.query(sql, [name, diagnosedAt, notes, patientConditionId], callback);
+    const sets = [];
+    const values = [];
+    const add = (col, val) => { if (val !== undefined) { sets.push(`${col} = ?`); values.push(val); } };
+    add('name', name);
+    add('diagnosed_at', diagnosedAt);
+    add('notes', notes);
+    if (sets.length === 0) return callback(null, { affectedRows: 0 });
+    values.push(patientConditionId);
+    const sql = `UPDATE patient_conditions SET ${sets.join(', ')} WHERE patient_condition_id = ?`;
+    db.query(sql, values, callback);
 }
 
 const updateMedication = (data, callback) => {
     const { patientMedicationId, name, dosage, frequency } = data;
-    const sql = `UPDATE patient_medications SET name = ?, dosage = ?, frequency = ? WHERE patient_medication_id = ?`;
-    db.query(sql, [name, dosage, frequency, patientMedicationId], callback);
+    const sets = [];
+    const values = [];
+    const add = (col, val) => { if (val !== undefined) { sets.push(`${col} = ?`); values.push(val); } };
+    add('name', name);
+    add('dosage', dosage);
+    add('frequency', frequency);
+    if (sets.length === 0) return callback(null, { affectedRows: 0 });
+    values.push(patientMedicationId);
+    const sql = `UPDATE patient_medications SET ${sets.join(', ')} WHERE patient_medication_id = ?`;
+    db.query(sql, values, callback);
 }
 
 
@@ -154,11 +192,38 @@ const updateMedication = (data, callback) => {
 
 //-todos los gets
 const getClinicalRecordByUser = (userProfileId, callback) => {
-    const sql = `SELECT cr.*, bt.blood_type 
+    const sql = `SELECT cr.CLINICAL_RECORD_ID AS clinical_record_id,
+                        cr.USER_PROFILE_ID AS user_profile_id,
+                        cr.BLOOD_TYPE_ID AS blood_type_id,
+                        cr.WEIGHT, cr.HEIGHT, cr.GENDER, cr.BIRTHPLACE,
+                        cr.MARITAL_STATUS AS marital_status,
+                        cr.OCCUPATION, cr.RELIGION, cr.NOTES,
+                        bt.blood_type
                 FROM clinical_records cr
                 LEFT JOIN blood_types bt ON cr.blood_type_id = bt.blood_type_id
                 WHERE cr.user_profile_id = ?`;
     db.query(sql, [userProfileId], callback);
+}
+
+// Verifica que un registro clínico (alergia/condición/medicamento) pertenezca
+// al expediente de cierto usuario → evita que un paciente toque datos ajenos.
+const allergyBelongsToUser = (patientAllergyId, userProfileId, callback) => {
+    db.query(`SELECT COUNT(*) AS total FROM patient_allergies pa
+              INNER JOIN clinical_records cr ON pa.clinical_record_id = cr.clinical_record_id
+              WHERE pa.patient_allergy_id = ? AND cr.user_profile_id = ?`,
+        [patientAllergyId, userProfileId], callback);
+}
+const conditionBelongsToUser = (patientConditionId, userProfileId, callback) => {
+    db.query(`SELECT COUNT(*) AS total FROM patient_conditions pc
+              INNER JOIN clinical_records cr ON pc.clinical_record_id = cr.clinical_record_id
+              WHERE pc.patient_condition_id = ? AND cr.user_profile_id = ?`,
+        [patientConditionId, userProfileId], callback);
+}
+const medicationBelongsToUser = (patientMedicationId, userProfileId, callback) => {
+    db.query(`SELECT COUNT(*) AS total FROM patient_medications pm
+              INNER JOIN clinical_records cr ON pm.clinical_record_id = cr.clinical_record_id
+              WHERE pm.patient_medication_id = ? AND cr.user_profile_id = ?`,
+        [patientMedicationId, userProfileId], callback);
 }
 
 const getAllergiesByRecord = (clinicalRecordId, callback) => {
@@ -226,5 +291,6 @@ module.exports = {
     getMedicationsByRecord,
     getAllergyHistory, getConditionHistory, getMedicationHistory,
     getAllBloodTypes,
-    getAllClinicalRecords, getAllAllergies, getAllConditions, getAllMedications
+    getAllClinicalRecords, getAllAllergies, getAllConditions, getAllMedications,
+    allergyBelongsToUser, conditionBelongsToUser, medicationBelongsToUser
 }
