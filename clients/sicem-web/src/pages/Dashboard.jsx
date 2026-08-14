@@ -19,6 +19,15 @@ const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 
 // demasiado tiempo sin resolver.
 const STALLED_THRESHOLD_MINUTES = 120
 
+// Formatea un promedio de segundos a "X min Y s" (o solo "Y s" si es menos de un minuto)
+const formatResponseTime = (totalSeconds) => {
+    const s = Math.round(totalSeconds)
+    const m = Math.floor(s / 60)
+    const rem = s % 60
+    if (m === 0) return `${rem} s`
+    return rem > 0 ? `${m} min ${rem} s` : `${m} min`
+}
+
 const formatElapsed = (createdAt) => {
     if (!createdAt) return ''
     const minutes = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000)
@@ -196,7 +205,7 @@ console.log('navLinks calculados:', navLinks)
             }
         })
             .then(res => res.json())
-            .then(({ data }) => setAvgResponseToday(data?.[0]?.avg_minutes ?? null))
+            .then(({ data }) => setAvgResponseToday(data?.[0]?.avg_seconds ?? null))
             .catch(error => console.error('Error consultando tiempo de respuesta de hoy. ', error))
     }, [])
 
@@ -344,7 +353,7 @@ console.log('navLinks calculados:', navLinks)
                     <span className="kpi-label">Emergencias activas</span>
                 </div>
                 <div className="kpi-card">
-                    <span className="kpi-value">{avgResponseToday !== null ? `${Math.round(avgResponseToday)} min` : '—'}</span>
+                    <span className="kpi-value">{avgResponseToday !== null ? formatResponseTime(avgResponseToday) : '—'}</span>
                     <span className="kpi-label">Tiempo prom. de respuesta (hoy)</span>
                 </div>
                 <div className="kpi-card">

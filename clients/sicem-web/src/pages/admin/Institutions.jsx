@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { toLowerCaseKeys } from '../../utils/formatData';
 import Navbar from '../../components/layout/Navbar';
+import MapArea from '../../components/map/MapArea';
 import { getNavLinks } from '../../utils/Navlinks';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
@@ -42,6 +43,9 @@ const Institutions = () => {
     const [states, setStates] = useState([]);
     const [cities, setCities] = useState([]);
     const [selectedStateId, setSelectedStateId] = useState('');
+
+    const [addressSearch, setAddressSearch] = useState('');
+    const [searchingAddress, setSearchingAddress] = useState(false);
 
     const [showNotificationForm, setShowNotificationForm] = useState(false);
     const [notificationForm, setNotificationForm] = useState({ institutionId: '', emergencyId: '', estimatedArrival: '', notes: '' })
@@ -182,6 +186,59 @@ const Institutions = () => {
     //---------------------------------instituciones: registrar / actualizar--------------------------------------------------
 
     const handleFieldChange = (field, value) => setForm((prev) => ({ ...prev, [field]: value }))
+
+    // Aplica un resultado de Nominatim (search o reverse) al formulario:
+    // latitud/longitud, dirección, código postal y estado (por match contra
+    // /usuarios/estados). Todo queda editable — son solo pre-llenados.
+    const applyPlaceDetails = (place) => {
+        const addr = place.address || {}
+        handleFieldChange('latitude', parseFloat(place.lat).toFixed(8))
+        handleFieldChange('longitude', parseFloat(place.lon).toFixed(8))
+
+        const street = [addr.road, addr.house_number].filter(Boolean).join(' ')
+        if (street) handleFieldChange('streetAddress', street.slice(0, 150))
+        if (addr.postcode) handleFieldChange('zipCode', addr.postcode.slice(0, 5))
+
+        if (addr.state) {
+            const normalize = (value) =>
+                value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^estado de\s+/, '').trim()
+            const target = normalize(addr.state)
+            const match = states.find((s) => normalize(s.name) === target)
+            if (match) {
+                setSelectedStateId(String(match.state_id))
+                handleFieldChange('cityId', '')
+            }
+        }
+    }
+
+    // Buscador de dirección vía Nominatim (mismo ecosistema OpenStreetMap que
+    // ya usa el mapa) — rellena latitud/longitud automáticamente, y también
+    // dirección, código postal y estado cuando vienen en el resultado (con
+    // addressdetails=1).
+    const handleAddressSearch = () => {
+        if (!addressSearch.trim()) return
+        setSearchingAddress(true)
+        const query = `${addressSearch}, Tabasco, México`
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`)
+            .then(res => res.json())
+            .then((results) => {
+                if (results.length === 0) {
+                    alert('No se encontró esa dirección. Intenta ser más específico o marca directamente en el mapa.')
+                    return
+                }
+                applyPlaceDetails(results[0])
+            })
+            .catch(error => console.error('Error buscando dirección. ', error))
+            .finally(() => setSearchingAddress(false))
+    }
+
+    // Clic en el mapa — solo rellena latitud/longitud. (No se hace reverse
+    // geocoding: las instituciones no son calles, y Nominatim "brincaría" al
+    // punto de la calle más cercana, lo cual es incorrecto para este caso.)
+    const handleMapClick = (lat, lng) => {
+        handleFieldChange('latitude', lat.toFixed(8))
+        handleFieldChange('longitude', lng.toFixed(8))
+    }
 
     // Bloquea el guardado si las camas disponibles superan las camas totales
     const validateBeds = (availableBeds, totalBeds) => {
@@ -618,14 +675,33 @@ const Institutions = () => {
                                         </select>
                                     </div>
                                 </div>
-                                <div className="institutions-form-row">
+                                <div className="institutions-address-search">
+                                    <input
+                                        type="text"
+                                        value={addressSearch}
+                                        onChange={(e) => setAddressSearch(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddressSearch(); } }}
+                                        placeholder="Busca la dirección de la institución..."
+                                    />
+                                    <button type="button" onClick={handleAddressSearch} disabled={searchingAddress}>
+                                        {searchingAddress ? 'Buscando...' : 'Buscar'}
+                                    </button>
+                                </div>
+                                <div className="institutions-map-wrapper">
+                                    <MapArea
+                                        emergencyLocation={form.latitude && form.longitude ? { latitude: form.latitude, longitude: form.longitude } : null}
+                                        onMapClick={handleMapClick}
+                                        flyToLocation={form.latitude && form.longitude ? [parseFloat(form.latitude), parseFloat(form.longitude)] : null}
+                                    />
+                                </div>
+                                <div className="institutions-coords">
                                     <div className="institutions-field">
                                         <label>Latitud</label>
-                                        <input type="number" step="0.00000001" value={form.latitude} onChange={(e) => handleFieldChange('latitude', e.target.value)} required />
+                                        <input type="number" step="0.00000001" value={form.latitude} onChange={(e) => handleFieldChange('latitude', e.target.value)} placeholder="Clic en el mapa" required />
                                     </div>
                                     <div className="institutions-field">
                                         <label>Longitud</label>
-                                        <input type="number" step="0.00000001" value={form.longitude} onChange={(e) => handleFieldChange('longitude', e.target.value)} required />
+                                        <input type="number" step="0.00000001" value={form.longitude} onChange={(e) => handleFieldChange('longitude', e.target.value)} placeholder="Clic en el mapa" required />
                                     </div>
                                 </div>
                                 <div className="institutions-form-actions">

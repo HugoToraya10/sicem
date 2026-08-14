@@ -848,7 +848,7 @@ const getAssignmentsByEmergency = (emergencyId, callback) => {
                         OR (ash.scheduled_end IS NULL AND ash.shift_start > DATE_SUB(NOW(), INTERVAL 12 HOUR))
                     )
                 LEFT JOIN user_profiles driver ON ash.user_profile_id = driver.user_profile_id
-                WHERE a.emergency_id = ?`;
+                WHERE a.emergency_id = ? AND a.unassigned_at IS NULL`;
     db.query(sql, [emergencyId], callback);
 }
 
@@ -1031,9 +1031,12 @@ const getResponseTimeByDay = (callback) => {
     db.query(sql, callback);
 }
 
-// Tiempo promedio de respuesta (minutos entre registro y asignación), solo del día actual
+// Tiempo promedio de respuesta (minutos entre registro y asignación), solo del día actual.
+// Se calcula en segundos (avg_seconds) además de minutos para poder mostrarlo
+// con precisión de segundos (p. ej. "1 min 12 s" en lugar de "1 min").
 const getResponseTimeToday = (callback) => {
-    const sql = `SELECT AVG(TIMESTAMPDIFF(MINUTE, e.created_at, a.assigned_at)) AS avg_minutes
+    const sql = `SELECT AVG(TIMESTAMPDIFF(MINUTE, e.created_at, a.assigned_at)) AS avg_minutes,
+                AVG(TIMESTAMPDIFF(SECOND, e.created_at, a.assigned_at)) AS avg_seconds
                 FROM emergencies e
                 JOIN assignments a ON e.emergency_id = a.emergency_id
                 WHERE DATE(e.created_at) = CURDATE()`;

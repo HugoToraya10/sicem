@@ -319,11 +319,9 @@ const EmergencyDetail = () => {
     useEffect(() => {
         const emergencySocket = connectEmergencySocket(token)
 
-        // Una unidad de esta emergencia se desasignó — desde aquí mismo (ya se
-        // refresca directo, ver handleUnassignAmbulance), pero también puede
-        // pasar desde la campana de fallas reportadas (otra pestaña, u otra
-        // sesión) — sin esto, esta pantalla se quedaba mostrando la unidad ya
-        // desasignada hasta recargar.
+        // Una unidad de esta emergencia se desasignó — puede pasar desde la
+        // campana de fallas reportadas del hospital (con su propia sesión/sesión) —
+        // con esto esta pantalla se quita la unidad de la lista sin recargar.
         emergencySocket.on('eventAmbulanceUnassigned', (data) => {
             if (!data.emergencyId || String(data.emergencyId) !== String(emergencyId)) return
             fetchAssignments()
@@ -420,18 +418,6 @@ const EmergencyDetail = () => {
             .then(parseResponse)
             .then(() => fetchEmergencyData())
             .catch(error => { console.error('Error actualizando el estado de la emergencia. ', error); alert(error.message) })
-    }
-
-    const handleUnassignAmbulance = (a) => {
-        if (!window.confirm(`¿Seguro que quieres desasignar la unidad ${a.unit_number} de esta emergencia?`)) return
-        fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ assignmentId: a.assignment_id, ambulanceIds: [a.ambulance_id] })
-        })
-            .then(parseResponse)
-            .then(() => fetchAssignments())
-            .catch(error => { console.error('Error desasignando ambulancia. ', error); alert(error.message) })
     }
 
     // También funciona sobre una ya Aceptada (p. ej. dos unidades externas
@@ -1028,17 +1014,8 @@ const EmergencyDetail = () => {
                                     <span className="assignment-paramedic">
                                         {a.driver_first_name ? `${a.driver_first_name} ${a.driver_first_surname}` : 'Sin conductor con turno activo'}
                                     </span>
-                                    {a.unassigned_at ? (
+                                    {a.unassigned_at && (
                                         <span className="assignment-tag">Desasignada</span>
-                                    ) : (
-                                        [1, 2].includes(parseInt(user?.roleId)) && (
-                                            <button
-                                                className="assignment-unassign-btn"
-                                                onClick={() => handleUnassignAmbulance(a)}
-                                            >
-                                                Desasignar
-                                            </button>
-                                        )
                                     )}
                                 </div>
                             ))}

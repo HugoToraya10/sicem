@@ -80,28 +80,6 @@ const Navbar = ({ userName, roleLabel, links }) => {
         return () => { unitsSocket.disconnect(); emergencySocket.disconnect() }
     }, [token])
 
-    const [unassigningId, setUnassigningId] = useState(null)
-
-    const handleUnassign = (report) => {
-        if (!report.ambulance_id || !report.emergency_id) return
-        if (!window.confirm(`¿Seguro que quieres desasignar la unidad ${report.unit_number || ''}? Quedará marcada "Fuera de servicio" hasta que el propio paramédico la reactive.`)) return
-        setUnassigningId(report.ambulance_failure_report_id)
-        fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ ambulanceId: report.ambulance_id, emergencyId: report.emergency_id, reason: 'ambulance_failure' }),
-        })
-            .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
-            .then(({ ok, body }) => {
-                if (!ok) return alert(body.message || 'No se pudo desasignar la unidad.')
-                setFailureReports((current) => current.map((r) =>
-                    r.ambulance_failure_report_id === report.ambulance_failure_report_id ? { ...r, unassigned: true } : r
-                ))
-            })
-            .catch(() => alert('No se pudo desasignar la unidad. Intenta de nuevo.'))
-            .finally(() => setUnassigningId(null))
-    }
-
     const unreadCount = failureReports.filter((r) => new Date(r.reported_at) > lastSeen).length
 
     const toggleBell = () => {
@@ -188,23 +166,13 @@ const Navbar = ({ userName, roleLabel, links }) => {
                                     <div className="navbar-bell-item-note">{r.note}</div>
                                     {r.emergency_id && (
                                         <div className="navbar-bell-item-actions">
-                                            {(r.unassigned || r.still_assigned === false || r.still_assigned === 0) ? (
+                                            <button
+                                                onClick={() => { navigate(`/emergencias/${r.emergency_id}`); setBellOpen(false) }}
+                                            >
+                                                Ver emergencia
+                                            </button>
+                                            {(r.unassigned || r.still_assigned === false || r.still_assigned === 0) && (
                                                 <span className="navbar-bell-item-done">✓ Unidad desasignada</span>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => { navigate(`/emergencias/${r.emergency_id}`); setBellOpen(false) }}
-                                                    >
-                                                        Ver emergencia
-                                                    </button>
-                                                    <button
-                                                        className="danger"
-                                                        onClick={() => handleUnassign(r)}
-                                                        disabled={unassigningId === r.ambulance_failure_report_id}
-                                                    >
-                                                        {unassigningId === r.ambulance_failure_report_id ? 'Desasignando…' : 'Desasignar unidad'}
-                                                    </button>
-                                                </>
                                             )}
                                         </div>
                                     )}

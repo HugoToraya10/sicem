@@ -1,16 +1,16 @@
-# Graph Report - SICEM  (2026-08-13)
+# Graph Report - SICEM  (2026-08-14)
 
 ## Corpus Check
-- 155 files · ~494,952 words
+- 155 files · ~495,151 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1338 nodes · 1941 edges · 103 communities (71 shown, 32 thin omitted)
+- 1339 nodes · 1945 edges · 103 communities (71 shown, 32 thin omitted)
 - Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 416 edges (avg confidence: 0.51)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `dfb9f783`
+- Built from commit: `234fe083`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -210,8 +210,8 @@ Cohesion: 0.09
 Nodes (22): dependencies, bcrypt, cors, dotenv, express, jsonwebtoken, mysql2, devDependencies (+14 more)
 
 ### Community 20 - "Institutions.jsx"
-Cohesion: 0.20
-Nodes (9): emptyEditInstitutionForm, emptyEditSpecialityForm, emptyEditTypeForm, emptyForm, emptyNewSpecialityForm, emptyNewTypeForm, emptySpecialityForm, roleLabels (+1 more)
+Cohesion: 0.12
+Nodes (15): createAmbulanceIcon(), DEFAULT_CENTER, emergencyIcon, hospitalIcon, MapArea(), statusColors, emptyEditInstitutionForm, emptyEditSpecialityForm (+7 more)
 
 ### Community 21 - "gateway/package.json"
 Cohesion: 0.11
@@ -266,8 +266,8 @@ Cohesion: 0.18
 Nodes (9): app, cors, db, express, userRoutes, express, middleware, router (+1 more)
 
 ### Community 34 - "Dashboard.jsx"
-Cohesion: 0.15
-Nodes (14): EmergencyCard(), severityColor, createAmbulanceIcon(), DEFAULT_CENTER, emergencyIcon, hospitalIcon, MapArea(), statusColors (+6 more)
+Cohesion: 0.29
+Nodes (9): EmergencyCard(), severityColor, Dashboard(), formatElapsed(), formatResponseTime(), isStalled(), priorityScore(), roleLabels (+1 more)
 
 ### Community 35 - "Ambulances.jsx"
 Cohesion: 0.18
@@ -425,9 +425,9 @@ Nodes (5): scripts, build, dev, lint, preview
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `plugins` connect `useAuth` to `expo`?**
-  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **Why does `Aprende SICEM: de lo más simple a lo más complejo` connect `Aprende SICEM: de lo más simple a lo más complejo` to `Nivel 1 — JavaScript moderno`, `Nivel 7 — Tiempo real: Socket.IO`, `Nivel 6 — Enrutamiento en React (React Router)`, `Nivel 11 — Infraestructura: variables de entorno, CORS, Codespaces`, `Nivel 5 — React: Hooks y Context API`, `Nivel 3 — Autenticación: JWT, middleware, roles`, `Nivel 8 — Las 3 plataformas y sus diferencias reales`, `Nivel 2 — Backend: Express, rutas, controladores, modelos`, `Nivel 9 — Herramientas de build (Vite, Metro)`, `Nivel 4 — Frontend: React desde cero`, `Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto)`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `plugins` connect `useAuth` to `expo`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `postCreate.sh script`, `PORTS`, `startDb.sh script` to the rest of the system?**
   _470 weakly-connected nodes found - possible documentation gaps or missing edges._
