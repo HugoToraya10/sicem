@@ -1,4 +1,5 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
+import { roleLabel } from '../../config/roles'
 import { useAuth } from '../../context/AuthContext';
 import { toLowerCaseKeys } from '../../utils/formatData';
 import Navbar from '../../components/layout/Navbar';
@@ -8,8 +9,11 @@ import { parseResponse } from '../../utils/apiRequest';
 import './Institutions.css';
 import './Patients.css';
 import {API_BASE_URL} from '../../config/api'
+import { useDialogs } from '../../context/useDialogs'
+import MoreMenu from '../../components/ui/MoreMenu'
+import '../../styles/entities.css'
+import { Drawer } from '../../components/ui/Overlay'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 const emptyRecordForm = {
     userProfileId: '', bloodTypeId: '', weight: '', height: '', gender: '', birthplace: '',
@@ -26,7 +30,7 @@ const emptyEditConditionForm = { patientConditionId: '', name: '', diagnosedAt: 
 const emptyMedicationForm = { clinicalRecordId: '', name: '', dosage: '', frequency: '' }
 const emptyEditMedicationForm = { patientMedicationId: '', name: '', dosage: '', frequency: '' }
 
-const TABS = ['Expedientes Clínicos', 'Alergias', 'Condiciones', 'Medicamentos']
+const TABS = ['Expedientes clínicos', 'Alergias', 'Condiciones', 'Medicamentos']
 
 const patientLabel = (row) => {
     const name = [row.first_name, row.first_surname, row.second_surname].filter(Boolean).join(' ')
@@ -46,9 +50,10 @@ const matchesSearch = (row, query, mode = 'all') => {
 }
 
 const Patients = () => {
+    const { notify, confirm } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
-    const [activeTab, setActiveTab] = useState('Expedientes Clínicos')
+    const [activeTab, setActiveTab] = useState('Expedientes clínicos')
 
     const [bloodTypes, setBloodTypes] = useState([]);
     const [clinicalRecords, setClinicalRecords] = useState([]);
@@ -173,7 +178,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(({ history }) => setAllergyHistory((history || []).map(h => toLowerCaseKeys(h))))
-            .catch(error => { console.error('Error consultando historial de alergia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando historial de alergia. ', error); notify(error.message, 'error') })
     }
 
     const toggleConditionHistory = (c) => {
@@ -184,7 +189,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(({ history }) => setConditionHistory((history || []).map(h => toLowerCaseKeys(h))))
-            .catch(error => { console.error('Error consultando historial de condición. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando historial de condición. ', error); notify(error.message, 'error') })
     }
 
     const toggleMedicationHistory = (m) => {
@@ -195,7 +200,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(({ history }) => setMedicationHistory((history || []).map(h => toLowerCaseKeys(h))))
-            .catch(error => { console.error('Error consultando historial de medicamento. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando historial de medicamento. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------expedientes: crear / editar--------------------------------------------------
@@ -209,7 +214,7 @@ const Patients = () => {
             .then(res => res.json())
             .then(({ data }) => {
                 const rows = (data || []).map(u => toLowerCaseKeys(u))
-                if (rows.length === 0) { alert('No se encontró ningún usuario con ese CURP.'); return }
+                if (rows.length === 0) { notify('No se encontró ningún usuario con ese CURP.', 'error'); return }
                 setRecordForm(p => ({ ...p, userProfileId: rows[0].user_profile_id }))
             })
             .catch(error => console.error('Error buscando CURP. ', error))
@@ -234,7 +239,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setRecordForm(emptyRecordForm); setCurpLookup(''); setShowRecordForm(false); fetchClinicalRecords(); })
-            .catch(error => { console.error('Error registrando expediente. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando expediente. ', error); notify(error.message, 'error') })
     }
 
     const openEditRecord = (r) => {
@@ -257,7 +262,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingRecord(null); fetchClinicalRecords(); })
-            .catch(error => { console.error('Error actualizando expediente. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando expediente. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------alergias: crear / editar / alternar--------------------------------------------------
@@ -273,7 +278,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setAllergyForm(emptyAllergyForm); setShowAllergyForm(false); fetchAllergies(); })
-            .catch(error => { console.error('Error registrando alergia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando alergia. ', error); notify(error.message, 'error') })
     }
 
     const openEditAllergy = (a) => {
@@ -290,12 +295,12 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingAllergy(null); fetchAllergies(); })
-            .catch(error => { console.error('Error actualizando alergia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando alergia. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleAllergy = (a) => {
+    const handleToggleAllergy = async (a) => {
         const action = a.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} la alergia "${a.name}" de ${patientLabel(a)}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} la alergia "${a.name}" de ${patientLabel(a)}?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/pacientes/alternar-alergia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -303,7 +308,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => fetchAllergies())
-            .catch(error => { console.error('Error cambiando estado de alergia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de alergia. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------condiciones: crear / editar / alternar--------------------------------------------------
@@ -322,7 +327,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setConditionForm(emptyConditionForm); setShowConditionForm(false); fetchConditions(); })
-            .catch(error => { console.error('Error registrando condición. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando condición. ', error); notify(error.message, 'error') })
     }
 
     const openEditCondition = (c) => {
@@ -342,12 +347,12 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingCondition(null); fetchConditions(); })
-            .catch(error => { console.error('Error actualizando condición. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando condición. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleCondition = (c) => {
+    const handleToggleCondition = async (c) => {
         const action = c.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} la condición "${c.name}" de ${patientLabel(c)}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} la condición "${c.name}" de ${patientLabel(c)}?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/pacientes/alternar-condicion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -355,7 +360,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => fetchConditions())
-            .catch(error => { console.error('Error cambiando estado de condición. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de condición. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------medicamentos: crear / editar / alternar--------------------------------------------------
@@ -374,7 +379,7 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setMedicationForm(emptyMedicationForm); setShowMedicationForm(false); fetchMedications(); })
-            .catch(error => { console.error('Error registrando medicamento. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando medicamento. ', error); notify(error.message, 'error') })
     }
 
     const openEditMedication = (m) => {
@@ -391,12 +396,12 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingMedication(null); fetchMedications(); })
-            .catch(error => { console.error('Error actualizando medicamento. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando medicamento. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleMedication = (m) => {
+    const handleToggleMedication = async (m) => {
         const action = m.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el medicamento "${m.name}" de ${patientLabel(m)}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el medicamento "${m.name}" de ${patientLabel(m)}?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/pacientes/alternar-medicacion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -404,17 +409,17 @@ const Patients = () => {
         })
             .then(parseResponse)
             .then(() => fetchMedications())
-            .catch(error => { console.error('Error cambiando estado de medicamento. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de medicamento. ', error); notify(error.message, 'error') })
     }
 
     const bloodTypeNameById = (id) => bloodTypes.find(b => b.blood_type_id === id)?.blood_type || '—'
 
     return (
         <div className="institutions-page">
-            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabels[user?.roleId] || ''} links={navLinks} />
+            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabel(user?.roleId)} links={navLinks} />
 
-            <div className="institutions-body">
-                <h2 className="institutions-title">Gestión de Pacientes</h2>
+            <div role="main" id="contenido" className="institutions-body">
+                <h1 className="institutions-title">Gestión de pacientes</h1>
 
                 <div className="institutions-tabs">
                     {TABS.map((tab) => (
@@ -425,10 +430,10 @@ const Patients = () => {
                 </div>
 
                 {/* ── TAB: EXPEDIENTES CLÍNICOS ─────────────────────────────── */}
-                {activeTab === 'Expedientes Clínicos' && (
+                {activeTab === 'Expedientes clínicos' && (
                     <>
                         <div className="patient-search-row">
-                            <select value={recordSearchMode} onChange={(e) => setRecordSearchMode(e.target.value)}>
+                            <select aria-label="Buscar por" value={recordSearchMode} onChange={(e) => setRecordSearchMode(e.target.value)}>
                                 <option value="all">Todos los campos</option>
                                 <option value="curp">CURP</option>
                                 <option value="name">Nombre</option>
@@ -447,13 +452,12 @@ const Patients = () => {
 
                         <div className="institutions-tab-header">
                             <button className="institutions-add-btn" onClick={() => setShowRecordForm(!showRecordForm)}>
-                                + Nuevo Expediente
+                                + Nuevo expediente
                             </button>
                         </div>
 
-                        {showRecordForm && (
+                        <Drawer open={Boolean(showRecordForm)} onClose={() => setShowRecordForm(false)} title="Registrar expediente clínico" size="md">
                             <form className="institutions-form" onSubmit={handleCreateRecord}>
-                                <h3>Registrar Expediente Clínico</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>ID de perfil del paciente</label>
@@ -470,7 +474,7 @@ const Patients = () => {
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Tipo de sangre</label>
-                                        <select value={recordForm.bloodTypeId} onChange={(e) => setRecordForm(p => ({ ...p, bloodTypeId: e.target.value }))}>
+                                        <select aria-label="Tipo de sangre" value={recordForm.bloodTypeId} onChange={(e) => setRecordForm(p => ({ ...p, bloodTypeId: e.target.value }))}>
                                             <option value="">Sin especificar</option>
                                             {bloodTypes.map((b) => (<option key={b.blood_type_id} value={b.blood_type_id}>{b.blood_type}</option>))}
                                         </select>
@@ -519,15 +523,14 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowRecordForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingRecord !== null && (
+                        <Drawer open={Boolean(editingRecord !== null)} onClose={() => setEditingRecord(null)} title="Editar expediente clínico" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateRecord}>
-                                <h3>Editar Expediente Clínico</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Tipo de sangre</label>
-                                        <select value={editRecordForm.bloodTypeId} onChange={(e) => setEditRecordForm(p => ({ ...p, bloodTypeId: e.target.value }))}>
+                                        <select aria-label="Tipo de sangre" value={editRecordForm.bloodTypeId} onChange={(e) => setEditRecordForm(p => ({ ...p, bloodTypeId: e.target.value }))}>
                                             <option value="">Sin especificar</option>
                                             {bloodTypes.map((b) => (<option key={b.blood_type_id} value={b.blood_type_id}>{b.blood_type}</option>))}
                                         </select>
@@ -576,27 +579,36 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingRecord(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Paciente</th><th>CURP</th><th>Tipo de sangre</th><th>Peso</th><th>Estatura</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {clinicalRecords.filter(r => matchesSearch(r, recordSearch, recordSearchMode)).map((r) => (
-                                        <tr key={r.clinical_record_id}>
-                                            <td>{[r.first_name, r.first_surname, r.second_surname].filter(Boolean).join(' ') || `ID ${r.user_profile_id}`}</td>
-                                            <td>{r.curp || '—'}</td>
-                                            <td>{r.blood_type || bloodTypeNameById(r.blood_type_id)}</td>
-                                            <td>{r.weight ?? '—'} kg</td>
-                                            <td>{r.height ?? '—'} cm</td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditRecord(r)}>Editar</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {clinicalRecords.filter(r => matchesSearch(r, recordSearch, recordSearchMode)).length === 0 && <p className="institutions-empty">No hay expedientes que coincidan con la búsqueda.</p>}
+                        <div className="entity-grid">
+                            {clinicalRecords.filter(r => matchesSearch(r, recordSearch, recordSearchMode)).map((r) => {
+                                const name = [r.first_name, r.first_surname, r.second_surname].filter(Boolean).join(' ') || `ID ${r.user_profile_id}`
+                                const blood = r.blood_type || bloodTypeNameById(r.blood_type_id)
+                                const heightNum = Number(r.height)
+                                const heightText = r.height === null || r.height === undefined || r.height === '' || Number.isNaN(heightNum) ? '—' : (heightNum < 3 ? `${heightNum} m` : `${heightNum} cm`)
+                                const weightNum = Number(r.weight)
+                                return (
+                                    <article key={r.clinical_record_id} className="entity acc-hospital" aria-label={name}>
+                                        <div className="entity-head">
+                                            <span className="entity-avatar" aria-hidden="true">{blood || '?'}</span>
+                                            <div className="entity-titles">
+                                                <h2 className="entity-title">{name}</h2>
+                                                <p className="entity-sub">CURP <span className="mono">{r.curp || 'sin registrar'}</span></p>
+                                            </div>
+                                        </div>
+                                        <dl className="entity-facts">
+                                            <div><dt>Tipo de sangre</dt><dd>{blood || 'Sin dato'}</dd></div>
+                                            <div><dt>Peso</dt><dd>{r.weight === null || r.weight === undefined || Number.isNaN(weightNum) ? '—' : `${weightNum} kg`}</dd></div>
+                                            <div><dt>Estatura</dt><dd>{heightText}</dd></div>
+                                        </dl>
+                                        <div className="entity-actions">
+                                            <button type="button" className="institutions-edit-btn" onClick={() => openEditRecord(r)}>Editar expediente</button>
+                                        </div>
+                                    </article>
+                                )
+                            })}
+                            {clinicalRecords.filter(r => matchesSearch(r, recordSearch, recordSearchMode)).length === 0 && <p className="entity-empty">No hay expedientes que coincidan con la búsqueda.</p>}
                         </div>
                     </>
                 )}
@@ -605,7 +617,7 @@ const Patients = () => {
                 {activeTab === 'Alergias' && (
                     <>
                         <div className="patient-search-row">
-                            <select value={allergySearchMode} onChange={(e) => setAllergySearchMode(e.target.value)}>
+                            <select aria-label="Buscar por" value={allergySearchMode} onChange={(e) => setAllergySearchMode(e.target.value)}>
                                 <option value="all">Todos los campos</option>
                                 <option value="curp">CURP</option>
                                 <option value="name">Nombre</option>
@@ -618,20 +630,19 @@ const Patients = () => {
                         </div>
 
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={allergiesFilter} onChange={(e) => setAllergiesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={allergiesFilter} onChange={(e) => setAllergiesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <button className="institutions-add-btn" onClick={() => setShowAllergyForm(!showAllergyForm)}>+ Nueva Alergia</button>
+                            <button className="institutions-add-btn" onClick={() => setShowAllergyForm(!showAllergyForm)}>+ Nueva alergia</button>
                         </div>
 
-                        {showAllergyForm && (
+                        <Drawer open={Boolean(showAllergyForm)} onClose={() => setShowAllergyForm(false)} title="Registrar alergia" size="md">
                             <form className="institutions-form" onSubmit={handleCreateAllergy}>
-                                <h3>Registrar Alergia</h3>
                                 <div className="institutions-field">
                                     <label>Paciente</label>
-                                    <select value={allergyForm.clinicalRecordId} onChange={(e) => setAllergyForm(p => ({ ...p, clinicalRecordId: e.target.value }))} required>
+                                    <select aria-label="Paciente" value={allergyForm.clinicalRecordId} onChange={(e) => setAllergyForm(p => ({ ...p, clinicalRecordId: e.target.value }))} required>
                                         <option value="">Selecciona un paciente</option>
                                         {clinicalRecords.map((r) => (<option key={r.clinical_record_id} value={r.clinical_record_id}>{patientLabel(r)}</option>))}
                                     </select>
@@ -651,11 +662,10 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowAllergyForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingAllergy !== null && (
+                        <Drawer open={Boolean(editingAllergy !== null)} onClose={() => setEditingAllergy(null)} title="Editar alergia" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateAllergy}>
-                                <h3>Editar Alergia</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -671,41 +681,39 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingAllergy(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Paciente</th><th>Nombre</th><th>Severidad</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(allergies, allergiesFilter).filter(a => matchesSearch(a, allergySearch, allergySearchMode)).map((a) => (
-                                        <Fragment key={a.patient_allergy_id}>
-                                        <tr>
-                                            <td>{patientLabel(a)}</td>
-                                            <td>{a.name}</td>
-                                            <td>{a.severity || '—'}</td>
-                                            <td>
-                                                <span className={`institutions-status ${a.is_active ? 'status-active' : 'status-inactive'}`}>{a.is_active ? 'Activa' : 'Inactiva'}</span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditAllergy(a)}>Editar</button>
-                                                <button className="institutions-edit-btn" onClick={() => toggleAllergyHistory(a)}>Historial</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleAllergy(a)}>{a.is_active ? 'Desactivar' : 'Activar'}</button>
-                                            </td>
-                                        </tr>
-                                        {historyAllergyId === a.patient_allergy_id && (
-                                            <tr><td colSpan={5}>
-                                                <div className="clinical-history">
-                                                    {allergyHistory.length === 0 ? <span>Sin cambios registrados todavía.</span> : allergyHistory.map((h) => (
-                                                        <span key={h.patient_allergy_history_id}>{h.is_active ? 'Activada' : 'Desactivada'} — {new Date(h.changed_at).toLocaleString('es-MX')}</span>
-                                                    ))}
-                                                </div>
-                                            </td></tr>
-                                        )}
-                                        </Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(allergies, allergiesFilter).filter(a => matchesSearch(a, allergySearch, allergySearchMode)).length === 0 && <p className="institutions-empty">No hay alergias que coincidan con el filtro.</p>}
+                        <div className="entity-grid">
+                            {filterByStatus(allergies, allergiesFilter).filter(a => matchesSearch(a, allergySearch, allergySearchMode)).map((a) => (
+                                <article key={a.patient_allergy_id} className={`entity ${/anafil|grave|sever|cr[ií]tic/i.test(a.severity || '') ? 'acc-admin' : /moder/i.test(a.severity || '') ? 'acc-scene' : 'acc-free'}${a.is_active ? '' : ' is-off'}`}>
+                                    <div className="entity-head">
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{a.name}</h2>
+                                            <p className="entity-sub">{patientLabel(a)}</p>
+                                        </div>
+                                        <span className={`pill ${a.is_active ? 'pill-ok' : 'pill-warn'}`}>{a.is_active ? 'Activa' : 'Inactiva'}</span>
+                                    </div>
+                                    <div className="entity-chips">
+                                        <span className={`pill ${/anafil|grave|sever|cr[ií]tic/i.test(a.severity || '') ? 'pill-bad' : /moder/i.test(a.severity || '') ? 'pill-warn' : ''}`}>Gravedad: {a.severity || 'sin dato'}</span>
+                                    </div>
+                                    {historyAllergyId === a.patient_allergy_id && (
+                                        <div className="entity-panel clinical-history">
+                                            {allergyHistory.length === 0 ? <span>Sin cambios registrados todavía.</span> : allergyHistory.map((h) => (
+                                                <span key={h.patient_allergy_history_id}>{h.is_active ? 'Activada' : 'Desactivada'} — {new Date(h.changed_at).toLocaleString('es-MX')}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openEditAllergy(a)}>Editar</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[
+                                            { label: 'Historial de cambios', onClick: () => toggleAllergyHistory(a) },
+                                            { label: a.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleAllergy(a), danger: Boolean(a.is_active) },
+                                        ]} />
+                                    </div>
+                                </article>
+                            ))}
+                            {filterByStatus(allergies, allergiesFilter).filter(a => matchesSearch(a, allergySearch, allergySearchMode)).length === 0 && <p className="entity-empty">No hay alergias que coincidan con la búsqueda.</p>}
                         </div>
                     </>
                 )}
@@ -714,7 +722,7 @@ const Patients = () => {
                 {activeTab === 'Condiciones' && (
                     <>
                         <div className="patient-search-row">
-                            <select value={conditionSearchMode} onChange={(e) => setConditionSearchMode(e.target.value)}>
+                            <select aria-label="Buscar por" value={conditionSearchMode} onChange={(e) => setConditionSearchMode(e.target.value)}>
                                 <option value="all">Todos los campos</option>
                                 <option value="curp">CURP</option>
                                 <option value="name">Nombre</option>
@@ -727,20 +735,19 @@ const Patients = () => {
                         </div>
 
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={conditionsFilter} onChange={(e) => setConditionsFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={conditionsFilter} onChange={(e) => setConditionsFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <button className="institutions-add-btn" onClick={() => setShowConditionForm(!showConditionForm)}>+ Nueva Condición</button>
+                            <button className="institutions-add-btn" onClick={() => setShowConditionForm(!showConditionForm)}>+ Nueva condición</button>
                         </div>
 
-                        {showConditionForm && (
+                        <Drawer open={Boolean(showConditionForm)} onClose={() => setShowConditionForm(false)} title="Registrar condición médica" size="md">
                             <form className="institutions-form" onSubmit={handleCreateCondition}>
-                                <h3>Registrar Condición Médica</h3>
                                 <div className="institutions-field">
                                     <label>Paciente</label>
-                                    <select value={conditionForm.clinicalRecordId} onChange={(e) => setConditionForm(p => ({ ...p, clinicalRecordId: e.target.value }))} required>
+                                    <select aria-label="Paciente" value={conditionForm.clinicalRecordId} onChange={(e) => setConditionForm(p => ({ ...p, clinicalRecordId: e.target.value }))} required>
                                         <option value="">Selecciona un paciente</option>
                                         {clinicalRecords.map((r) => (<option key={r.clinical_record_id} value={r.clinical_record_id}>{patientLabel(r)}</option>))}
                                     </select>
@@ -764,11 +771,10 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowConditionForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingCondition !== null && (
+                        <Drawer open={Boolean(editingCondition !== null)} onClose={() => setEditingCondition(null)} title="Editar condición médica" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateCondition}>
-                                <h3>Editar Condición Médica</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -788,42 +794,40 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingCondition(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Paciente</th><th>Nombre</th><th>Fecha de diagnóstico</th><th>Notas</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(conditions, conditionsFilter).filter(c => matchesSearch(c, conditionSearch, conditionSearchMode)).map((c) => (
-                                        <Fragment key={c.patient_condition_id}>
-                                        <tr>
-                                            <td>{patientLabel(c)}</td>
-                                            <td>{c.name}</td>
-                                            <td>{c.diagnosed_at ? new Date(c.diagnosed_at).toLocaleDateString('es-MX') : '—'}</td>
-                                            <td>{c.notes || '—'}</td>
-                                            <td>
-                                                <span className={`institutions-status ${c.is_active ? 'status-active' : 'status-inactive'}`}>{c.is_active ? 'Activa' : 'Inactiva'}</span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditCondition(c)}>Editar</button>
-                                                <button className="institutions-edit-btn" onClick={() => toggleConditionHistory(c)}>Historial</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleCondition(c)}>{c.is_active ? 'Desactivar' : 'Activar'}</button>
-                                            </td>
-                                        </tr>
-                                        {historyConditionId === c.patient_condition_id && (
-                                            <tr><td colSpan={6}>
-                                                <div className="clinical-history">
-                                                    {conditionHistory.length === 0 ? <span>Sin cambios registrados todavía.</span> : conditionHistory.map((h) => (
-                                                        <span key={h.patient_condition_history_id}>{h.is_active ? 'Activada' : 'Desactivada'} — {new Date(h.changed_at).toLocaleString('es-MX')}</span>
-                                                    ))}
-                                                </div>
-                                            </td></tr>
-                                        )}
-                                        </Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(conditions, conditionsFilter).filter(c => matchesSearch(c, conditionSearch, conditionSearchMode)).length === 0 && <p className="institutions-empty">No hay condiciones que coincidan con el filtro.</p>}
+                        <div className="entity-grid">
+                            {filterByStatus(conditions, conditionsFilter).filter(c => matchesSearch(c, conditionSearch, conditionSearchMode)).map((c) => (
+                                <article key={c.patient_condition_id} className={`entity acc-scene${c.is_active ? '' : ' is-off'}`}>
+                                    <div className="entity-head">
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{c.name}</h2>
+                                            <p className="entity-sub">{patientLabel(c)}</p>
+                                        </div>
+                                        <span className={`pill ${c.is_active ? 'pill-ok' : 'pill-warn'}`}>{c.is_active ? 'Activa' : 'Inactiva'}</span>
+                                    </div>
+                                    <dl className="entity-facts">
+                                        <div><dt>Diagnóstico</dt><dd>{c.diagnosed_at ? new Date(c.diagnosed_at).toLocaleDateString('es-MX', { dateStyle: 'medium' }) : '—'}</dd></div>
+                                        <div><dt>Notas</dt><dd>{c.notes || '—'}</dd></div>
+                                    </dl>
+                                    {historyConditionId === c.patient_condition_id && (
+                                        <div className="entity-panel clinical-history">
+                                            {conditionHistory.length === 0 ? <span>Sin cambios registrados todavía.</span> : conditionHistory.map((h) => (
+                                                <span key={h.patient_condition_history_id}>{h.is_active ? 'Activada' : 'Desactivada'} — {new Date(h.changed_at).toLocaleString('es-MX')}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openEditCondition(c)}>Editar</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[
+                                            { label: 'Historial de cambios', onClick: () => toggleConditionHistory(c) },
+                                            { label: c.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleCondition(c), danger: Boolean(c.is_active) },
+                                        ]} />
+                                    </div>
+                                </article>
+                            ))}
+                            {filterByStatus(conditions, conditionsFilter).filter(c => matchesSearch(c, conditionSearch, conditionSearchMode)).length === 0 && <p className="entity-empty">No hay condiciones que coincidan con la búsqueda.</p>}
                         </div>
                     </>
                 )}
@@ -832,7 +836,7 @@ const Patients = () => {
                 {activeTab === 'Medicamentos' && (
                     <>
                         <div className="patient-search-row">
-                            <select value={medicationSearchMode} onChange={(e) => setMedicationSearchMode(e.target.value)}>
+                            <select aria-label="Buscar por" value={medicationSearchMode} onChange={(e) => setMedicationSearchMode(e.target.value)}>
                                 <option value="all">Todos los campos</option>
                                 <option value="curp">CURP</option>
                                 <option value="name">Nombre</option>
@@ -845,20 +849,19 @@ const Patients = () => {
                         </div>
 
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={medicationsFilter} onChange={(e) => setMedicationsFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={medicationsFilter} onChange={(e) => setMedicationsFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <button className="institutions-add-btn" onClick={() => setShowMedicationForm(!showMedicationForm)}>+ Nuevo Medicamento</button>
+                            <button className="institutions-add-btn" onClick={() => setShowMedicationForm(!showMedicationForm)}>+ Nuevo medicamento</button>
                         </div>
 
-                        {showMedicationForm && (
+                        <Drawer open={Boolean(showMedicationForm)} onClose={() => setShowMedicationForm(false)} title="Registrar medicamento" size="md">
                             <form className="institutions-form" onSubmit={handleCreateMedication}>
-                                <h3>Registrar Medicamento</h3>
                                 <div className="institutions-field">
                                     <label>Paciente</label>
-                                    <select value={medicationForm.clinicalRecordId} onChange={(e) => setMedicationForm(p => ({ ...p, clinicalRecordId: e.target.value }))} required>
+                                    <select aria-label="Paciente" value={medicationForm.clinicalRecordId} onChange={(e) => setMedicationForm(p => ({ ...p, clinicalRecordId: e.target.value }))} required>
                                         <option value="">Selecciona un paciente</option>
                                         {clinicalRecords.map((r) => (<option key={r.clinical_record_id} value={r.clinical_record_id}>{patientLabel(r)}</option>))}
                                     </select>
@@ -882,11 +885,10 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowMedicationForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingMedication !== null && (
+                        <Drawer open={Boolean(editingMedication !== null)} onClose={() => setEditingMedication(null)} title="Editar medicamento" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateMedication}>
-                                <h3>Editar Medicamento</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -906,42 +908,40 @@ const Patients = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingMedication(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Paciente</th><th>Nombre</th><th>Dosis</th><th>Frecuencia</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(medications, medicationsFilter).filter(m => matchesSearch(m, medicationSearch, medicationSearchMode)).map((m) => (
-                                        <Fragment key={m.patient_medication_id}>
-                                        <tr>
-                                            <td>{patientLabel(m)}</td>
-                                            <td>{m.name}</td>
-                                            <td>{m.dosage || '—'}</td>
-                                            <td>{m.frequency || '—'}</td>
-                                            <td>
-                                                <span className={`institutions-status ${m.is_active ? 'status-active' : 'status-inactive'}`}>{m.is_active ? 'Activo' : 'Inactivo'}</span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditMedication(m)}>Editar</button>
-                                                <button className="institutions-edit-btn" onClick={() => toggleMedicationHistory(m)}>Historial</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleMedication(m)}>{m.is_active ? 'Desactivar' : 'Activar'}</button>
-                                            </td>
-                                        </tr>
-                                        {historyMedicationId === m.patient_medication_id && (
-                                            <tr><td colSpan={6}>
-                                                <div className="clinical-history">
-                                                    {medicationHistory.length === 0 ? <span>Sin cambios registrados todavía.</span> : medicationHistory.map((h) => (
-                                                        <span key={h.patient_medication_history_id}>{h.is_active ? 'Activado' : 'Desactivado'} — {new Date(h.changed_at).toLocaleString('es-MX')}</span>
-                                                    ))}
-                                                </div>
-                                            </td></tr>
-                                        )}
-                                        </Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(medications, medicationsFilter).filter(m => matchesSearch(m, medicationSearch, medicationSearchMode)).length === 0 && <p className="institutions-empty">No hay medicamentos que coincidan con el filtro.</p>}
+                        <div className="entity-grid">
+                            {filterByStatus(medications, medicationsFilter).filter(m => matchesSearch(m, medicationSearch, medicationSearchMode)).map((m) => (
+                                <article key={m.patient_medication_id} className={`entity acc-route${m.is_active ? '' : ' is-off'}`}>
+                                    <div className="entity-head">
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{m.name}</h2>
+                                            <p className="entity-sub">{patientLabel(m)}</p>
+                                        </div>
+                                        <span className={`pill ${m.is_active ? 'pill-ok' : 'pill-warn'}`}>{m.is_active ? 'Activo' : 'Inactivo'}</span>
+                                    </div>
+                                    <dl className="entity-facts">
+                                        <div><dt>Dosis</dt><dd>{m.dosage || '—'}</dd></div>
+                                        <div><dt>Frecuencia</dt><dd>{m.frequency || '—'}</dd></div>
+                                    </dl>
+                                    {historyMedicationId === m.patient_medication_id && (
+                                        <div className="entity-panel clinical-history">
+                                            {medicationHistory.length === 0 ? <span>Sin cambios registrados todavía.</span> : medicationHistory.map((h) => (
+                                                <span key={h.patient_medication_history_id}>{h.is_active ? 'Activado' : 'Desactivado'} — {new Date(h.changed_at).toLocaleString('es-MX')}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openEditMedication(m)}>Editar</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[
+                                            { label: 'Historial de cambios', onClick: () => toggleMedicationHistory(m) },
+                                            { label: m.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleMedication(m), danger: Boolean(m.is_active) },
+                                        ]} />
+                                    </div>
+                                </article>
+                            ))}
+                            {filterByStatus(medications, medicationsFilter).filter(m => matchesSearch(m, medicationSearch, medicationSearchMode)).length === 0 && <p className="entity-empty">No hay medicamentos que coincidan con la búsqueda.</p>}
                         </div>
                     </>
                 )}

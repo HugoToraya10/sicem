@@ -405,6 +405,14 @@ const getLocationsByAmbulance = (ambulanceId, callback) => {
     db.query(sql, [ambulanceId], callback);
 }
 
+// Última ubicación conocida de TODAS las ambulancias en una sola consulta (el tablero pedía una por unidad).
+const getLatestLocationsAll = (callback) => {
+    const sql = `SELECT l.* FROM locations l
+                JOIN (SELECT ambulance_id, MAX(recorded_at) AS last_at FROM locations GROUP BY ambulance_id) x
+                    ON x.ambulance_id = l.ambulance_id AND x.last_at = l.recorded_at`;
+    db.query(sql, callback);
+}
+
 //-------- gets para administración: sin filtrar por is_active, el admin necesita ver todo --------
 
 const getAllAmbulancesAdmin = (callback) => {
@@ -520,7 +528,7 @@ module.exports = {
     getActiveTransferByAmbulance, markTransferConcluded, getTransferPatients, releaseAmbulanceAfterTransfer, getConcludeTransferContext,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulancesByInstitution, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
-    getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
+    getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance, getLatestLocationsAll,
     startShift, endShift, getActiveShiftByAmbulance, getActiveShiftByUser, getCrumAmbulances, getUserSchedule,
     getUserBasicName, getExpiredActiveShifts, STALE_GRACE_MINUTES
 }

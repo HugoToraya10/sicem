@@ -1,0 +1,114 @@
+/* ============================================================
+   SICEM — Tokens de diseño (web)
+   Única fuente de verdad de color, tipografía, radios y sombras.
+   Para cambiar la apariencia del sistema, edita ESTE archivo.
+   Tema oscuro: [data-theme="dark"] en <html>.
+   ============================================================ */
+
+:root {
+    /* Superficies */
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-2: #F0F3F6;
+    --line: #E3E8EE;
+    --line-strong: #CBD3DD;
+
+    /* Texto */
+    --text: #14181F;
+    --text-2: #4A5360;
+    --text-3: #5C6676;   /* contraste AA sobre --bg y --surface */
+
+    /* Marca y significado: el rojo es URGENCIA y marca */
+    --brand: #C21F2D;
+    --brand-hover: #A51822;
+    --brand-soft: #FDECEE;
+    --on-brand: #FFFFFF;
+    --steel: #0F766E;          /* acento secundario: selección, rutas, "en ruta" */
+    --steel-soft: #DFF3F0;
+    --ok: #187A3E;
+    --ok-soft: #E3F5EA;
+    --warn: #8F5A00;
+    --warn-soft: #FDF0D9;
+    --hosp: #6A4C9C;           /* hospitales en el mapa */
+
+    /* Barra superior */
+    --nav-bg: #11151B;
+    --nav-text: #B8C0CC;
+    --nav-active: #FFFFFF;
+    --nav-line: #232A33;
+
+    /* Triage (semántica fija, Manchester I a V) */
+    --t1: #C62828;
+    --t2: #E8710A;
+    --t3: #D9A400;
+    --t4: #2E7D32;
+    --t5: #1E6FB8;
+
+    /* Estados de unidad en el mapa */
+    --u-free: #2E7D32;
+    --u-route: #0F766E;
+    --u-scene: #E8710A;
+    --u-transfer: #6A4C9C;
+    --u-off: #888888;
+
+    /* Elevación y foco */
+    --shadow-panel: 0 10px 30px rgba(27, 29, 33, .14), 0 1px 2px rgba(27, 29, 33, .08);
+    --shadow-card: 0 3px 10px rgba(27, 29, 33, .10);
+    --ring: 0 0 0 3px rgba(29, 107, 102, .45);
+
+    /* Forma */
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+
+    /* Tipografía */
+    --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-id: 'IBM Plex Mono', ui-monospace, monospace;
+
+    /* Compatibilidad con CSS anterior */
+    --role-accent: var(--brand);
+}
+
+:root[data-theme="dark"] {
+    --bg: #0B0E12;
+    --surface: #141920;
+    --surface-2: #1B222B;
+    --line: #252D38;
+    --line-strong: #323C49;
+
+    --text: #ECEFF4;
+    --text-2: #A9B3C0;
+    --text-3: #8792A2;
+
+    --brand: #F26B6F;
+    --brand-hover: #FF8A8E;
+    --brand-soft: #3A1519;
+    --on-brand: #1A0507;
+    --steel: #5FBDB3;
+    --steel-soft: #12302D;
+    --ok: #5BC47A;
+    --ok-soft: #12291A;
+    --warn: #F0B44A;
+    --warn-soft: #33260B;
+    --hosp: #A58BDB;
+
+    --nav-bg: #07090C;
+    --nav-text: #A9B3C0;
+    --nav-line: #1A2029;
+
+    --t1: #F0555A;
+    --t2: #F5913F;
+    --t3: #E8BC2C;
+    --t4: #52B85A;
+    --t5: #4C9BE0;
+
+    --u-free: #52B85A;
+    --u-route: #5FBDB3;
+    --u-scene: #F5913F;
+    --u-transfer: #A58BDB;
+
+    --shadow-panel: 0 12px 32px rgba(0, 0, 0, .55), 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-card: 0 3px 10px rgba(0, 0, 0, .4);
+    --ring: 0 0 0 3px rgba(95, 189, 179, .55);
+}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { roleLabel } from '../config/roles'
 import { useAuth } from '../context/AuthContext';
 import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
@@ -10,11 +11,23 @@ import './Charts.css';
 import { getNavLinks } from '../utils/Navlinks';
 import {API_BASE_URL} from '../config/api'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
-const PIE_COLORS = ['#2E7D32', '#E67E22', '#C0272D']
-const BAR_COLORS = ['#1a1a2e', '#2980B9', '#8E44AD', '#16A085', '#C0272D']
+// Colores desde los tokens, para que los gráficos sigan el tema claro/oscuro.
+// El estado de una solicitud tiene significado fijo: verde aceptada, rojo rechazada,
+// ámbar pendiente, gris cancelada.
+const STATUS_COLORS = { Pendiente: 'var(--t3)', Aceptada: 'var(--ok)', Rechazada: 'var(--brand)', Cancelada: 'var(--text-3)' }
+const FALLBACK_COLORS = ['var(--steel)', 'var(--t2)', 'var(--hosp)']
 
+const AXIS_TICK = { fontSize: 12, fill: 'var(--text-2)' }
+const TOOLTIP_STYLE = {
+    contentStyle: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, color: 'var(--text)', fontSize: 13 },
+    labelStyle: { color: 'var(--text)', fontWeight: 600 },
+    itemStyle: { color: 'var(--text)' },
+    cursor: { fill: 'var(--surface-2)' },
+}
+
+// El servidor manda el día en inglés (DAYNAME de MariaDB); aquí se muestra en español.
+const DIAS = { Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mié', Thursday: 'Jue', Friday: 'Vie', Saturday: 'Sáb', Sunday: 'Dom' }
 const monthLabel = new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
 
 const Charts = () => {
@@ -67,34 +80,39 @@ const Charts = () => {
         <div className="charts-page">
             <Navbar
                 userName={user?.firstName || 'Usuario'}
-                roleLabel={roleLabels[user?.roleId] || ''}
+                roleLabel={roleLabel(user?.roleId)}
                 links={navLinks}
             />
 
-            <div className="charts-body">
+            <div role="main" id="contenido" className="charts-body">
+                <h1 className="charts-title">Gráficas</h1>
+                <p className="charts-subtitle">Cómo va la operación: tipos de emergencia, solicitudes entre instituciones y tiempos de respuesta.</p>
+
                 <div className="charts-grid">
 
                     <div className="chart-box">
-                        <h4>Emergencias por Tipo — {monthLabel}</h4>
+                        <h2>Emergencias por tipo</h2>
+                        <p className="chart-sub">{monthLabel}</p>
                         {byType.length === 0 ? (
-                            <p className="chart-empty">Sin datos este mes.</p>
+                            <p className="chart-empty">Todavía no hay emergencias este mes.</p>
                         ) : (
                             <ResponsiveContainer width="100%" height={220}>
                                 <BarChart data={byType}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                    <Tooltip />
-                                    <Bar dataKey="total" fill="#C0272D" radius={[3, 3, 0, 0]} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line)" />
+                                    <XAxis dataKey="name" tick={AXIS_TICK} stroke="var(--line-strong)" />
+                                    <YAxis allowDecimals={false} tick={AXIS_TICK} stroke="var(--line-strong)" />
+                                    <Tooltip {...TOOLTIP_STYLE} />
+                                    <Bar dataKey="total" name="Emergencias" fill="var(--brand)" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         )}
                     </div>
 
                     <div className="chart-box">
-                        <h4>Solicitudes Interinstitucionales</h4>
+                        <h2>Solicitudes interinstitucionales</h2>
+                        <p className="chart-sub">Por estado</p>
                         {byStatus.length === 0 ? (
-                            <p className="chart-empty">Sin solicitudes registradas.</p>
+                            <p className="chart-empty">Todavía no hay solicitudes entre instituciones.</p>
                         ) : (
                             <ResponsiveContainer width="100%" height={220}>
                                 <PieChart>
@@ -105,52 +123,54 @@ const Charts = () => {
                                         cx="50%"
                                         cy="50%"
                                         outerRadius={75}
+                                        innerRadius={42}
+                                        stroke="var(--surface)"
                                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                         labelLine={false}
                                     >
                                         {byStatus.map((entry, index) => (
-                                            <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                            <Cell key={entry.name} fill={STATUS_COLORS[entry.name] || FALLBACK_COLORS[index % FALLBACK_COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip {...TOOLTIP_STYLE} />
+                                    <Legend wrapperStyle={{ fontSize: 13, color: 'var(--text-2)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                         )}
                     </div>
 
                     <div className="chart-box">
-                        <h4>Tiempo Promedio de Respuesta (min) — Última Semana</h4>
+                        <h2>Tiempo promedio de respuesta</h2>
+                        <p className="chart-sub">Minutos, última semana</p>
                         {responseTime.length === 0 ? (
-                            <p className="chart-empty">Sin asignaciones en los últimos 7 días.</p>
+                            <p className="chart-empty">No hubo asignaciones en los últimos 7 días.</p>
                         ) : (
                             <ResponsiveContainer width="100%" height={220}>
                                 <LineChart data={responseTime}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                                    <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                                    <YAxis tick={{ fontSize: 11 }} />
-                                    <Tooltip />
-                                    <Line type="monotone" dataKey="avg_minutes" stroke="#C0272D" strokeWidth={2} dot={{ r: 3 }} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line)" />
+                                    <XAxis dataKey="day" tickFormatter={(d) => DIAS[d] || d} tick={AXIS_TICK} stroke="var(--line-strong)" />
+                                    <YAxis tick={AXIS_TICK} stroke="var(--line-strong)" />
+                                    <Tooltip {...TOOLTIP_STYLE} labelFormatter={(d) => DIAS[d] || d} />
+                                    <Line type="monotone" dataKey="avg_minutes" name="Minutos" stroke="var(--steel)" strokeWidth={2.5} dot={{ r: 3.5, fill: "var(--steel)" }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         )}
                     </div>
 
                     <div className="chart-box">
-                        <h4>Emergencias por Institución — {monthLabel}</h4>
+                        <h2>Emergencias por institución</h2>
+                        <p className="chart-sub">{monthLabel}</p>
                         {byInstitution.length === 0 ? (
                             <p className="chart-empty">Sin datos este mes.</p>
                         ) : (
                             <div className="institution-bars">
-                                {byInstitution.map((inst, index) => (
+                                {byInstitution.map((inst) => (
                                     <div key={inst.name} className="institution-bar-row">
                                         <span className="institution-bar-label">{inst.name}</span>
                                         <div className="institution-bar-track">
                                             <div
                                                 className="institution-bar-fill"
-                                                style={{
-                                                    width: `${(inst.total / maxInstitutionTotal) * 100}%`,
-                                                    background: BAR_COLORS[index % BAR_COLORS.length]
-                                                }}
+                                                style={{ width: `${(inst.total / maxInstitutionTotal) * 100}%` }}
                                             />
                                         </div>
                                         <span className="institution-bar-value">{inst.total}</span>

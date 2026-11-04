@@ -1,31 +1,6 @@
 import { useState } from 'react'
 import './AmbulanceAdminCard.css'
-
-// Formato legible del horario de turnos del paramédico (shift_windows: un
-// rango de hora POR día, 1=lunes..7=domingo — mismo formato del resto del
-// proyecto).
-const WEEKDAY_LABELS = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom' }
-const formatSchedule = (shiftWindows) => {
-    if (!shiftWindows || shiftWindows.length === 0) return 'Sin horario asignado'
-    return shiftWindows
-        .map((w) => `${WEEKDAY_LABELS[parseInt(w.day)] || w.day} ${w.start}-${w.end}`)
-        .join(' · ')
-}
-
-// ¿Debería estar de turno AHORA? Mismo criterio que isWithinSchedule en
-// services/unidades (rangos que cruzan medianoche incluidos).
-const isOnScheduleNow = (shiftWindows) => {
-    if (!shiftWindows || shiftWindows.length === 0) return false
-    const now = new Date()
-    const isoDay = now.getDay() === 0 ? 7 : now.getDay()
-    const todayWindow = shiftWindows.find((w) => parseInt(w.day) === isoDay)
-    if (!todayWindow) return false
-    const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
-    const nowMinutes = now.getHours() * 60 + now.getMinutes()
-    const start = toMinutes(todayWindow.start)
-    const end = toMinutes(todayWindow.end)
-    return start <= end ? (nowMinutes >= start && nowMinutes <= end) : (nowMinutes >= start || nowMinutes <= end)
-}
+import AmbulanceDetailPanel from '../ambulances/AmbulanceDetailPanel'
 
 const AmbulanceAdminCard = ({ ambulance, types, onUpdate, onToggleActive, crew = [], onlineParamedicIds = new Set(), detailOpen, onToggleDetail }) => {
     const [isEditing, setIsEditing] = useState(false)
@@ -78,7 +53,7 @@ const AmbulanceAdminCard = ({ ambulance, types, onUpdate, onToggleActive, crew =
             ) : (
                 <>
                     <div className="ambulance-admin-header">
-                        <h5>Unidad {ambulance.unit_number}</h5>
+                        <h2>Unidad {ambulance.unit_number}</h2>
                         <span className={`ambulance-admin-status ${ambulance.is_active ? 'status-active' : 'status-inactive'}`}>
                             {ambulance.is_active ? 'Activa' : 'Inactiva'}
                         </span>
@@ -96,46 +71,14 @@ const AmbulanceAdminCard = ({ ambulance, types, onUpdate, onToggleActive, crew =
                 </>
             )}
 
-            {detailOpen && (
-                <div className="modal-backdrop" onClick={onToggleDetail}>
-                    <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <span className="modal-title">Unidad {ambulance.unit_number}</span>
-                            <button className="modal-close" onClick={onToggleDetail} title="Cerrar">×</button>
-                        </div>
-
-                        <div className="modal-body">
-                            <div className="detail-panel-title">Detalle de la unidad</div>
-                            <div className="ambulance-admin-detail">Placa: {ambulance.license_plate}</div>
-                            <div className="ambulance-admin-detail">Tipo: {ambulance.type_name}</div>
-                            <div className="ambulance-admin-detail">Estado: {ambulance.is_active ? 'Activa' : 'Inactiva'}</div>
-                            <div className="ambulance-admin-detail">ID interno: {ambulance.ambulance_id}</div>
-                            <div className="ambulance-admin-detail">
-                                Registrada: {ambulance.created_at ? new Date(ambulance.created_at).toLocaleString('es-MX') : '—'}
-                            </div>
-
-                            <div className="detail-panel-title">Tripulación</div>
-                            {crewForAmbulance.length === 0 ? (
-                                <div className="ambulance-crew-empty">Sin paramédicos vinculados a esta unidad.</div>
-                            ) : (
-                                crewForAmbulance.map((p) => {
-                                    const isOnline = onlineParamedicIds.has(String(p.user_profile_id))
-                                    return (
-                                        <div key={p.user_profile_id} className="ambulance-crew-row">
-                                            {isOnline && <span className="crew-online-dot" title="En línea ahora mismo" />}
-                                            <span className={`crew-name ${isOnScheduleNow(p.shift_windows) ? 'crew-on-schedule' : ''}`}>
-                                                {p.first_name} {p.first_surname}
-                                            </span>
-                                            <span className="crew-schedule">{formatSchedule(p.shift_windows)}</span>
-                                            {isOnline && <span className="crew-online-label">En línea</span>}
-                                        </div>
-                                    )
-                                })
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
+            <AmbulanceDetailPanel
+                open={Boolean(detailOpen)}
+                onClose={onToggleDetail}
+                ambulance={ambulance}
+                statusName={ambulance.status_name}
+                crew={crewForAmbulance}
+                onlineParamedicIds={onlineParamedicIds}
+            />
         </div>
     )
 }

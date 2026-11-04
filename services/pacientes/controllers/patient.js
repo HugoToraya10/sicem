@@ -310,7 +310,7 @@ const getAllergiesByRecord = (req, res) => {
             if (e) return res.status(500).json({message: "Error del servidor."});
             if (r.length === 0) return res.status(404).json({message: "Expediente no encontrado."});
             const clinicalRecordId = r[0].clinical_record_id;
-            patientModel.getAllergiesByRecord(clinicalRecordId, (e2, r2) => {
+            patientModel.getAllergiesByRecord(clinicalRecordId, true, (e2, r2) => {
                 if (e2) return res.status(500).json({message: "Error del servidor."});
                 res.status(200).json({message: "Alergias del paciente", allergies: r2});
             });
@@ -338,7 +338,7 @@ const getConditionsByRecord = (req, res) => {
                     return res.status(404).json({message: "Expediente no encontrado."});
                 } else {
                     const clinicalRecordId = r[0].clinical_record_id;
-                    patientModel.getConditionsByRecord(clinicalRecordId, (e2, r2) => {
+                    patientModel.getConditionsByRecord(clinicalRecordId, true, (e2, r2) => {
                         if (e2) {
                             return res.status(500).json({message: "Error del servidor."});
                         } else {
@@ -373,7 +373,7 @@ const getMedicationsByRecord = (req, res) => {
                     return res.status(404).json({message: "Expediente no encontrado."});
                 } else {
                     const clinicalRecordId = r[0].clinical_record_id;
-                    patientModel.getMedicationsByRecord(clinicalRecordId, (e2, r2) => {
+                    patientModel.getMedicationsByRecord(clinicalRecordId, true, (e2, r2) => {
                         if (e2) {
                             return res.status(500).json({message: "Error del servidor."});
                         } else {

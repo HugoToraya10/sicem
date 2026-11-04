@@ -1,1012 +1,1362 @@
 {
   ".claude/settings.json": {
-    "mtime": 1785648182.2548323,
+    "mtime": 1791535596.4886343,
     "ast_hash": "c1a3b6b56600453c8961910b1fe8539e",
     "semantic_hash": "c1a3b6b56600453c8961910b1fe8539e"
   },
-  ".claude/settings.local.json": {
-    "mtime": 1785977094.1810358,
-    "ast_hash": "32aeaf5a4781d7daf1f41ab9e9124524",
-    "semantic_hash": ""
-  },
   "clients/sicem-desktop/main.js": {
-    "mtime": 1785970023.7712045,
-    "ast_hash": "3237b494b3d5a7d9621fbaae015b5b88",
+    "mtime": 1791535596.5200627,
+    "ast_hash": "c282194913f692d8d2a046ea2bd45978",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/package.json": {
-    "mtime": 1786564861.5810935,
-    "ast_hash": "7b27a48f9f5aa607f21d2b10169d0e2a",
+    "mtime": 1791535596.5200627,
+    "ast_hash": "4326ff66f18ff5a1e3d3f88dc08c7d16",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/preload.js": {
-    "mtime": 1784598496.747196,
-    "ast_hash": "b3df3da4402fe6441a521730014fbe9a",
-    "semantic_hash": "b3df3da4402fe6441a521730014fbe9a"
+    "mtime": 1791535596.5200627,
+    "ast_hash": "cd1aaa64b3b71a1ea2246a07a060d100",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/App.jsx": {
-    "mtime": 1786705544.6981168,
-    "ast_hash": "f1bba399f9f1cb5fabc34dd698f7d85d",
+    "mtime": 1791573023.2322466,
+    "ast_hash": "83ddabaedafd551148a19489526edb95",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/InstitutionAdminRoute.jsx": {
-    "mtime": 1784702372.6515872,
-    "ast_hash": "c9d9620fb3549c2d22e34be179f8abe1",
-    "semantic_hash": "c9d9620fb3549c2d22e34be179f8abe1"
+    "mtime": 1791535596.5238388,
+    "ast_hash": "d0ca13cf8c0ae1d7c058403250ae7d6e",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/PrivateRoute.jsx": {
-    "mtime": 1785903828.5019417,
-    "ast_hash": "3911ea38819164ae267893a10a151726",
+    "mtime": 1791572746.346909,
+    "ast_hash": "877847df52197090240d6e415174fbc4",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/ambulances/AmbulanceStatusCard.jsx": {
-    "mtime": 1786501173.8687155,
-    "ast_hash": "9912b9c22bf355bc475c26c0f74e1340",
+    "mtime": 1791606526.5228772,
+    "ast_hash": "6788b44089a87684ec9b171fe2070900",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/capacity/SpecialtyCapacityCard.jsx": {
-    "mtime": 1785653143.416533,
-    "ast_hash": "e03e94ef02a63c900fded6948e02470a",
+    "mtime": 1791574503.5848856,
+    "ast_hash": "5eb983be90a1e4be4dfab7ac0f6af364",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/hospitalAdmin/AmbulanceAdminCard.jsx": {
-    "mtime": 1786562226.7468722,
-    "ast_hash": "b0b6fe3cab4d23f6b5bcbc7a5dbcdcda",
+    "mtime": 1791606526.441483,
+    "ast_hash": "1bfe7413319f514062d4ab74daa1c368",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/hospitalAdmin/SpecialityAdminCard.jsx": {
-    "mtime": 1784702958.2158406,
-    "ast_hash": "59bcdebdf29057839ff36533ac9eff9d",
-    "semantic_hash": "59bcdebdf29057839ff36533ac9eff9d"
+    "mtime": 1791574753.0250397,
+    "ast_hash": "4676dc1de0ddc176649098ef4f6f79b6",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/layout/Navbar.jsx": {
-    "mtime": 1785975407.7764876,
-    "ast_hash": "b2082763a7543010d668eaed4f9378aa",
+    "mtime": 1791602809.0665152,
+    "ast_hash": "d3996a7d2712b3dbeecbfa65af54f6a3",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/map/MapArea.jsx": {
-    "mtime": 1784779878.7566476,
-    "ast_hash": "35e786a0e272c4df278d168804e65dad",
-    "semantic_hash": "35e786a0e272c4df278d168804e65dad"
+    "mtime": 1791574379.7361722,
+    "ast_hash": "f400f9fef432f9a52cb556209b264274",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/patients/IncomingPatientCard.jsx": {
-    "mtime": 1786705294.6914673,
-    "ast_hash": "b9d90e0f82615b4659806b5c6aa46439",
+    "mtime": 1791578000.9406824,
+    "ast_hash": "207991469e6eb94c5a05e8d0392cec84",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/patients/PatientDetailModal.jsx": {
-    "mtime": 1786705322.3471854,
-    "ast_hash": "b6dbe6a4dbc670fbf8529bf01bb7aa3d",
+    "mtime": 1791606461.938843,
+    "ast_hash": "024fcaed5c45828e2be9ebb641678d9b",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/patients/RejectReasonModal.jsx": {
-    "mtime": 1784769125.6229513,
-    "ast_hash": "dc7754b854d5434f4075e7af812c3504",
-    "semantic_hash": "dc7754b854d5434f4075e7af812c3504"
+    "mtime": 1791606402.4027588,
+    "ast_hash": "b6485cf690aeb7ff1c920d7c37511997",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/requests/UnitRequestDetailModal.jsx": {
-    "mtime": 1785923026.2185638,
-    "ast_hash": "1acd35f3586ea0a7dd0dac6c758671b0",
+    "mtime": 1791606461.2750912,
+    "ast_hash": "1d267a3252ba201a8eb7a06ce167db90",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/context/AuthContext.jsx": {
-    "mtime": 1784775873.6924775,
-    "ast_hash": "5bc05f2ddf84414519ba330445005b5f",
-    "semantic_hash": "5bc05f2ddf84414519ba330445005b5f"
+    "mtime": 1791617417.5512981,
+    "ast_hash": "bf5d4940e5aeff8326e4b8bd715491b0",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/main.jsx": {
-    "mtime": 1784598528.9104185,
-    "ast_hash": "09e93b37b7d833295b6ffb3c4b9c9e67",
-    "semantic_hash": "09e93b37b7d833295b6ffb3c4b9c9e67"
+    "mtime": 1791535596.5429058,
+    "ast_hash": "b3e95111ede3fd3417b49061c52a124b",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/Capacity.jsx": {
-    "mtime": 1785922980.0758014,
-    "ast_hash": "71babad2c42e6564ce24578f6b151748",
+    "mtime": 1791599036.8105602,
+    "ast_hash": "ac90184c61935e2d04d7bfb4c9ec0deb",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/Charts.jsx": {
-    "mtime": 1785923050.5501032,
-    "ast_hash": "7622191423ecf6544ff63eee079e323c",
+    "mtime": 1791574567.4251163,
+    "ast_hash": "5d03054b73eaf28ca9fe7c2e17d5f217",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/History.jsx": {
-    "mtime": 1786577030.7834098,
-    "ast_hash": "579a678ae7a12fa7bdcab7377f2662ef",
+    "mtime": 1791599036.8115604,
+    "ast_hash": "976dadfa12713f3256637b83d5b19306",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/HospitalAdmin.jsx": {
-    "mtime": 1786650278.606045,
-    "ast_hash": "434676e23cd87363621f08e74baf5c3d",
+    "mtime": 1791606368.472156,
+    "ast_hash": "6fec3aad796f8e8869f196fef4cc70dc",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/IncomingPatients.jsx": {
-    "mtime": 1786705307.7411509,
-    "ast_hash": "788d4ebc78c37cbd64425f6dab2f8075",
+    "mtime": 1791599036.8140798,
+    "ast_hash": "f8a138cd9ed3f66462b0231084e8682a",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/IncomingUnitRequests.jsx": {
-    "mtime": 1785923020.9026263,
-    "ast_hash": "92c751b8ce3cf2ee6256f67e16d36b12",
+    "mtime": 1791599036.8140798,
+    "ast_hash": "a65b17bd2213acf5033cde5cad80156c",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/Login.jsx": {
-    "mtime": 1785923055.0425684,
-    "ast_hash": "2ce6c1e19aa63910fee743ddf86a8cf9",
+    "mtime": 1791572758.7154467,
+    "ast_hash": "68e2588d488c2fd42acc100462fb2996",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/MyAmbulances.jsx": {
-    "mtime": 1786500804.6853456,
-    "ast_hash": "413f519536775226b7e6ae0cb77c8a91",
+    "mtime": 1791599036.8160863,
+    "ast_hash": "642ff87e17a020c48a84dec297872b55",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/Tracking.jsx": {
-    "mtime": 1785922914.1755624,
-    "ast_hash": "473cefda56b001557a99a0ec10dc49fe",
+    "mtime": 1791599036.8150885,
+    "ast_hash": "d176860b5a4c9a7b82ed5eb24ad7f5d4",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/sockets/emergencySocket.js": {
-    "mtime": 1785922831.9123485,
+    "mtime": 1791535596.555421,
     "ast_hash": "cbc28855b9b763ab4aae2cd72e25c156",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/utils/Navlinks.js": {
-    "mtime": 1786705535.3268073,
-    "ast_hash": "c99485505da8c140fbc31dd4e2465784",
+    "mtime": 1791572918.972469,
+    "ast_hash": "0b7ff8221fc1221677943c48eb2dc3eb",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/utils/formatData.js": {
-    "mtime": 1784598534.683304,
-    "ast_hash": "4516eddd3dd79cd7702202d645734d68",
-    "semantic_hash": "4516eddd3dd79cd7702202d645734d68"
+    "mtime": 1791535596.555421,
+    "ast_hash": "080eb58bfd267019118cf0fb7c542ccb",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/src/utils/notify.js": {
-    "mtime": 1784774894.8218493,
-    "ast_hash": "8891216d86cc8416969a42441dd18fee",
-    "semantic_hash": "8891216d86cc8416969a42441dd18fee"
+    "mtime": 1791535596.559563,
+    "ast_hash": "72eaefbfad6ed80b5ace583a26fa1ac4",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/vite.config.js": {
-    "mtime": 1784598425.7310643,
-    "ast_hash": "48b0eade47d36130737bb8affcc1f3ab",
-    "semantic_hash": "48b0eade47d36130737bb8affcc1f3ab"
+    "mtime": 1791535596.559563,
+    "ast_hash": "80a4cb8c2d3227ea3d2391e62d2afb43",
+    "semantic_hash": ""
   },
   "clients/sicem-mobile/.claude/settings.json": {
-    "mtime": 1785311750.8027256,
-    "ast_hash": "dc580fca35a0e98ed20777ede5e545a1",
-    "semantic_hash": "dc580fca35a0e98ed20777ede5e545a1"
+    "mtime": 1791535596.559563,
+    "ast_hash": "0e5fa9ee1de7421260d9f6695b5b6683",
+    "semantic_hash": ""
   },
   "clients/sicem-mobile/app.json": {
-    "mtime": 1785929495.530713,
-    "ast_hash": "76195ed87f425ed33c11e9f5493c1982",
+    "mtime": 1791582816.1394045,
+    "ast_hash": "c44aab801073d17a9d77f5302d3b747c",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/_layout.js": {
-    "mtime": 1785708872.7960134,
-    "ast_hash": "aee0045b37fd8d0a9545095fe970bde9",
+    "mtime": 1791617934.6729069,
+    "ast_hash": "162963a02dcbd74efc136acf8205a3b5",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/index.js": {
-    "mtime": 1785311697.0296278,
-    "ast_hash": "33caa6d28d87fc7e637c033d0d7124b1",
-    "semantic_hash": "33caa6d28d87fc7e637c033d0d7124b1"
+    "mtime": 1791535596.5838096,
+    "ast_hash": "b7e518b41e4e8caf95b01ee70d7745f2",
+    "semantic_hash": ""
   },
   "clients/sicem-mobile/package.json": {
-    "mtime": 1785887619.5476713,
-    "ast_hash": "2af4feeeb6239e959a5b56034faf0dd5",
+    "mtime": 1791535596.5850317,
+    "ast_hash": "f8c095a54844c7e84fe187c5482118ff",
     "semantic_hash": ""
   },
   "clients/sicem-web/eslint.config.js": {
-    "mtime": 1783183876.6162915,
-    "ast_hash": "3aa4b57d7f08181d86bde52a4dcb7f22",
-    "semantic_hash": "3aa4b57d7f08181d86bde52a4dcb7f22"
+    "mtime": 1791535596.6013796,
+    "ast_hash": "fa91453358b56681481f75f81d1bfccd",
+    "semantic_hash": ""
   },
   "clients/sicem-web/package.json": {
-    "mtime": 1786575661.1807153,
-    "ast_hash": "e41675e12edebf379c26204d4083128e",
+    "mtime": 1791535596.6013796,
+    "ast_hash": "c2505e407da7c08e6615ee4f11b92536",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/App.jsx": {
-    "mtime": 1785926229.695303,
-    "ast_hash": "9ceb272971aa05c9c560982fb2fb7a78",
+    "mtime": 1791617068.0579057,
+    "ast_hash": "bb5943b82ba794c8aa2f0e58253cc950",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/components/emergencies/EmergencyCard.jsx": {
-    "mtime": 1784746713.762384,
-    "ast_hash": "81cf21b32d465b3b5ec82f217df7b1de",
-    "semantic_hash": "81cf21b32d465b3b5ec82f217df7b1de"
+    "mtime": 1791599097.9694862,
+    "ast_hash": "3a508d2cf4cb1398ae42e7b46e47e5b6",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/components/layout/Navbar.jsx": {
-    "mtime": 1786705784.109162,
-    "ast_hash": "2f25445f67efce6c71ccb6b0f5681278",
+    "mtime": 1791602809.065516,
+    "ast_hash": "cff5c7419df7e782c45504fa77b48283",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/components/map/MapArea.jsx": {
-    "mtime": 1785895639.621349,
-    "ast_hash": "fe91414e2aafb9b2b1da62979a7b8358",
+    "mtime": 1791572409.4621563,
+    "ast_hash": "178b2e1b2b7477da669cf9438fad7b7c",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/context/AuthContext.jsx": {
-    "mtime": 1784775880.9369566,
-    "ast_hash": "a0def52788e76710632b34915db9c3d5",
-    "semantic_hash": "a0def52788e76710632b34915db9c3d5"
+    "mtime": 1791617417.5499556,
+    "ast_hash": "ccdd2fbbe47df357ff58e2fefd0cfa70",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/main.jsx": {
-    "mtime": 1784508015.3270524,
-    "ast_hash": "51fd21c378330142b61bf8d1ef3795ef",
-    "semantic_hash": "51fd21c378330142b61bf8d1ef3795ef"
+    "mtime": 1791602880.6473248,
+    "ast_hash": "cd6ac92bb82d82b89c679f259773f83b",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Charts.jsx": {
-    "mtime": 1785922999.2466524,
-    "ast_hash": "3001c0da65225d75899f5fc2a94b7c23",
+    "mtime": 1791597704.8200116,
+    "ast_hash": "a2b9558e9d57ab4fb4195d46d2ed3914",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Dashboard.jsx": {
-    "mtime": 1786702961.2632284,
-    "ast_hash": "d19b5694a672225f42505589d071a798",
+    "mtime": 1791617453.9658246,
+    "ast_hash": "2ba53f9277a6dd8f63da102e59432900",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/EmergencyDetail.jsx": {
-    "mtime": 1786701088.423168,
-    "ast_hash": "832f625f357eee8c693f8a227e49432c",
+    "mtime": 1791617252.3990517,
+    "ast_hash": "c3c93636404a08fcbb799b264dfe7a15",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/History.jsx": {
-    "mtime": 1786577013.2480004,
-    "ast_hash": "e6bd05aced13cd7f6a928daa2cf65f68",
+    "mtime": 1791582513.8275175,
+    "ast_hash": "ba8f3f22f681828de9a82028f8a9abcf",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Hospitals.jsx": {
-    "mtime": 1785922999.4463806,
-    "ast_hash": "6c050c2e371d4473ec324e514e427e16",
+    "mtime": 1791599097.834522,
+    "ast_hash": "acee4be93b44a105283d1f5fad51770d",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Login.jsx": {
-    "mtime": 1785926361.325883,
-    "ast_hash": "f4804301eb50dc450e3e777586b84c09",
+    "mtime": 1791617071.765867,
+    "ast_hash": "378cabef2207d000977cfce7f69a090a",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/NewEmergency.jsx": {
-    "mtime": 1785929257.5563314,
-    "ast_hash": "10e9d040dcfc02ac292e554e35bf4bf6",
+    "mtime": 1791617153.6985765,
+    "ast_hash": "a6ebb67e1f6e5f318f7f84408ad7cdc0",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Profile.jsx": {
-    "mtime": 1785922999.0276256,
-    "ast_hash": "71f1e462d407ef92af50ba1824d123c5",
+    "mtime": 1791606281.5387774,
+    "ast_hash": "2568985d49f927a973f93d7bd91faae7",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/Requests.jsx": {
-    "mtime": 1785922994.1576316,
-    "ast_hash": "000c9f3a8be3cf5b2ccd95c2aedd5dab",
+    "mtime": 1791582523.6253636,
+    "ast_hash": "4196ad7f7acea51259b074fd8b7ec247",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Ambulances.jsx": {
-    "mtime": 1786500159.049628,
-    "ast_hash": "48a83477d4ccafe7773efdbcb3f26b1c",
+    "mtime": 1791606087.2657263,
+    "ast_hash": "40073941ba4b37d17e42e62e744119db",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/EmergencyCatalogs.jsx": {
-    "mtime": 1785923003.3922734,
-    "ast_hash": "38bc02863e0ed861bfdd1dce72508528",
+    "mtime": 1791606087.4403868,
+    "ast_hash": "7f65264bc8dd2fbd8cb9ee4bea24f3a2",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Institutions.jsx": {
-    "mtime": 1786702477.197203,
-    "ast_hash": "27927cb810ce820aa5429db189da2cba",
+    "mtime": 1791606254.9816463,
+    "ast_hash": "27e0b8df60ffcb01ea45d0bf4f8a5474",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Patients.jsx": {
-    "mtime": 1785923004.851385,
-    "ast_hash": "6c4691c59f5a540a60d51b1ced09f09a",
+    "mtime": 1791606087.357088,
+    "ast_hash": "da34bf31183d80513272460ad37c536a",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/pages/admin/Users.jsx": {
-    "mtime": 1786651927.8406463,
-    "ast_hash": "ac3746368ac2d35658ded8f446936012",
+    "mtime": 1791606087.1736417,
+    "ast_hash": "da663edabb2eff7bbb1cb12f16a14707",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/sockets/emergencySocket.js": {
-    "mtime": 1785922836.497712,
+    "mtime": 1791535596.6823757,
     "ast_hash": "cbc28855b9b763ab4aae2cd72e25c156",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/utils/Navlinks.js": {
-    "mtime": 1784481944.2938902,
-    "ast_hash": "eeb27158775250b6083623442199b93b",
-    "semantic_hash": "eeb27158775250b6083623442199b93b"
+    "mtime": 1791535596.6823757,
+    "ast_hash": "cd8a8ff2d9f3affa53c18386245e06ee",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/utils/apiRequest.js": {
-    "mtime": 1784511366.448441,
-    "ast_hash": "dbedee830c23c9dc5f5e7b75269a5f96",
-    "semantic_hash": "dbedee830c23c9dc5f5e7b75269a5f96"
+    "mtime": 1791535596.6823757,
+    "ast_hash": "dc7c6e5ae8e48830c3d0a2881d9dfacf",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/utils/duplicateCheck.js": {
-    "mtime": 1784437034.286519,
-    "ast_hash": "fa95a09e2da30bc11fc5d9331512f8c7",
-    "semantic_hash": "fa95a09e2da30bc11fc5d9331512f8c7"
+    "mtime": 1791606685.5663514,
+    "ast_hash": "9f9cf282ef8726fb508fdd8c4445d4a9",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/utils/formatData.js": {
-    "mtime": 1783901951.1398695,
+    "mtime": 1791535596.6864643,
     "ast_hash": "080eb58bfd267019118cf0fb7c542ccb",
     "semantic_hash": "080eb58bfd267019118cf0fb7c542ccb"
   },
   "clients/sicem-web/vite.config.js": {
-    "mtime": 1783183876.6427183,
-    "ast_hash": "88439104b3c207f17d33ef3160e3b080",
-    "semantic_hash": "88439104b3c207f17d33ef3160e3b080"
+    "mtime": 1791535596.6864643,
+    "ast_hash": "199e1221ae03d6974fdc8b5e23787b98",
+    "semantic_hash": ""
   },
   "gateway/index.js": {
-    "mtime": 1784305543.929738,
-    "ast_hash": "4e50c29a83e8a6c4d7eb097cbf2f0ab1",
-    "semantic_hash": "4e50c29a83e8a6c4d7eb097cbf2f0ab1"
+    "mtime": 1791535596.6904726,
+    "ast_hash": "f36d7d0ead58d1dcaa8d14bc507bbb90",
+    "semantic_hash": ""
   },
   "gateway/package.json": {
-    "mtime": 1783183998.273427,
+    "mtime": 1791537204.1366713,
     "ast_hash": "090c00ebb3b6da49dce10a070ab90dd2",
     "semantic_hash": "090c00ebb3b6da49dce10a070ab90dd2"
   },
   "services/emergencias/config/db.js": {
-    "mtime": 1783183956.6762483,
-    "ast_hash": "dd78154301dcae85489ffe1aa4d9e1ee",
-    "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
+    "mtime": 1791535596.771958,
+    "ast_hash": "4425f076d01439f74b01f68b3512c518",
+    "semantic_hash": ""
   },
   "services/emergencias/config/socket.js": {
-    "mtime": 1783183956.6820645,
-    "ast_hash": "6ec4909bd3cb6a86dbec7468b1ae7c59",
-    "semantic_hash": "6ec4909bd3cb6a86dbec7468b1ae7c59"
+    "mtime": 1791535596.771958,
+    "ast_hash": "6dad8f1a6be811096ad46717ad8bd9e0",
+    "semantic_hash": ""
   },
   "services/emergencias/controllers/emergency.js": {
-    "mtime": 1786705756.924822,
-    "ast_hash": "c9dd8ad5cfe06147c9f69d0046fca3e2",
+    "mtime": 1791616994.0645444,
+    "ast_hash": "85b2cae5b35e1727a66a7d48ae8a4703",
     "semantic_hash": ""
   },
   "services/emergencias/index.js": {
-    "mtime": 1785711440.0991173,
-    "ast_hash": "47fea4be4d6b87b0814eeb211ff1a086",
+    "mtime": 1791535596.7743478,
+    "ast_hash": "eb3fb86c3135c312604e814181d24a14",
     "semantic_hash": ""
   },
   "services/emergencias/middlewares/auth.js": {
-    "mtime": 1785822054.896019,
-    "ast_hash": "300d3db312a00dc255821146b1e51cb5",
+    "mtime": 1791535596.7743478,
+    "ast_hash": "82cca93334c782fcf3d4d83bb592126a",
     "semantic_hash": ""
   },
   "services/emergencias/models/emergency.js": {
-    "mtime": 1786705748.6666727,
-    "ast_hash": "d64bffc14d34edcc315a69019fe58550",
+    "mtime": 1791535596.7743478,
+    "ast_hash": "99c78de3e7f5ddafebf9e59da567c4d7",
     "semantic_hash": ""
   },
   "services/emergencias/package.json": {
-    "mtime": 1785786000.6315963,
+    "mtime": 1791535596.7784014,
     "ast_hash": "6c79bbd90128e8f4eb92757782fe5217",
     "semantic_hash": ""
   },
   "services/emergencias/routes/emergency.js": {
-    "mtime": 1786576977.2875426,
-    "ast_hash": "6bae389c5a3e1aae1f320b2b179836e2",
+    "mtime": 1791535596.7784014,
+    "ast_hash": "e92697aeec623d2ede7572c0fd94e2cf",
     "semantic_hash": ""
   },
   "services/hospitales/config/db.js": {
-    "mtime": 1783183972.1602125,
+    "mtime": 1791535596.7784014,
     "ast_hash": "4425f076d01439f74b01f68b3512c518",
     "semantic_hash": "4425f076d01439f74b01f68b3512c518"
   },
   "services/hospitales/config/socket.js": {
-    "mtime": 1783183972.1687677,
-    "ast_hash": "6ec4909bd3cb6a86dbec7468b1ae7c59",
-    "semantic_hash": "6ec4909bd3cb6a86dbec7468b1ae7c59"
+    "mtime": 1791535596.7784014,
+    "ast_hash": "6dad8f1a6be811096ad46717ad8bd9e0",
+    "semantic_hash": ""
   },
   "services/hospitales/controllers/hospital.js": {
-    "mtime": 1785651879.5941615,
-    "ast_hash": "140dda09011f9013686479828d68868b",
+    "mtime": 1791572095.6579409,
+    "ast_hash": "316a47475bb05a4302cd33e4c91b1969",
     "semantic_hash": ""
   },
   "services/hospitales/index.js": {
-    "mtime": 1783183972.1479504,
-    "ast_hash": "5b336be36272befeb859a22243eb7b47",
-    "semantic_hash": "5b336be36272befeb859a22243eb7b47"
+    "mtime": 1791535596.7826426,
+    "ast_hash": "831a6d455334d3c3b5dd653f70030f8d",
+    "semantic_hash": ""
   },
   "services/hospitales/middlewares/auth.js": {
-    "mtime": 1785822035.6867957,
-    "ast_hash": "300d3db312a00dc255821146b1e51cb5",
+    "mtime": 1791535596.7826426,
+    "ast_hash": "82cca93334c782fcf3d4d83bb592126a",
     "semantic_hash": ""
   },
   "services/hospitales/models/hospital.js": {
-    "mtime": 1785895596.0262127,
-    "ast_hash": "39e8357f3236c05bbc44c8876eb17d2b",
+    "mtime": 1791572083.563584,
+    "ast_hash": "cd5979dcb8247f629c89c6973bc3538f",
     "semantic_hash": ""
   },
   "services/hospitales/package.json": {
-    "mtime": 1783183972.1221497,
+    "mtime": 1791535596.7826426,
     "ast_hash": "dbdfb89781745cb1bf104c5fd9002003",
     "semantic_hash": "dbdfb89781745cb1bf104c5fd9002003"
   },
   "services/hospitales/routes/hospital.js": {
-    "mtime": 1784700248.4066658,
-    "ast_hash": "9c065d051013fdb75c3933c5d3952d99",
-    "semantic_hash": "9c065d051013fdb75c3933c5d3952d99"
+    "mtime": 1791572095.6584475,
+    "ast_hash": "3f38ed81edc983450b0b18b9a00aacc0",
+    "semantic_hash": ""
   },
   "services/pacientes/config/db.js": {
-    "mtime": 1783183986.4583533,
-    "ast_hash": "dd78154301dcae85489ffe1aa4d9e1ee",
-    "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
+    "mtime": 1791535596.7881062,
+    "ast_hash": "4425f076d01439f74b01f68b3512c518",
+    "semantic_hash": ""
   },
   "services/pacientes/controllers/patient.js": {
-    "mtime": 1786712714.1589289,
-    "ast_hash": "eb5b09551824143220936a4d2a7cb774",
+    "mtime": 1791576446.4605017,
+    "ast_hash": "82e933605025b34e92b17715b41d8cbe",
     "semantic_hash": ""
   },
   "services/pacientes/index.js": {
-    "mtime": 1783183986.427564,
-    "ast_hash": "502d0d3096c1f277f6946b08105e0c8e",
-    "semantic_hash": "502d0d3096c1f277f6946b08105e0c8e"
+    "mtime": 1791535596.7900763,
+    "ast_hash": "49c220c6d69694103b474577e2e92bd7",
+    "semantic_hash": ""
   },
   "services/pacientes/middlewares/auth.js": {
-    "mtime": 1785822043.7832363,
-    "ast_hash": "300d3db312a00dc255821146b1e51cb5",
+    "mtime": 1791535596.7921066,
+    "ast_hash": "82cca93334c782fcf3d4d83bb592126a",
     "semantic_hash": ""
   },
   "services/pacientes/models/patient.js": {
-    "mtime": 1786713538.3317244,
-    "ast_hash": "094f2ea48a0b3a6335f450ea5b1bfa8a",
+    "mtime": 1791576446.4605017,
+    "ast_hash": "224f9f57d477efe2a195a9d694e2732f",
     "semantic_hash": ""
   },
   "services/pacientes/package.json": {
-    "mtime": 1783183986.414987,
+    "mtime": 1791535596.7931118,
     "ast_hash": "3eafdb1f91d04b9cb27609477a0d688e",
     "semantic_hash": "3eafdb1f91d04b9cb27609477a0d688e"
   },
   "services/pacientes/routes/patient.js": {
-    "mtime": 1784511203.9651701,
-    "ast_hash": "da2995c010037e9a9ce696bc8c8aaf9e",
-    "semantic_hash": "da2995c010037e9a9ce696bc8c8aaf9e"
+    "mtime": 1791535596.7939396,
+    "ast_hash": "31a4827fb289c6aed2d64e3167ac9e58",
+    "semantic_hash": ""
   },
   "services/unidades/config/db.js": {
-    "mtime": 1783183930.778762,
-    "ast_hash": "dd78154301dcae85489ffe1aa4d9e1ee",
-    "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
+    "mtime": 1791535596.7963746,
+    "ast_hash": "4425f076d01439f74b01f68b3512c518",
+    "semantic_hash": ""
   },
   "services/unidades/config/socket.js": {
-    "mtime": 1783183930.7721603,
-    "ast_hash": "43763602c28e42af89a1664f35522e07",
-    "semantic_hash": "43763602c28e42af89a1664f35522e07"
+    "mtime": 1791535596.7963746,
+    "ast_hash": "0f40c9d1f23f5cca26a5549e7ef38f5a",
+    "semantic_hash": ""
   },
   "services/unidades/controllers/unit.js": {
-    "mtime": 1785974100.9339967,
-    "ast_hash": "84cc541c5a68557d1d3e55e98b88d3e7",
+    "mtime": 1791617443.1439292,
+    "ast_hash": "14d0d8aebd79d8867dada6cecc538d8e",
     "semantic_hash": ""
   },
   "services/unidades/index.js": {
-    "mtime": 1786647473.9887862,
-    "ast_hash": "c9052f8924c9ea5bca02afbafb99a263",
+    "mtime": 1791535596.7979956,
+    "ast_hash": "dc6310b591557c4c29def152235c912b",
     "semantic_hash": ""
   },
   "services/unidades/middlewares/auth.js": {
-    "mtime": 1785822062.5180373,
-    "ast_hash": "300d3db312a00dc255821146b1e51cb5",
+    "mtime": 1791535596.799254,
+    "ast_hash": "82cca93334c782fcf3d4d83bb592126a",
     "semantic_hash": ""
   },
   "services/unidades/models/unit.js": {
-    "mtime": 1785974948.6621046,
-    "ast_hash": "167dbf9c235248066e1b7f0b6a050fe8",
+    "mtime": 1791617439.5812721,
+    "ast_hash": "79f2fa2d65d123e227ee7ac688557008",
     "semantic_hash": ""
   },
   "services/unidades/package.json": {
-    "mtime": 1783183930.7231133,
+    "mtime": 1791535596.801254,
     "ast_hash": "0054e0327a4f79e9272eb618f4309951",
     "semantic_hash": "0054e0327a4f79e9272eb618f4309951"
   },
   "services/unidades/routes/unit.js": {
-    "mtime": 1785972252.8075466,
-    "ast_hash": "fdb27ada6eab060454fe9359fdf7c0f4",
+    "mtime": 1791617443.1776183,
+    "ast_hash": "bda646700850069536991fb0305077b8",
     "semantic_hash": ""
   },
   "services/usuarios/config/db.js": {
-    "mtime": 1783183945.1628942,
-    "ast_hash": "dd78154301dcae85489ffe1aa4d9e1ee",
-    "semantic_hash": "dd78154301dcae85489ffe1aa4d9e1ee"
+    "mtime": 1791535596.804254,
+    "ast_hash": "4425f076d01439f74b01f68b3512c518",
+    "semantic_hash": ""
   },
   "services/usuarios/controllers/user.js": {
-    "mtime": 1786711086.358511,
-    "ast_hash": "cbe20162b03c8e8746cbe55c46ca078f",
+    "mtime": 1791535596.8049629,
+    "ast_hash": "1c68dc79b2720023c10ada3b548ab474",
     "semantic_hash": ""
   },
   "services/usuarios/index.js": {
-    "mtime": 1783183945.0988533,
+    "mtime": 1791535596.8049629,
     "ast_hash": "1540a75de19dfbdf7e87de1deaeeac18",
     "semantic_hash": "1540a75de19dfbdf7e87de1deaeeac18"
   },
   "services/usuarios/middlewares/auth.js": {
-    "mtime": 1785822027.5233638,
-    "ast_hash": "300d3db312a00dc255821146b1e51cb5",
+    "mtime": 1791535596.8060129,
+    "ast_hash": "82cca93334c782fcf3d4d83bb592126a",
     "semantic_hash": ""
   },
   "services/usuarios/models/user.js": {
-    "mtime": 1786709468.1731274,
+    "mtime": 1791535596.8070126,
     "ast_hash": "54ae4366fe06596b867ff91192b33d5b",
     "semantic_hash": ""
   },
   "services/usuarios/package.json": {
-    "mtime": 1783183945.1152163,
+    "mtime": 1791537204.1436799,
     "ast_hash": "59b2489807786aa7f801c9cd6207d473",
     "semantic_hash": "59b2489807786aa7f801c9cd6207d473"
   },
   "services/usuarios/routes/user.js": {
-    "mtime": 1786709011.972695,
-    "ast_hash": "0fcf1f374468ec44c1f1b731bcad46df",
+    "mtime": 1791535596.8090117,
+    "ast_hash": "4d092f6dddf86527690df0f07b649167",
     "semantic_hash": ""
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1785645606.4727223,
+    "mtime": 1791535596.4843893,
     "ast_hash": "c232166e6492ba1ed955030b16979b05",
     "semantic_hash": "c232166e6492ba1ed955030b16979b05"
   },
   ".claude/skills/graphify/SKILL.md": {
-    "mtime": 1785645606.4757383,
+    "mtime": 1791535596.4886343,
     "ast_hash": "9ed2c6aeacfaed1605e952784fbaafbb",
     "semantic_hash": "9ed2c6aeacfaed1605e952784fbaafbb"
   },
   ".claude/skills/graphify/references/add-watch.md": {
-    "mtime": 1785645606.4777687,
+    "mtime": 1791535596.4886343,
     "ast_hash": "58c888b5ec0689a886543dd765c1acc9",
     "semantic_hash": "58c888b5ec0689a886543dd765c1acc9"
   },
   ".claude/skills/graphify/references/exports.md": {
-    "mtime": 1785645606.4777687,
+    "mtime": 1791535596.4916513,
     "ast_hash": "ecc0c36852fee4ba6280cdf2b9149039",
     "semantic_hash": "ecc0c36852fee4ba6280cdf2b9149039"
   },
   ".claude/skills/graphify/references/extraction-spec.md": {
-    "mtime": 1785645606.4787724,
+    "mtime": 1791535596.4916513,
     "ast_hash": "024c6f2a3c146b03c72cc871dc56ed3c",
     "semantic_hash": "024c6f2a3c146b03c72cc871dc56ed3c"
   },
   ".claude/skills/graphify/references/github-and-merge.md": {
-    "mtime": 1785645606.482879,
+    "mtime": 1791535596.4926572,
     "ast_hash": "aa0e7ef186392cad062e60483ca7dbbf",
     "semantic_hash": "aa0e7ef186392cad062e60483ca7dbbf"
   },
   ".claude/skills/graphify/references/hooks.md": {
-    "mtime": 1785645606.4838834,
+    "mtime": 1791535596.4926572,
     "ast_hash": "0045c2f12c69bff3a641a8908a1ac057",
     "semantic_hash": "0045c2f12c69bff3a641a8908a1ac057"
   },
   ".claude/skills/graphify/references/query.md": {
-    "mtime": 1785645606.4848974,
+    "mtime": 1791535596.4926572,
     "ast_hash": "852ef14334d60a75ae666ea103d4c4f0",
     "semantic_hash": "852ef14334d60a75ae666ea103d4c4f0"
   },
   ".claude/skills/graphify/references/transcribe.md": {
-    "mtime": 1785645606.4859016,
+    "mtime": 1791535596.4926572,
     "ast_hash": "5c6a9af05d12b5797b2fa8b9493dcc37",
     "semantic_hash": "5c6a9af05d12b5797b2fa8b9493dcc37"
   },
   ".claude/skills/graphify/references/update.md": {
-    "mtime": 1785645606.4891706,
+    "mtime": 1791535596.4950032,
     "ast_hash": "07bf4293ea21b4e00a9655dd4e7f0af5",
     "semantic_hash": "07bf4293ea21b4e00a9655dd4e7f0af5"
   },
   "SICEM_HANDOFF.md": {
-    "mtime": 1785309571.667845,
-    "ast_hash": "88ffb12a86b3f392821e33da303f44d3",
-    "semantic_hash": "88ffb12a86b3f392821e33da303f44d3"
+    "mtime": 1791535596.513231,
+    "ast_hash": "e0d0346e08e15afcb7af39d282394345",
+    "semantic_hash": ""
   },
   "clients/sicem-desktop/index.html": {
-    "mtime": 1784598506.1005244,
-    "ast_hash": "42a4225b0ea1b1d6628645b6214ac74e",
-    "semantic_hash": "42a4225b0ea1b1d6628645b6214ac74e"
+    "mtime": 1791602809.0685139,
+    "ast_hash": "bef7374bfefff75183744641d4e09ea1",
+    "semantic_hash": ""
   },
   "clients/sicem-mobile/AGENTS.md": {
-    "mtime": 1785311750.8016176,
-    "ast_hash": "963888ec05f17b13375386f058dd621e",
-    "semantic_hash": "963888ec05f17b13375386f058dd621e"
+    "mtime": 1791535596.5638535,
+    "ast_hash": "edb1a7757cff5f679b36fe90f839bce1",
+    "semantic_hash": ""
   },
   "clients/sicem-mobile/CLAUDE.md": {
-    "mtime": 1785311750.8016176,
-    "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
-    "semantic_hash": "5c27369b226fcf2be8a6cfe52224e767"
+    "mtime": 1791535596.5648363,
+    "ast_hash": "771faa62feb60b7de901a397aebb29b0",
+    "semantic_hash": ""
   },
   "clients/sicem-web/README.md": {
-    "mtime": 1783183876.6503427,
-    "ast_hash": "a28dc4cb878325f3e9e5649f3e1469ac",
-    "semantic_hash": "a28dc4cb878325f3e9e5649f3e1469ac"
+    "mtime": 1791535596.6013796,
+    "ast_hash": "abfa161e3e5434e3e85394bf03d387a4",
+    "semantic_hash": ""
   },
   "clients/sicem-web/index.html": {
-    "mtime": 1785929441.6054547,
-    "ast_hash": "42467d8edaf0d9cbf0af8f3ab412f675",
+    "mtime": 1791602809.0675137,
+    "ast_hash": "97dc0c7cf4f6373294863a4fb810c773",
     "semantic_hash": ""
   },
   "hola.txt": {
-    "mtime": 1783183766.8258417,
+    "mtime": 1791535596.7657945,
     "ast_hash": "f1308ab3a83ceff8e445d2367e23885b",
     "semantic_hash": "f1308ab3a83ceff8e445d2367e23885b"
   },
   "clients/sicem-mobile/assets/android-icon-background.png": {
-    "mtime": 1785929485.034632,
+    "mtime": 1791535596.575358,
     "ast_hash": "b615fe4814a67f173659ee93a62e95da",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/assets/android-icon-foreground.png": {
-    "mtime": 1785929485.0088172,
+    "mtime": 1791535596.5758483,
     "ast_hash": "791d3c46a198057b66b441698a43fbdd",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/assets/android-icon-monochrome.png": {
-    "mtime": 1785929485.0609653,
+    "mtime": 1791535596.5770543,
     "ast_hash": "791d3c46a198057b66b441698a43fbdd",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/assets/favicon.png": {
-    "mtime": 1785929485.0853846,
+    "mtime": 1791535596.5780532,
     "ast_hash": "6ea43b9e9e350ba80e5f60364977f5c7",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/assets/icon.png": {
-    "mtime": 1785929484.9826207,
+    "mtime": 1791535596.5790546,
     "ast_hash": "2f8b0a0caf3903aa1cce299e796a4243",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/assets/splash-icon.png": {
-    "mtime": 1785929485.1121814,
+    "mtime": 1791535596.5790546,
     "ast_hash": "a1f482a1642ea27abb34899c24be8ff4",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/favicon.svg": {
-    "mtime": 1785929437.4126263,
-    "ast_hash": "bc117e35911e5e4b77c4fec84c32ed2b",
+    "mtime": 1791535596.6265788,
+    "ast_hash": "4fc9416232f4188369ac2cce33fa3a22",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/icons.svg": {
-    "mtime": 1783183876.870484,
-    "ast_hash": "3b4fcfcf393eca4d264dca4a4663bc37",
-    "semantic_hash": "3b4fcfcf393eca4d264dca4a4663bc37"
+    "mtime": 1791535596.6265788,
+    "ast_hash": "21c7473c592c67dc87223d49892c8f0a",
+    "semantic_hash": ""
   },
   "clients/sicem-web/src/assets/hero.png": {
-    "mtime": 1783183876.8122208,
+    "mtime": 1791535596.6313295,
     "ast_hash": "aead493361b27e7510691c5d7072dfc1",
     "semantic_hash": "aead493361b27e7510691c5d7072dfc1"
   },
   "clients/sicem-web/src/assets/react.svg": {
-    "mtime": 1783183876.8187025,
+    "mtime": 1791535596.6313295,
     "ast_hash": "f0402b67b6ce880f65666bb49e841696",
     "semantic_hash": "f0402b67b6ce880f65666bb49e841696"
   },
   "clients/sicem-web/src/assets/vite.svg": {
-    "mtime": 1783183876.8283973,
-    "ast_hash": "9960a24288958394ac50e57ff638b036",
-    "semantic_hash": "9960a24288958394ac50e57ff638b036"
+    "mtime": 1791535596.6555412,
+    "ast_hash": "6d5180a782d64c8cf51ba01c2a2184d8",
+    "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/_layout.js": {
-    "mtime": 1785906953.7833233,
-    "ast_hash": "552f6d870630a06b39c5f12fa578bd91",
+    "mtime": 1791575465.1840093,
+    "ast_hash": "5715d8dde9370c880d3957828fc5f506",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/index.js": {
-    "mtime": 1785975716.9509175,
-    "ast_hash": "923e29b2322452944eb4b6e0badc95fd",
+    "mtime": 1791617934.6476047,
+    "ast_hash": "4d72191255dc55076e8153bfbec93e2c",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/notas.js": {
-    "mtime": 1785906042.9162295,
-    "ast_hash": "c6a0fcdb486d0aa2f822dbeda1c69511",
+    "mtime": 1791618415.1902938,
+    "ast_hash": "902be6f5a0c0243c4d0590bb99a81b5a",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/registrar-paciente.js": {
-    "mtime": 1785873218.009944,
-    "ast_hash": "329dd16b96e9254cf7216c56e8ed45a8",
+    "mtime": 1791618150.1434112,
+    "ast_hash": "e0e772c02b743bec3610d360a97387d3",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(auth)/login.js": {
-    "mtime": 1785709727.364972,
-    "ast_hash": "87728da65374c0661b3cd74f42456910",
+    "mtime": 1791617882.8504102,
+    "ast_hash": "b75e8641093f073a92c6d79d9b32ecf6",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1785645606.4891706,
-    "ast_hash": "8a6643a420fdad6bfb583523bc6cef16",
+    "mtime": 1791539554.3701453,
+    "ast_hash": "27fbde060227576300a0daddef565cd1",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1783183876.5562272,
+    "mtime": 1791535596.513231,
     "ast_hash": "b3fa05613eb3023ca75cecb674c61e36",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/components/capacity/BedMatrixModal.jsx": {
-    "mtime": 1785708220.306664,
-    "ast_hash": "af342586e870d9697aad218271f1ba19",
+    "mtime": 1791606402.5861998,
+    "ast_hash": "b4bbef7aebfb80208a52ae2492b5fe25",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/context/AuthContext.jsx": {
-    "mtime": 1785822103.9400837,
-    "ast_hash": "d1992091f9a9cbdd9553ed01e9e90e1e",
+    "mtime": 1791617934.649604,
+    "ast_hash": "45d11580a980c9b6d7329a1ce0ec2db4",
     "semantic_hash": ""
   },
   "fundamentos-legales/traslado-pacientes-por-ambulancia.txt": {
-    "mtime": 1785708562.3637247,
-    "ast_hash": "d86738d93713b6281cf08fecd38db612",
+    "mtime": 1791535596.6904726,
+    "ast_hash": "968d8a69d7954ba499f4655031d6f6c0",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/constants/api.js": {
-    "mtime": 1785922822.0037246,
-    "ast_hash": "69541018cbfc4de37fc3581e14aafab1",
+    "mtime": 1791535596.5800548,
+    "ast_hash": "9a4fa9b055b7fa0b455a2f140ac9b730",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/context/AmbulanceContext.jsx": {
-    "mtime": 1785907665.8189125,
-    "ast_hash": "ca95778033364976e0f1c2c190277425",
+    "mtime": 1791617934.649604,
+    "ast_hash": "2fbab5491cb2b046dc8bb5b03bb757b4",
     "semantic_hash": ""
   },
   "plantillas mockup/SICEM_Escritorio_Hospital.html": {
-    "mtime": 1783724424.216198,
-    "ast_hash": "9e8c7d0fade3162c132ab1ee72993aff",
+    "mtime": 1791535596.7657945,
+    "ast_hash": "d67f19c22180c1af0af99f0a6498d08f",
     "semantic_hash": ""
   },
   "plantillas mockup/SICEM_Movil_Paramedico.html": {
-    "mtime": 1783724436.598284,
-    "ast_hash": "6ef84cb105b17e08659790518daab7c8",
+    "mtime": 1791535596.7701886,
+    "ast_hash": "22e3923714a309652ceba26ff39a0c35",
     "semantic_hash": ""
   },
   "plantillas mockup/SICEM_Web_Despachador.html": {
-    "mtime": 1783724408.2760887,
-    "ast_hash": "6b31c96409de9cd320f3e1322321817b",
+    "mtime": 1791535596.7711942,
+    "ast_hash": "a4581f04a54fa5130fc58038fa5b8f6b",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/mapa.js": {
-    "mtime": 1785908136.4747043,
-    "ast_hash": "f662e5d2a80b8352dfcd8491372645c2",
+    "mtime": 1791618078.0150468,
+    "ast_hash": "e8d5055071f3060194e5ca2c9894aa95",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/paciente.js": {
-    "mtime": 1786708837.7335353,
-    "ast_hash": "101387f04ec53ca1599278c79230ed2b",
+    "mtime": 1791618126.2429514,
+    "ast_hash": "44d95222909ce0f7a6bfcc7c6bca2e3e",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/stats.js": {
-    "mtime": 1785907074.7582467,
-    "ast_hash": "b00a538be8e2da2ebb06d701bb681168",
+    "mtime": 1791599594.6436415,
+    "ast_hash": "9e08e87c3a08c2e8fd8ce9f61b3a10bc",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/context/SocketContext.jsx": {
-    "mtime": 1785974147.2771611,
-    "ast_hash": "63fd22793d876ec26d194606b954d210",
+    "mtime": 1791617934.6719007,
+    "ast_hash": "ad0be716e353dfe1529553157319eb35",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/sockets/unitsSocket.js": {
-    "mtime": 1785922835.4257286,
-    "ast_hash": "2bac2fe81701996e5e5c608bf9febada",
+    "mtime": 1791535596.6823757,
+    "ast_hash": "5c5f632856f182c93b137905e59a372e",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/utils/pushNotifications.js": {
-    "mtime": 1785785858.7046907,
-    "ast_hash": "e27590cb8142fe35ad4aa863528dd953",
+    "mtime": 1791535596.5890388,
+    "ast_hash": "4d3ed7b509947b40fd4fee335dd6ccc3",
     "semantic_hash": ""
   },
   "services/emergencias/config/firebase.js": {
-    "mtime": 1785919011.2848434,
-    "ast_hash": "a87a9f97d16b637a447f476ab1073723",
+    "mtime": 1791535596.771958,
+    "ast_hash": "66cd65811e1c75273dddf35263708be9",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/plugins/withNdkVersion.js": {
-    "mtime": 1785928474.801303,
-    "ast_hash": "8949d049d4cbdf5108297e92faf4aa93",
+    "mtime": 1791535596.587036,
+    "ast_hash": "146b1c098d02e85effd9fb92a74bde0e",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/utils/formatData.js": {
-    "mtime": 1785873106.1257896,
-    "ast_hash": "474ccdc4aba3ff5aa6f9a657ee0cb9ec",
+    "mtime": 1791535596.5880365,
+    "ast_hash": "ba04fec05ff30440ad67c8c52c87968a",
     "semantic_hash": ""
   },
   "fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt": {
-    "mtime": 1785885542.411479,
-    "ast_hash": "0e766b9c7571679755b0a779948e4da4",
+    "mtime": 1791535596.6904726,
+    "ast_hash": "d35a5e384903f387994abcf1068d803c",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/sockets/unitsSocket.js": {
-    "mtime": 1785922830.3600748,
-    "ast_hash": "f9f4f541ac5f29106cd6e9dc1881aadf",
+    "mtime": 1791535596.555421,
+    "ast_hash": "51e5edade59dbb78f27980cb31ab235f",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/expediente.js": {
-    "mtime": 1785905974.5205529,
-    "ast_hash": "c8186663967470bba55f4ffde76c71cb",
+    "mtime": 1791617934.6466029,
+    "ast_hash": "c02eb61892d88c11ae12778c59df8af9",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/app/(app)/perfil.js": {
-    "mtime": 1785903027.1625473,
-    "ast_hash": "7d8b0b819a711575194dd4652fc34152",
+    "mtime": 1791617934.649604,
+    "ast_hash": "a9e9fff010437ee7ef839e0d6a45544c",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/config/api.js": {
-    "mtime": 1785922808.304228,
-    "ast_hash": "fa6cfca0f662c07e5a6c5ee478e51cb8",
+    "mtime": 1791535596.5392866,
+    "ast_hash": "a488a768f5f66e7234685dbca3106e3a",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/config/api.js": {
-    "mtime": 1785922804.7414641,
-    "ast_hash": "1902348a2957d762ad0f7d59c16b0bf8",
+    "mtime": 1791535596.6612425,
+    "ast_hash": "1e7916b686ac316609ee64afa012c431",
     "semantic_hash": ""
   },
   "Manual_SICEM_Desktop_Hospital.html": {
-    "mtime": 1785913297.9485354,
-    "ast_hash": "8979283215224c7c3af616ca9f5735b2",
+    "mtime": 1791535596.498237,
+    "ast_hash": "5f749d43e37b68e2f90ff4b8853e87d3",
     "semantic_hash": ""
   },
   "Manual_SICEM_Mobile_Paramedico.html": {
-    "mtime": 1785913482.6448047,
-    "ast_hash": "eaf0ba992fdafa2a8027dc3abef5a215",
+    "mtime": 1791535596.5008576,
+    "ast_hash": "35417626dea1a7c20bf38699b1e8ca9e",
     "semantic_hash": ""
   },
   "Manual_SICEM_Web_Despachador.html": {
-    "mtime": 1785913169.4871535,
-    "ast_hash": "5e324e152bf836aea3b908ffa2aaa544",
+    "mtime": 1791535596.5069935,
+    "ast_hash": "bc8b13bffb662946733650fbfde632c3",
     "semantic_hash": ""
   },
   "Manual_SICEM_Desktop_Hospital.pdf": {
-    "mtime": 1785913787.2900543,
+    "mtime": 1791535596.5008576,
     "ast_hash": "178f9d9e06073d01edaca05847fbd21c",
     "semantic_hash": ""
   },
   "Manual_SICEM_Mobile_Paramedico.pdf": {
-    "mtime": 1785913789.5437934,
+    "mtime": 1791535596.5069935,
     "ast_hash": "19534032bdaa40b44ae15b03e7fd465a",
     "semantic_hash": ""
   },
   "Manual_SICEM_Web_Despachador.pdf": {
-    "mtime": 1785913751.395914,
+    "mtime": 1791535596.5089977,
     "ast_hash": "4b8c83ee3d277d1cfd1629e0efce015a",
     "semantic_hash": ""
   },
   "clients/sicem-web/vercel.json": {
-    "mtime": 1785924697.714652,
-    "ast_hash": "6411d2fbb5f0e00aaff0ca0ded84e0b6",
+    "mtime": 1791535596.6864643,
+    "ast_hash": "7708fbf29b99cd92c2a778d60001c5ba",
     "semantic_hash": ""
   },
   "clients/sicem-mobile/metro.config.js": {
-    "mtime": 1785960414.1610188,
-    "ast_hash": "479e2ba4b12c9b8d238106848f9658b6",
+    "mtime": 1791535596.5850317,
+    "ast_hash": "c9fb8541b3afb4e3c6067339e0dc3575",
     "semantic_hash": ""
   },
   "Manual_Tecnico_SICEM.html": {
-    "mtime": 1785930693.9645936,
-    "ast_hash": "2e15ee157adf7a87c229dad1556ac7ab",
+    "mtime": 1791535596.5089977,
+    "ast_hash": "96ed1c2df2ec4dd6ed332f1b4add9b93",
     "semantic_hash": ""
   },
   "Manual_Tecnico_SICEM.pdf": {
-    "mtime": 1785942178.431974,
+    "mtime": 1791535596.513231,
     "ast_hash": "dcc6e7e564dedda40f6bd257c7c1c734",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/assets/units/advanced_life_support.png": {
-    "mtime": 1783972442.9580147,
+    "mtime": 1791535596.6100295,
     "ast_hash": "c092079d3da1e9a4cfc42fceb4b357d5",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/assets/units/basic_life_support.png": {
-    "mtime": 1783972451.935878,
+    "mtime": 1791535596.61404,
     "ast_hash": "380da497fe8cadbd5d6f7952a4139711",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/assets/units/intensive_care.png": {
-    "mtime": 1783972395.368179,
+    "mtime": 1791535596.6184535,
     "ast_hash": "db8a71b9db211e1e439d411dc7152f41",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/assets/units/neonatal.png": {
-    "mtime": 1783972419.676203,
+    "mtime": 1791535596.6225662,
     "ast_hash": "f6a5f7e8ac31221942e319e605cfdd5f",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/assets/units/transport.png": {
-    "mtime": 1783972428.6014135,
+    "mtime": 1791535596.6265788,
     "ast_hash": "db3b41453f4858928743d7eb3f7c83f5",
     "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
-    "mtime": 1786494606.3402095,
+    "mtime": 1791535596.4950032,
     "ast_hash": "585ec96909c44093e52805182e70f6be",
     "semantic_hash": ""
   },
   ".devcontainer/postCreate.sh": {
-    "mtime": 1785968078.6269827,
-    "ast_hash": "8ff6c2ccbb7c4184a95e28700e965a56",
+    "mtime": 1791535596.4950032,
+    "ast_hash": "3d07f741054d2efada8344555e1c78b8",
     "semantic_hash": ""
   },
   "Guias/Aprende_SICEM_De_Cero_A_Experto.md": {
-    "mtime": 1785971214.3981686,
-    "ast_hash": "51984bd464cb9d606350c9de94e6956e",
+    "mtime": 1791535596.498237,
+    "ast_hash": "45b4c1fcdf6dfa8ef524d96003a1d010",
     "semantic_hash": ""
   },
   "Guias/Empaquetado_Desktop_y_Mobile.md": {
-    "mtime": 1785971029.0788922,
-    "ast_hash": "45e25996ab9d0500f19649fb88c2af1d",
+    "mtime": 1791535596.498237,
+    "ast_hash": "372ff78389d8a5f3fc60889b16e73e44",
     "semantic_hash": ""
   },
   ".devcontainer/startDb.sh": {
-    "mtime": 1786494606.3402095,
+    "mtime": 1791535596.4967487,
     "ast_hash": "782c8352a4e2065ba80b3f08b794c53b",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/utils/generatePatientReport.js": {
-    "mtime": 1786577793.0211234,
-    "ast_hash": "296c712ac30811cd09b982c822297bb3",
+    "mtime": 1791535596.559563,
+    "ast_hash": "c2d3be82e565f93c608fdd378e553ae1",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/utils/generateEmergencyReport.js": {
-    "mtime": 1786577795.5313902,
-    "ast_hash": "1c219683232041e8977e2cfe46b3ef92",
+    "mtime": 1791535596.6864643,
+    "ast_hash": "1f4145498c92f56a0b0757c2d1595103",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/public/assets/SALUD_Logo_(2024).png": {
-    "mtime": 1786574508.1448846,
+    "mtime": 1791535596.5218108,
     "ast_hash": "e2374d32a5ef32ae7fd9b3af3108ca0a",
     "semantic_hash": ""
   },
   "clients/sicem-web/public/assets/SALUD_Logo_(2024).png": {
-    "mtime": 1786574508.1448846,
+    "mtime": 1791535596.6057081,
     "ast_hash": "e2374d32a5ef32ae7fd9b3af3108ca0a",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/assets/units/advanced_life_support.png": {
-    "mtime": 1783972442.9580147,
+    "mtime": 1791535596.6371307,
     "ast_hash": "c092079d3da1e9a4cfc42fceb4b357d5",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/assets/units/basic_life_support.png": {
-    "mtime": 1783972451.935878,
+    "mtime": 1791535596.6411538,
     "ast_hash": "380da497fe8cadbd5d6f7952a4139711",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/assets/units/intensive_care.png": {
-    "mtime": 1783972395.368179,
+    "mtime": 1791535596.6456745,
     "ast_hash": "db8a71b9db211e1e439d411dc7152f41",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/assets/units/neonatal.png": {
-    "mtime": 1783972419.676203,
+    "mtime": 1791535596.6474192,
     "ast_hash": "f6a5f7e8ac31221942e319e605cfdd5f",
     "semantic_hash": ""
   },
   "clients/sicem-web/src/assets/units/transport.png": {
-    "mtime": 1783972428.6014135,
+    "mtime": 1791535596.6542728,
     "ast_hash": "db3b41453f4858928743d7eb3f7c83f5",
     "semantic_hash": ""
   },
   "clients/sicem-desktop/src/pages/Patients.jsx": {
-    "mtime": 1786705524.7114065,
-    "ast_hash": "57d8ef96ade75f9f39c9c961ab943bf1",
+    "mtime": 1791606346.6159015,
+    "ast_hash": "7995e4faa134f96e758f0e083d7f5942",
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/package.json": {
-    "mtime": 1786705084.7166426,
-    "ast_hash": "eac6312229bb8b1a5ada9743a1f1c032",
+    "mtime": 1791535596.5952413,
+    "ast_hash": "2ac6a3322c08fdc6294c2e14d96daeef",
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/src/App.jsx": {
-    "mtime": 1786713160.9844484,
-    "ast_hash": "916751e8760e5e06cb68b72d9325c05f",
+    "mtime": 1791602956.0627208,
+    "ast_hash": "05e4d6757fb1e5ccd93ae6c14beb4fdd",
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/src/main.jsx": {
-    "mtime": 1786705108.634509,
-    "ast_hash": "7659180e125ef2ae58796d5eda861912",
+    "mtime": 1791602880.648334,
+    "ast_hash": "65a97f4641bcd0ba39512aab66eb31fd",
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/vite.config.js": {
-    "mtime": 1786705088.0163944,
-    "ast_hash": "7e8d2d2a67cf6717bea85b97e1fd198c",
+    "mtime": 1791535596.5972426,
+    "ast_hash": "174a11d35ca6a7ba7d44075258cdb7fd",
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/index.html": {
-    "mtime": 1786705093.1919417,
-    "ast_hash": "16e0ad529879d23baf396ebf3968f0d1",
+    "mtime": 1791602809.0685139,
+    "ast_hash": "80fb5a6bc84c8d7d80ce9e10434de832",
     "semantic_hash": ""
   },
   "docs/plan-paciente-institucion.md": {
-    "mtime": 1786705861.1664553,
-    "ast_hash": "0004b905dc9021acd69286150aaeea3d",
+    "mtime": 1791535596.6864643,
+    "ast_hash": "98c8e4b2adb33d87a341a9a927c6537e",
     "semantic_hash": ""
   },
   "clients/sicem-pacientes/src/utils/formatData.js": {
-    "mtime": 1786708805.9057431,
-    "ast_hash": "4516eddd3dd79cd7702202d645734d68",
+    "mtime": 1791535596.5972426,
+    "ast_hash": "080eb58bfd267019118cf0fb7c542ccb",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/layout/CommandPalette.jsx": {
+    "mtime": 1791539531.4572127,
+    "ast_hash": "b31876f3d646ccb8225b3131ffc4dc53",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/Icon.jsx": {
+    "mtime": 1791602809.0635176,
+    "ast_hash": "2172ea1a0a93136b37deb909d3fe7d8a",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/LiveClock.jsx": {
+    "mtime": 1791572274.2119837,
+    "ast_hash": "865d7fd5c4cc6447eedd14f7aadb812c",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/theme.js": {
+    "mtime": 1791542120.8447034,
+    "ast_hash": "bec7887964c307242645c2c65c3c0e53",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/DESIGN.md": {
+    "mtime": 1791619189.309364,
+    "ast_hash": "b1a15f022870758913f80d36226f459a",
+    "semantic_hash": ""
+  },
+  "maqueta-rediseno-sicem.html": {
+    "mtime": 1791538581.2806485,
+    "ast_hash": "6fcffcfad63557d83c30244f9af754c2",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/emergencies/QuickAssignCard.jsx": {
+    "mtime": 1791572409.5329854,
+    "ast_hash": "323b2b9a2eb1e633c5e4f14d86c722ca",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/map/MapControls.jsx": {
+    "mtime": 1791540306.9142163,
+    "ast_hash": "b2508eb7e0cbe410abbc1096dfa57d90",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/alertSound.js": {
+    "mtime": 1791540288.2061214,
+    "ast_hash": "542011b1fe560f2d5eb10ef2428e71e9",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/osrm.js": {
+    "mtime": 1791572409.461157,
+    "ast_hash": "de5b3d4c323336c4fa0a02d89b01e1a4",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/color.js": {
+    "mtime": 1791568634.1607537,
+    "ast_hash": "cf2c932ba5f1d7737374e6d0f88e997c",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/Icon.jsx": {
+    "mtime": 1791602809.0645156,
+    "ast_hash": "53673ad43282c3dc6460f6a496cc4099",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/RegionNotice.jsx": {
+    "mtime": 1791572695.4911878,
+    "ast_hash": "275e71163f6e0edbb64c0c8045555d0f",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/config/roles.js": {
+    "mtime": 1791572695.7268655,
+    "ast_hash": "339bfae386cdf208a684d248b398f7cc",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/config/services.js": {
+    "mtime": 1791572695.7303762,
+    "ast_hash": "c17920133dae9347257c5ca15317d0a8",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/context/DialogsContext.jsx": {
+    "mtime": 1791606692.702655,
+    "ast_hash": "138d4f8b8191852c701cc11537a24865",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/context/RegionContext.jsx": {
+    "mtime": 1791572695.6702254,
+    "ast_hash": "ac201221b4a03b43b4d004897cb01b2b",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/context/useDialogs.js": {
+    "mtime": 1791606692.8218365,
+    "ast_hash": "c413f34b3b55ab3afffbc6a47107361e",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/context/useRegion.js": {
+    "mtime": 1791572695.651881,
+    "ast_hash": "3a2d10e3743379a7df7ecadeb60f64a5",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/color.js": {
+    "mtime": 1791572695.556512,
+    "ast_hash": "cf2c932ba5f1d7737374e6d0f88e997c",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/mexico.js": {
+    "mtime": 1791572695.5710993,
+    "ast_hash": "e1166ce3d5f7421b7a5f410fadb3a34d",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/region.js": {
+    "mtime": 1791572695.5897768,
+    "ast_hash": "d21c20debbd19e6d0c595a92b0418904",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/theme.js": {
+    "mtime": 1791572711.065276,
+    "ast_hash": "0da521f15c0f130db91cf4a2a844423d",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/time.js": {
+    "mtime": 1791582629.8414264,
+    "ast_hash": "b0d8625ccd3be9aff4385fd6d51b985d",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/triage.js": {
+    "mtime": 1791573022.2978773,
+    "ast_hash": "2f1f0891946a9f43937e2ee9fef23508",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/RegionNotice.jsx": {
+    "mtime": 1791572274.2129843,
+    "ast_hash": "275e71163f6e0edbb64c0c8045555d0f",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/config/operations.js": {
+    "mtime": 1791572393.4684267,
+    "ast_hash": "e9c691f331553c7a8a37cd66563d0fe2",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/config/roles.js": {
+    "mtime": 1791572393.3692613,
+    "ast_hash": "339bfae386cdf208a684d248b398f7cc",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/config/services.js": {
+    "mtime": 1791572393.4190426,
+    "ast_hash": "c17920133dae9347257c5ca15317d0a8",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/context/RegionContext.jsx": {
+    "mtime": 1791572274.1979659,
+    "ast_hash": "ac201221b4a03b43b4d004897cb01b2b",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/context/useRegion.js": {
+    "mtime": 1791572274.1969688,
+    "ast_hash": "3a2d10e3743379a7df7ecadeb60f64a5",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/geocode.js": {
+    "mtime": 1791572409.4621563,
+    "ast_hash": "59d05c78c49e305e551c36dec0ce5666",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/mexico.js": {
+    "mtime": 1791572156.5103955,
+    "ast_hash": "e1166ce3d5f7421b7a5f410fadb3a34d",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/region.js": {
+    "mtime": 1791572274.1969688,
+    "ast_hash": "d21c20debbd19e6d0c595a92b0418904",
+    "semantic_hash": ""
+  },
+  "scripts/crear-cuentas-qa.mjs": {
+    "mtime": 1791572569.4155483,
+    "ast_hash": "1c55e0885e1a94b2a35b12564e3995d8",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/api.js": {
+    "mtime": 1791574981.9361079,
+    "ast_hash": "457ea1c146255ff49252536881ecf351",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/components/ui.jsx": {
+    "mtime": 1791575002.7378242,
+    "ast_hash": "1b8d7551df29cd7239cd84b197ac83eb",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/pages/AuthPage.jsx": {
+    "mtime": 1791617665.9613264,
+    "ast_hash": "d5cf6362c78cb730a7a6fc3154fcaefd",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/pages/ClinicalList.jsx": {
+    "mtime": 1791582689.2708888,
+    "ast_hash": "465c962bc2022ec31bf5fb3cdbe5a18c",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/pages/ClinicalRecord.jsx": {
+    "mtime": 1791582689.283917,
+    "ast_hash": "e02de81d5fccea4eca606a746b204244",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/pages/Profile.jsx": {
+    "mtime": 1791582689.283917,
+    "ast_hash": "84f3624e71dded24af303987ec53a1f6",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/utils/dates.js": {
+    "mtime": 1791582663.787961,
+    "ast_hash": "64e5b3e945fcaf2f30ea8ef6e4328bfa",
+    "semantic_hash": ""
+  },
+  "clients/sicem-mobile/constants/theme.js": {
+    "mtime": 1791603040.0725422,
+    "ast_hash": "f36840f9cfcff3d4c07d1511c2b3e1b6",
+    "semantic_hash": ""
+  },
+  "clients/sicem-mobile/components/ui.js": {
+    "mtime": 1791618150.127791,
+    "ast_hash": "9443bf5b4b03ce69a6a1f3551266b497",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/context/DialogsContext.jsx": {
+    "mtime": 1791606684.8238246,
+    "ast_hash": "138d4f8b8191852c701cc11537a24865",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/context/useDialogs.js": {
+    "mtime": 1791606685.5659392,
+    "ast_hash": "c413f34b3b55ab3afffbc6a47107361e",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/MoreMenu.jsx": {
+    "mtime": 1791606884.9100673,
+    "ast_hash": "1a9f0307edf3d2e9f6c47d9b8ec12bfa",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/components/MedicalCard.jsx": {
+    "mtime": 1791582663.3281467,
+    "ast_hash": "c3b712f43e9a681332391112c5e78f57",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/useSummary.js": {
+    "mtime": 1791582663.1390564,
+    "ast_hash": "6f8a2f5ad873e54cf150cd55f9bccabd",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/MoreMenu.jsx": {
+    "mtime": 1791606884.8732007,
+    "ast_hash": "1a9f0307edf3d2e9f6c47d9b8ec12bfa",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/AnimatedNumber.jsx": {
+    "mtime": 1791599019.5982654,
+    "ast_hash": "f90c1bd7d4332961c3ddc6daae56ee36",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/SkeletonCards.jsx": {
+    "mtime": 1791599066.9804902,
+    "ast_hash": "9d2eae927dd812167ffdc60c3211dc39",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/AnimatedNumber.jsx": {
+    "mtime": 1791599019.5418727,
+    "ast_hash": "f90c1bd7d4332961c3ddc6daae56ee36",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/SkeletonCards.jsx": {
+    "mtime": 1791599066.9298403,
+    "ast_hash": "9d2eae927dd812167ffdc60c3211dc39",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/SkinMenu.jsx": {
+    "mtime": 1791602809.0605137,
+    "ast_hash": "26fd2c4bada4011f295dbfb72f5c6b63",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/SkinPicker.jsx": {
+    "mtime": 1791602809.061517,
+    "ast_hash": "d43f943b38347b44dc39c08357c9687e",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/utils/skin.js": {
+    "mtime": 1791602809.0575144,
+    "ast_hash": "d618695830a33e4c827adb6f6bc2acb7",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/SkinMenu.jsx": {
+    "mtime": 1791602956.0627208,
+    "ast_hash": "4716966c192136f23f79b1896f9edaed",
+    "semantic_hash": ""
+  },
+  "clients/sicem-pacientes/src/skin.js": {
+    "mtime": 1791602809.0595124,
+    "ast_hash": "d618695830a33e4c827adb6f6bc2acb7",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/SkinMenu.jsx": {
+    "mtime": 1791602793.508388,
+    "ast_hash": "26fd2c4bada4011f295dbfb72f5c6b63",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/SkinPicker.jsx": {
+    "mtime": 1791602793.746269,
+    "ast_hash": "d43f943b38347b44dc39c08357c9687e",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/utils/skin.js": {
+    "mtime": 1791602793.4236846,
+    "ast_hash": "d618695830a33e4c827adb6f6bc2acb7",
+    "semantic_hash": ""
+  },
+  "propuestas/skins/build.py": {
+    "mtime": 1791606926.4688756,
+    "ast_hash": "f7cf022e0e8682a15f8f8a36aa15077c",
+    "semantic_hash": ""
+  },
+  "propuestas-diseno.html": {
+    "mtime": 1791601867.910387,
+    "ast_hash": "274ef936aab6174ff31d47a161676302",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ambulances/AmbulanceDetailPanel.jsx": {
+    "mtime": 1791606484.8360467,
+    "ast_hash": "3efecea2cb231322d7af52a3a8b1dea0",
+    "semantic_hash": ""
+  },
+  "clients/sicem-desktop/src/components/ui/Overlay.jsx": {
+    "mtime": 1791617396.2273576,
+    "ast_hash": "cacefef5770fe9dd3f696f604c1717f8",
+    "semantic_hash": ""
+  },
+  "clients/sicem-web/src/components/ui/Overlay.jsx": {
+    "mtime": 1791617396.203999,
+    "ast_hash": "cacefef5770fe9dd3f696f604c1717f8",
+    "semantic_hash": ""
+  },
+  "propuestas/skins/to_drawer.py": {
+    "mtime": 1791606086.5067062,
+    "ast_hash": "a88e6ea5b4dc7c13c295a38ca02852ef",
+    "semantic_hash": ""
+  },
+  "clients/sicem-mobile/components/AlertHost.js": {
+    "mtime": 1791617934.1582463,
+    "ast_hash": "c7734f346a147b34affb3a53a9c7868b",
+    "semantic_hash": ""
+  },
+  "clients/sicem-mobile/utils/alert.js": {
+    "mtime": 1791617934.1009314,
+    "ast_hash": "d5123a12fe1e0900d47c5f284113d95d",
+    "semantic_hash": ""
+  },
+  "AUDITORIA_FRONTEND.md": {
+    "mtime": 1791618426.9403949,
+    "ast_hash": "4ad6e99deb6757aabe6ef2cf876f95ba",
     "semantic_hash": ""
   }
 }

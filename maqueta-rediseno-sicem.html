@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SICEM — Maqueta de rediseño</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#F3F2EE; --surface:#FFFFFF; --surface-2:#F8F7F4; --line:#DEDBD3; --line-strong:#C6C2B8;
+  --text:#1B1D21; --text-2:#4B4F57; --text-3:#6C7079;
+  --brand:#B3202A; --brand-hover:#98171F; --on-brand:#FFFFFF; --brand-soft:#FBE8E9;
+  --steel:#1D6B66; --steel-soft:#E0EFED;
+  --ok:#2B7A3E; --ok-soft:#E4F2E7;
+  --warn:#8F5A00; --warn-soft:#FAEFD8;
+  --hosp:#6A4C9C;
+  --nav-bg:#25272C; --nav-text:#CFCBC3; --nav-active:#FFFFFF; --nav-line:#383B42;
+  --t1:#C62828; --t2:#E8710A; --t3:#D9A400; --t4:#2E7D32; --t5:#1E6FB8;
+  --map-land:#ECEAE4; --map-block:#E3E0D8; --map-water:#BDD5DB; --map-park:#D2DEC6;
+  --map-road:#FFFFFF; --map-road-major:#FFFFFF; --map-casing:#CBC6BA; --map-label:#6C7079;
+  --shadow-panel:0 10px 30px rgba(27,29,33,.14), 0 1px 2px rgba(27,29,33,.08);
+  --ring:0 0 0 3px rgba(29,107,102,.45);
+  --r-sm:6px; --r-md:8px; --r-lg:12px;
+  --font-display:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --font-body:'Public Sans','Segoe UI',sans-serif;
+  --font-id:'IBM Plex Mono',ui-monospace,monospace;}
+:root[data-theme="dark"]{
+  --bg:#111215; --surface:#1A1C20; --surface-2:#212428; --line:#2D3036; --line-strong:#3E424A;
+  --text:#EEEBE5; --text-2:#B3B0A8; --text-3:#8B8E96;
+  --brand:#E5484D; --brand-hover:#F06A6E; --on-brand:#1A0507; --brand-soft:#3A1519;
+  --steel:#5FBDB3; --steel-soft:#12302D;
+  --ok:#5BC47A; --ok-soft:#12291A;
+  --warn:#F0B44A; --warn-soft:#33260B;
+  --hosp:#A58BDB;
+  --nav-bg:#0C0D0F; --nav-text:#B3B0A8; --nav-active:#FFFFFF; --nav-line:#25272C;
+  --t1:#F0555A; --t2:#F5913F; --t3:#E8BC2C; --t4:#52B85A; --t5:#4C9BE0;
+  --map-land:#16181C; --map-block:#1B1E23; --map-water:#173038; --map-park:#19271E;
+  --map-road:#272A30; --map-road-major:#363A42; --map-casing:#0F1013; --map-label:#7D8088;
+  --shadow-panel:0 12px 32px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.4);
+  --ring:0 0 0 3px rgba(95,189,179,.55);}
+
+/* ============ BASE ============ */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:400 15px/1.5 var(--font-body);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:none;box-shadow:var(--ring);border-radius:var(--r-sm)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.icon{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--font-display);margin:0;letter-spacing:-.01em}
+
+/* ============ BARRA SUPERIOR ============ */
+.topbar{height:59px;border-top:3px solid var(--brand);background:var(--nav-bg);color:var(--nav-text);display:flex;align-items:center;gap:28px;padding:0 20px;border-bottom:1px solid var(--nav-line);flex:none;position:relative;z-index:30}
+.brand{display:flex;align-items:center;gap:11px;color:#fff;text-decoration:none}
+.brand-text b{display:block;font:700 22px/1 var(--font-display);letter-spacing:.01em}
+.brand-text small{display:block;font:500 10.5px/1.2 var(--font-body);color:var(--nav-text);margin-top:3px;letter-spacing:.01em}
+.brand-mark{width:30px;height:30px;border-radius:6px;background:var(--brand);display:grid;place-items:center}
+.brand-mark svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round}
+.nav{display:flex;gap:2px;height:100%}
+.nav a{display:flex;align-items:center;padding:0 12px;color:var(--nav-text);text-decoration:none;font-weight:500;font-size:14px;position:relative;transition:color .15s}
+.nav a:hover{color:#fff}
+.nav a[aria-current="page"]{color:var(--nav-active);font-weight:600}
+.nav a[aria-current="page"]::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:3px;background:var(--brand);border-radius:3px 3px 0 0}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.cmd-btn{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px 0 12px;min-width:200px;background:rgba(255,255,255,.06);border:1px solid var(--nav-line);border-radius:var(--r-md);color:var(--nav-text);font-size:13.5px;transition:background .15s,border-color .15s}
+.cmd-btn:hover{background:rgba(255,255,255,.1);border-color:#3a4c6d}
+.kbd{margin-left:auto;font:600 11px/1 var(--font-body);padding:3px 6px;border:1px solid #3a4c6d;border-radius:5px;color:#9fb0cb}
+.icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:var(--r-md);background:transparent;border:0;color:var(--nav-text);position:relative;transition:background .15s,color .15s}
+.icon-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.badge{position:absolute;top:3px;right:3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--brand);color:#fff;font:700 10.5px/16px var(--font-body);text-align:center}
+.user{display:flex;align-items:center;gap:10px;padding-left:12px;margin-left:4px;border-left:1px solid var(--nav-line)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--steel);color:#fff;display:grid;place-items:center;font:700 12px var(--font-body);flex:none}
+.user b{display:block;color:#fff;font-size:13px;font-weight:600;line-height:1.2}
+.user span{display:block;font-size:12px;color:#8fa0bd;line-height:1.2}
+.theme-ico-moon{display:none}
+[data-theme="dark"] .theme-ico-sun{display:none}
+[data-theme="dark"] .theme-ico-moon{display:block}
+
+/* ============ VISTAS ============ */
+.view{display:none;flex:1;min-height:0}
+.view.active{display:flex;flex-direction:column}
+
+/* ============ FRANJA DE SITUACIÓN ============ */
+.situation{display:flex;align-items:stretch;background:var(--surface);border-bottom:1px solid var(--line);flex:none}
+.stat{padding:12px 24px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;min-width:170px}
+.stat .v{font:600 30px/1.05 var(--font-display);letter-spacing:-.01em}
+.stat .v small{font:500 14px var(--font-body);color:var(--text-3);letter-spacing:0;margin-left:4px}
+.stat .l{font-size:12.5px;color:var(--text-2);margin-top:3px}
+.stat.alert .v{color:var(--brand)}
+.triage-dist{flex:1;min-width:260px;padding:12px 24px;display:flex;flex-direction:column;justify-content:center;gap:7px;border-right:1px solid var(--line)}
+.triage-dist .l{font-size:12.5px;color:var(--text-2)}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--text-2)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend em{width:8px;height:8px;border-radius:2px;display:block}
+.clock{padding:12px 24px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;min-width:150px}
+.clock .v{font:700 24px/1 var(--font-body);letter-spacing:0}
+.clock .l{font-size:12.5px;color:var(--text-2);margin-top:3px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ok);font-weight:600}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);animation:blink 1.8s infinite}
+@keyframes blink{50%{opacity:.35}}
+
+/* ============ DASHBOARD: MAPA COMO ESCENARIO ============ */
+.stage{position:relative;flex:1;min-height:0;overflow:hidden;background:var(--map-land)}
+.stage svg.map{position:absolute;inset:0;width:100%;height:100%}
+.panel{position:absolute;top:12px;bottom:12px;width:340px;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-panel);display:flex;flex-direction:column;overflow:hidden;z-index:5}
+.panel.left{left:12px}
+.panel.right{right:12px;width:360px}
+.panel-head{padding:14px 16px 12px;border-bottom:1px solid var(--line);flex:none}
+.panel-head h2{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
+.count{font:600 12px var(--font-body);padding:2px 8px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);color:var(--text-2)}
+.panel-head p{margin:4px 0 0;font-size:12.5px;color:var(--text-2);line-height:1.4}
+.seg{display:flex;gap:4px;margin-top:10px;background:var(--surface-2);border:1px solid var(--line);padding:3px;border-radius:var(--r-md)}
+.seg button{flex:1;white-space:nowrap;border:0;background:transparent;padding:5px 6px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--text-2);transition:background .15s,color .15s}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.list{overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px;flex:1}
+.list::-webkit-scrollbar{width:8px}.list::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:4px}
+
+.em,.need{flex:none}
+.chip,.btn{white-space:nowrap}
+.tri[data-t="3"]{color:#1c1500}
+.em{display:grid;grid-template-columns:5px 1fr;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;cursor:pointer;text-align:left;width:100%;padding:0;transition:border-color .15s,box-shadow .15s,transform .15s}
+.em:hover{border-color:var(--line-strong);box-shadow:0 3px 10px rgba(14,23,38,.1)}
+.em[aria-selected="true"]{border-color:var(--steel);box-shadow:0 0 0 2px var(--steel)}
+.em .rail{background:var(--c)}
+.em-body{padding:10px 12px;display:grid;gap:5px}
+.em-top{display:flex;align-items:center;gap:8px}
+.tri{display:inline-grid;place-items:center;min-width:26px;height:20px;padding:0 6px;border-radius:5px;background:var(--c);color:#fff;font:700 11.5px var(--font-body);letter-spacing:.02em}
+:root[data-theme="dark"] .tri{color:#0B0F18}
+.em-title{font:600 14.5px var(--font-body)}
+.timer{margin-left:auto;font:600 13px var(--font-body);color:var(--text-2)}
+.em.crit .timer{color:var(--t1)}
+.em-addr{font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:5px}
+.em-addr .icon{width:14px;height:14px;color:var(--text-3)}
+.em-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:11px;font-size:12px;font-weight:600;line-height:18px;background:var(--surface-2);color:var(--text-2);border:1px solid var(--line)}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.chip.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.chip.steel{background:var(--steel-soft);color:var(--steel);border-color:transparent}
+.chip.brand{background:var(--brand-soft);color:var(--brand);border-color:transparent}
+.chip .icon{width:13px;height:13px}
+.unit-id{font-family:var(--font-id);font-weight:600;font-size:12px}
+
+.units-drawer{border-top:1px solid var(--line);flex:none}
+.units-drawer summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:8px;font:600 17px var(--font-display)}
+.units-drawer summary::-webkit-details-marker{display:none}
+.units-drawer summary .chev{margin-left:auto;transition:transform .2s}
+.units-drawer[open] summary .chev{transform:rotate(180deg)}
+.units-grid{padding:0 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.unit{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);font-size:12.5px}
+.unit i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.unit small{margin-left:auto;color:var(--text-3);font-size:11.5px}
+
+.need{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;display:grid;gap:8px;position:relative;overflow:hidden}
+.need::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+.need.rejected{border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}
+.need-head{display:flex;align-items:center;gap:8px;padding-left:4px}
+.need-meta{font-size:13px;color:var(--text-2);padding-left:4px}
+.need-meta b{color:var(--text);font-weight:600}
+.actions{display:flex;gap:8px;padding-left:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;border-radius:var(--r-md);border:1px solid var(--line-strong);background:var(--surface);color:var(--text);font-weight:600;font-size:13.5px;transition:background .15s,border-color .15s,transform .05s}
+.btn:hover{background:var(--surface-2);border-color:var(--text-3)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.btn.primary:hover{background:var(--brand-hover);border-color:var(--brand-hover)}
+.btn.sm{height:32px;padding:0 11px;font-size:13px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--steel)}
+.btn.ghost:hover{background:var(--steel-soft)}
+.btn.block{width:100%}
+.btn .icon{width:16px;height:16px}
+
+.map-legend{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;display:flex;gap:16px;padding:8px 14px;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:22px;font-size:12.5px;color:var(--text-2);box-shadow:var(--shadow-panel);z-index:4}
+.map-legend span{display:flex;align-items:center;gap:6px}
+.map-legend i{width:9px;height:9px;border-radius:50%;display:block}
+.map-note{position:absolute;left:50%;transform:translateX(-50%);top:12px;font-size:12px;color:var(--text-2);background:color-mix(in srgb,var(--surface) 90%,transparent);border:1px dashed var(--line-strong);border-radius:14px;padding:3px 12px;z-index:4}
+
+.quick{position:absolute;left:360px;right:392px;bottom:62px;max-width:620px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-panel);padding:14px 16px;display:grid;grid-template-columns:auto 1fr auto;gap:6px 16px;align-items:center;z-index:5}
+.quick .eta{grid-row:1 / span 2;text-align:center;padding-right:16px;border-right:1px solid var(--line)}
+.quick .eta b{display:block;font:600 32px/1 var(--font-display);letter-spacing:-.01em}
+.quick .eta span{font-size:12px;color:var(--text-2)}
+.quick h3{font:600 15.5px var(--font-body);display:flex;align-items:center;gap:8px}
+.quick p{margin:0;font-size:13px;color:var(--text-2)}
+.quick .actions{padding:0;grid-row:1 / span 2;grid-column:3;flex-direction:column}
+.quick h3{flex-wrap:wrap}
+
+/* marcadores del mapa */
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.6);opacity:.65}100%{transform:scale(2.3);opacity:0}}
+.mk{cursor:pointer}
+.mk:focus-visible{outline:none}
+.mk:focus-visible .mk-ring,.mk.sel .mk-ring{opacity:1}
+.mk-ring{opacity:0;fill:none;stroke:var(--steel);stroke-width:3}
+.route{fill:none;stroke:var(--steel);stroke-width:3.5;stroke-dasharray:2 9;stroke-linecap:round}
+
+/* ============ NUEVA EMERGENCIA ============ */
+.page{flex:1;overflow:auto;padding:24px 28px 32px}
+.page-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:20px}
+.page-head h1{font-size:30px;font-weight:600;letter-spacing:-.01em}
+.page-head p{margin:4px 0 0;color:var(--text-2);font-size:14px}
+.page-head .right{margin-left:auto;display:flex;gap:8px}
+.ne{display:grid;grid-template-columns:220px minmax(0,1fr) 380px;gap:20px;align-items:start;max-width:1500px;margin:0 auto}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:4px;position:sticky;top:0}
+.steps li{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:var(--r-md);color:var(--text-2)}
+.steps .n{width:26px;height:26px;border-radius:50%;border:2px solid var(--line-strong);display:grid;place-items:center;font:700 12px var(--font-body);flex:none;background:var(--surface)}
+.steps li b{display:block;font-size:14px;color:var(--text);font-weight:600}
+.steps li small{font-size:12.5px;line-height:1.35;display:block}
+.steps li.on{background:var(--surface);border:1px solid var(--line);box-shadow:0 1px 3px rgba(14,23,38,.08)}
+.steps li.on .n{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.steps li.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px 22px}
+.card + .card{margin-top:16px}
+.card h2{font-size:19px;font-weight:600;margin-bottom:2px}
+.card .sub{font-size:13.5px;color:var(--text-2);margin:0 0 16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field label{font-size:13.5px;font-weight:600}
+.field .hint{font-size:12.5px;color:var(--text-3)}
+.input,.select,.textarea{width:100%;height:42px;padding:0 12px;border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.textarea{height:88px;padding:10px 12px;resize:vertical}
+.input:hover,.select:hover,.textarea:hover{border-color:var(--text-3)}
+.input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--steel);box-shadow:var(--ring)}
+.input.err{border-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 50%,var(--surface))}
+.err-msg{font-size:12.5px;color:var(--brand);display:flex;align-items:center;gap:5px;font-weight:500}
+.err-msg .icon{width:14px;height:14px}
+.search-row{display:flex;gap:8px}
+.mini-map{height:210px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);position:relative;margin-top:4px}
+.mini-map svg{width:100%;height:100%;display:block}
+.tri-pick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.tri-pick label{position:relative;cursor:pointer}
+.tri-pick input{position:absolute;opacity:0}
+.tri-pick span{display:grid;gap:2px;justify-items:center;padding:10px 4px;border:1.5px solid var(--line-strong);border-radius:var(--r-md);font-size:12px;color:var(--text-2);text-align:center;transition:border-color .15s,background .15s}
+.tri-pick b{font:700 18px var(--font-body);color:var(--c)}
+.tri-pick input:checked + span{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface));color:var(--text);font-weight:600}
+.tri-pick input:focus-visible + span{box-shadow:var(--ring)}
+.foot-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.summary{position:sticky;top:0;display:grid;gap:14px}
+.summary h3{font:600 17px var(--font-display);margin-bottom:10px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:8px 12px;font-size:13.5px;margin:0}
+.kv dt{color:var(--text-3)}
+.kv dd{margin:0;font-weight:500}
+.kv dd.muted{color:var(--text-3);font-weight:400;font-style:normal}
+.reco{display:grid;gap:8px}
+.unit-opt{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.unit-opt.best{border-color:var(--ok);background:color-mix(in srgb,var(--ok-soft) 55%,var(--surface))}
+.unit-opt b{font-family:var(--font-id);font-size:13px}
+.unit-opt small{display:block;color:var(--text-2);font-size:12.5px}
+.unit-opt .t{font:700 17px var(--font-body);text-align:right;line-height:1}
+.unit-opt .t small{font:500 11.5px var(--font-body);margin-top:2px}
+
+/* ============ HISTORIAL ============ */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1;min-width:260px;position:relative}
+.search .icon{position:absolute;left:12px;top:12px;color:var(--text-3)}
+.search .input{padding-left:38px}
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;font-size:12.5px;color:var(--text-2);padding:11px 16px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+td .tri{margin-right:8px}
+td.when{white-space:nowrap;color:var(--text-2)}
+td.desc{max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2)}
+td.type{font-weight:600}
+.row-actions{display:flex;gap:4px;justify-content:flex-end}
+.table-foot{display:flex;align-items:center;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--text-2);gap:8px;background:var(--surface-2)}
+.table-foot .pager{margin-left:auto;display:flex;gap:6px}
+
+/* ============ PALETA DE COMANDOS ============ */
+.palette{position:fixed;inset:0;background:rgba(6,10,18,.55);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding-top:14vh;z-index:100}
+.palette.open{display:flex}
+.palette-box{width:min(620px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden}
+.palette-box input{width:100%;height:54px;border:0;border-bottom:1px solid var(--line);padding:0 18px;font-size:16px;background:transparent;outline:none}
+.palette-list{max-height:340px;overflow:auto;padding:8px;margin:0;list-style:none}
+.palette-list li{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-md);cursor:pointer}
+.palette-list li[aria-selected="true"]{background:var(--steel-soft)}
+.palette-list li small{margin-left:auto;color:var(--text-3);font-size:12px}
+.palette-list .g{font-size:12px;font-weight:600;color:var(--text-3);padding:8px 12px 4px;cursor:default}
+.palette-foot{padding:9px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--text-3);display:flex;gap:16px;background:var(--surface-2)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,20px);background:var(--nav-bg);color:#fff;padding:12px 18px;border-radius:var(--r-md);box-shadow:var(--shadow-panel);font-size:14px;display:flex;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:120}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .icon{color:#5fd39a}
+
+@media (max-width:1180px){
+  .ne{grid-template-columns:1fr}
+  .steps{display:flex;position:static;overflow:auto}
+  .summary{position:static}
+  .panel{width:300px}.panel.right{width:310px}
+  .quick{left:330px;right:340px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- Íconos -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m10.3 3.9-8.2 14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-3.1l-8.2-14a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 16V7a1 1 0 0 1 1-1h9v10M13 9h4l4 4v3h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M7 10v3M5.5 11.5h3"/></symbol>
+    <symbol id="i-hosp" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 8v6M9 11h6"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  </defs>
+</svg>
+
+<!-- Barra superior -->
+<header class="topbar">
+  <a class="brand" href="#dashboard" aria-label="SICEM, ir al inicio">
+    <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="brand-text"><b>SICEM</b><small>Emergencias médicas · Tabasco</small></span>
+  </a>
+  <nav class="nav" aria-label="Principal">
+    <a href="#dashboard" data-nav="dashboard">Dashboard</a>
+    <a href="#nueva" data-nav="nueva">Nueva emergencia</a>
+    <a href="#solicitudes" data-nav="solicitudes">Solicitudes</a>
+    <a href="#hospitales" data-nav="hospitales">Hospitales</a>
+    <a href="#graficas" data-nav="graficas">Gráficas</a>
+    <a href="#historial" data-nav="historial">Historial</a>
+  </nav>
+  <div class="top-right">
+    <button class="cmd-btn" id="openPalette" aria-label="Buscar o ir a una sección">
+      <svg class="icon"><use href="#i-search"/></svg>Buscar o ir a…<span class="kbd">Ctrl K</span>
+    </button>
+    <button class="icon-btn" aria-label="Notificaciones, 1 sin leer"><svg class="icon"><use href="#i-bell"/></svg><span class="badge">1</span></button>
+    <button class="icon-btn" id="themeBtn" aria-label="Cambiar entre tema claro y oscuro">
+      <svg class="icon theme-ico-sun"><use href="#i-sun"/></svg><svg class="icon theme-ico-moon"><use href="#i-moon"/></svg>
+    </button>
+    <div class="user">
+      <div class="avatar" aria-hidden="true">HT</div>
+      <div><b>Hugo Toraya</b><span>Administrador</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ VISTA: DASHBOARD ============ -->
+<main class="view" id="view-dashboard">
+  <section class="situation" aria-label="Situación actual">
+    <div class="stat"><div class="v num" id="sActivas">23</div><div class="l">Emergencias activas</div></div>
+    <div class="stat alert"><div class="v num">7</div><div class="l">Esperando aceptación</div></div>
+    <div class="stat"><div class="v num">4<small>de 32</small></div><div class="l">Unidades disponibles</div></div>
+    <div class="stat"><div class="v num">8<small>min</small> 12<small>s</small></div><div class="l">Respuesta promedio hoy</div></div>
+    <div class="triage-dist">
+      <div class="l">Activas por nivel de triage</div>
+      <div class="bar" role="img" aria-label="Nivel I: 6, nivel II: 5, nivel III: 7, nivel IV: 3, nivel V: 2">
+        <i style="flex:6;background:var(--t1)"></i><i style="flex:5;background:var(--t2)"></i><i style="flex:7;background:var(--t3)"></i><i style="flex:3;background:var(--t4)"></i><i style="flex:2;background:var(--t5)"></i>
+      </div>
+      <div class="legend num">
+        <span><em style="background:var(--t1)"></em>I · 6</span><span><em style="background:var(--t2)"></em>II · 5</span><span><em style="background:var(--t3)"></em>III · 7</span><span><em style="background:var(--t4)"></em>IV · 3</span><span><em style="background:var(--t5)"></em>V · 2</span>
+      </div>
+    </div>
+    <div class="clock"><div class="v num" id="clock">--:--:--</div><div class="l"><span class="live">En vivo</span> · hora de Tabasco</div></div>
+  </section>
+
+  <div class="stage" id="stage">
+    <!-- Mapa estilizado (la versión real usará Leaflet con el mismo tema) -->
+    <svg class="map" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Mapa de Villahermosa con emergencias y unidades">
+      <rect width="1000" height="700" fill="var(--map-land)"/>
+      <g fill="var(--map-block)">
+        <rect x="40" y="60" width="180" height="120" rx="6"/><rect x="250" y="40" width="160" height="150" rx="6"/><rect x="600" y="30" width="200" height="130" rx="6"/>
+        <rect x="830" y="80" width="140" height="170" rx="6"/><rect x="60" y="400" width="190" height="140" rx="6"/><rect x="700" y="470" width="220" height="130" rx="6"/>
+        <rect x="300" y="540" width="200" height="110" rx="6"/><rect x="520" y="560" width="140" height="100" rx="6"/>
+      </g>
+      <path d="M-20 330 C120 300 200 380 330 345 C470 305 520 250 640 270 C760 290 820 220 1020 200" fill="none" stroke="var(--map-water)" stroke-width="46" stroke-linecap="round"/>
+      <path d="M690 420 C760 380 860 400 890 460 C920 520 860 590 770 585 C690 580 640 480 690 420Z" fill="var(--map-water)"/>
+      <path d="M130 560 C190 520 270 540 280 600 C290 650 200 680 150 650 C100 620 100 590 130 560Z" fill="var(--map-park)"/>
+      <path d="M420 120 C470 100 540 110 560 150 C575 190 520 215 470 205 C420 195 395 150 420 120Z" fill="var(--map-park)"/>
+      <!-- calles menores -->
+      <g stroke="var(--map-road)" stroke-width="5" stroke-linecap="round" fill="none">
+        <path d="M0 120H1000M0 215H1000M0 420H1000M0 500H1000M0 620H1000"/>
+        <path d="M120 0V700M235 0V700M360 0V700M470 0V700M590 0V700M690 0V700M820 0V700M930 0V700"/>
+      </g>
+      <!-- vías principales -->
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path id="peri" d="M70 640 C60 420 120 180 380 120 C620 70 860 120 940 330 C990 470 930 600 780 650" stroke="var(--map-casing)" stroke-width="15"/>
+        <path d="M70 640 C60 420 120 180 380 120 C620 70 860 120 940 330 C990 470 930 600 780 650" stroke="var(--map-road-major)" stroke-width="10"/>
+        <path d="M150 640 L420 420 L700 300 L880 110" stroke="var(--map-casing)" stroke-width="13"/>
+        <path d="M150 640 L420 420 L700 300 L880 110" stroke="var(--map-road-major)" stroke-width="8"/>
+        <path d="M280 120 L360 350 L480 560 L560 700" stroke="var(--map-casing)" stroke-width="12"/>
+        <path d="M280 120 L360 350 L480 560 L560 700" stroke="var(--map-road-major)" stroke-width="7"/>
+      </g>
+      <g font-family="Public Sans, sans-serif" font-size="13" fill="var(--map-label)" font-weight="600">
+        <text x="445" y="175" font-size="20" font-weight="700" letter-spacing="2">VILLAHERMOSA</text>
+        <text x="505" y="445" font-size="12.5">Centro</text>
+        <text x="740" y="440" font-size="12.5" fill="var(--map-label)">Laguna de las Ilusiones</text>
+        <text x="110" y="335" font-size="12.5" font-style="italic">Río Grijalva</text>
+        <text x="160" y="205" font-size="12" transform="rotate(-30 160 205)">Periférico Carlos Pellicer</text>
+      </g>
+      <g id="mapLayer"></g>
+    </svg>
+
+    <div class="map-note">Maqueta · datos de ejemplo · el mapa real mantiene Leaflet</div>
+
+    <!-- Panel izquierdo -->
+    <aside class="panel left" aria-label="Emergencias activas">
+      <div class="panel-head">
+        <h2>Emergencias activas <span class="count num" id="countList">7</span></h2>
+        <div class="seg" role="group" aria-label="Filtrar por triage">
+          <button aria-pressed="true" data-f="all">Todas</button>
+          <button aria-pressed="false" data-f="crit">I y II</button>
+          <button aria-pressed="false" data-f="mid">III</button>
+          <button aria-pressed="false" data-f="low">IV y V</button>
+        </div>
+      </div>
+      <div class="list" id="emList" role="listbox" aria-label="Lista de emergencias"></div>
+      <details class="units-drawer">
+        <summary>Unidades <span class="count num">32</span><svg class="icon chev"><use href="#i-chev"/></svg></summary>
+        <div class="units-grid" id="unitGrid"></div>
+      </details>
+    </aside>
+
+    <!-- Panel derecho -->
+    <aside class="panel right" aria-label="Necesitan aceptación">
+      <div class="panel-head">
+        <h2>Necesitan aceptación <span class="count num">3</span></h2>
+        <p>Pacientes sin hospital que los reciba. Primero los rechazados, después por gravedad.</p>
+      </div>
+      <div class="list" id="needList"></div>
+    </aside>
+
+    <!-- Tarjeta rápida de la emergencia seleccionada -->
+    <div class="quick" id="quick" aria-live="polite"></div>
+
+    <div class="map-legend" aria-label="Leyenda">
+      <span><i style="background:var(--ok)"></i>Disponible</span>
+      <span><i style="background:var(--steel)"></i>En ruta</span>
+      <span><i style="background:var(--t2)"></i>En escena</span>
+      <span><i style="background:var(--brand)"></i>Emergencia crítica</span>
+      <span><i style="background:var(--hosp)"></i>Hospital</span>
+    </div>
+  </div>
+</main>
+
+<!-- ============ VISTA: NUEVA EMERGENCIA ============ -->
+<main class="view" id="view-nueva">
+  <div class="page">
+    <div class="page-head">
+      <div><h1>Nueva emergencia</h1><p>Registra el reporte, elige la unidad más cercana y deja listo el traslado.</p></div>
+      <div class="right"><button class="btn ghost">Guardar borrador</button><button class="btn">Cancelar</button></div>
+    </div>
+    <div class="ne">
+      <ol class="steps" aria-label="Pasos">
+        <li class="on" aria-current="step"><span class="n">1</span><div><b>Reporte y ubicación</b><small>Quién llama y dónde ocurre</small></div></li>
+        <li><span class="n">2</span><div><b>Unidades</b><small>Propias o de otra institución</small></div></li>
+        <li><span class="n">3</span><div><b>Pacientes</b><small>Hospital destino y unidad por paciente</small></div></li>
+      </ol>
+
+      <div>
+        <section class="card">
+          <h2>Ubicación</h2>
+          <p class="sub">Busca la dirección que dio quien llamó, o haz clic en el mapa para marcarla.</p>
+          <div class="search-row">
+            <input class="input" id="addr" value="Paseo Tabasco 1203, Centro, Villahermosa" aria-label="Dirección reportada">
+            <button class="btn primary"><svg class="icon"><use href="#i-search"/></svg>Buscar</button>
+          </div>
+          <div class="mini-map" id="miniMap"></div>
+          <div class="grid2" style="margin-top:14px">
+            <div class="field" style="margin:0"><label for="lat">Latitud</label><input class="input num" id="lat" value="17.98930" readonly></div>
+            <div class="field" style="margin:0"><label for="lng">Longitud</label><input class="input num" id="lng" value="-92.92890" readonly></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Reporte</h2>
+          <p class="sub">Con estos datos el equipo en campo sabrá qué esperar.</p>
+          <div class="grid2">
+            <div class="field"><label for="tipo">Tipo de emergencia</label>
+              <select class="select" id="tipo"><option>Cardiovascular</option><option>Accidente vial</option><option>Obstétrica</option><option>Intoxicación</option></select></div>
+            <div class="field"><label for="pac">Número de pacientes</label><input class="input num" id="pac" type="number" value="2" min="1"></div>
+          </div>
+          <div class="field"><label for="desc">Qué pasó</label><textarea class="textarea" id="desc">Hombre de unos 60 años con dolor en el pecho y dificultad para respirar. Está consciente.</textarea>
+            <span class="hint">Describe lo que reportó la persona que llamó. Evita datos que no te dijo.</span></div>
+          <div class="grid2">
+            <div class="field"><label for="quien">Quién reporta</label><input class="input" id="quien" value="María Hernández"></div>
+            <div class="field"><label for="tel">Teléfono de contacto</label><input class="input err" id="tel" value="993 123 45" aria-invalid="true" aria-describedby="telerr">
+              <span class="err-msg" id="telerr"><svg class="icon"><use href="#i-alert"/></svg>Faltan dígitos. Un teléfono en Tabasco tiene 10.</span></div>
+          </div>
+          <div class="field"><span style="font-size:13.5px;font-weight:600">Nivel de urgencia estimado <span style="color:var(--text-3);font-weight:400">(opcional)</span></span>
+            <div class="tri-pick" role="radiogroup" aria-label="Nivel de urgencia">
+              <label style="--c:var(--t1)"><input type="radio" name="tri" checked><span><b>I</b>Inmediata</span></label>
+              <label style="--c:var(--t2)"><input type="radio" name="tri"><span><b>II</b>Muy urgente</span></label>
+              <label style="--c:var(--t3)"><input type="radio" name="tri"><span><b>III</b>Urgente</span></label>
+              <label style="--c:var(--t4)"><input type="radio" name="tri"><span><b>IV</b>Menos urgente</span></label>
+              <label style="--c:var(--t5)"><input type="radio" name="tri"><span><b>V</b>No urgente</span></label>
+            </div></div>
+          <div class="foot-actions"><button class="btn">Cancelar</button><button class="btn primary" id="toNext">Continuar a unidades<svg class="icon"><use href="#i-arrow"/></svg></button></div>
+        </section>
+      </div>
+
+      <aside class="summary" aria-label="Resumen">
+        <section class="card">
+          <h3>Resumen</h3>
+          <dl class="kv">
+            <dt>Tipo</dt><dd>Cardiovascular</dd>
+            <dt>Pacientes</dt><dd>2</dd>
+            <dt>Urgencia</dt><dd><span class="tri" style="--c:var(--t1)">I</span> Inmediata</dd>
+            <dt>Ubicación</dt><dd>Paseo Tabasco 1203, Centro</dd>
+            <dt>Unidad</dt><dd class="muted">Sin elegir todavía</dd>
+          </dl>
+        </section>
+        <section class="card">
+          <h3>Unidades recomendadas</h3>
+          <div class="reco">
+            <div class="unit-opt best"><div><span class="chip ok" style="margin-bottom:6px"><svg class="icon"><use href="#i-check"/></svg>Más cercana</span><br><b>TAB-005</b><small>Urgencias básicas · 2.1 km por calle</small></div><div class="t num">6 min</div></div>
+            <div class="unit-opt"><div><b>TAB-123</b><small>Traslado · 3.8 km por calle</small></div><div class="t num">11 min</div></div>
+            <div class="unit-opt"><div><b>DEMO-04</b><small>Urgencias básicas · 5.2 km por calle</small></div><div class="t num">15 min</div></div>
+          </div>
+          <p class="hint" style="margin:12px 0 0;font-size:12.5px;color:var(--text-3)">Tiempos calculados con la ruta real, no en línea recta.</p>
+        </section>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<!-- ============ VISTA: HISTORIAL ============ -->
+<main class="view" id="view-historial">
+  <div class="page">
+    <div class="page-head">
+      <div><h1>Historial de emergencias</h1><p>Todo lo que ya pasó por el sistema, con motivo de cierre y duración.</p></div>
+      <div class="right"><button class="btn"><svg class="icon"><use href="#i-file"/></svg>Exportar</button></div>
+    </div>
+    <div class="toolbar">
+      <div class="search"><svg class="icon"><use href="#i-search"/></svg><input class="input" placeholder="Buscar por tipo o descripción" aria-label="Buscar en el historial"></div>
+      <div class="seg" role="group" aria-label="Estado" style="margin:0">
+        <button aria-pressed="true">Todas</button><button aria-pressed="false">Resueltas</button><button aria-pressed="false">Sin resolver</button><button aria-pressed="false">Abiertas</button>
+      </div>
+      <select class="select" style="width:190px" aria-label="Nivel de triage"><option>Todos los niveles</option><option>Nivel I</option><option>Nivel II</option></select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tipo</th><th>Triage</th><th>Descripción</th><th>Registro</th><th>Duración</th><th>Resolución</th><th><span class="sr-only">Acciones</span></th></tr></thead>
+        <tbody id="histBody"></tbody>
+      </table>
+      <div class="table-foot"><span class="num">Mostrando 1–8 de 65 emergencias</span>
+        <div class="pager"><button class="btn sm" disabled>Anterior</button><button class="btn sm">Siguiente</button></div></div>
+    </div>
+  </div>
+</main>
+
+<!-- Vistas aún sin maqueta -->
+<main class="view" id="view-pendiente">
+  <div class="page"><div class="page-head"><div><h1 id="pendTitle">Pantalla</h1><p>Esta pantalla se rediseña en una parte posterior, con el mismo sistema.</p></div></div>
+    <div class="card" style="max-width:560px"><h2>Todavía no hay maqueta</h2><p class="sub" style="margin:0">Aprueba primero la dirección con Dashboard, Nueva emergencia e Historial.</p></div></div>
+</main>
+
+<!-- Paleta de comandos -->
+<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Buscar o ir a">
+  <div class="palette-box">
+    <input id="palInput" placeholder="Busca una emergencia, unidad o pantalla" autocomplete="off" aria-label="Buscar">
+    <ul class="palette-list" id="palList" role="listbox"></ul>
+    <div class="palette-foot"><span>↑ ↓ para moverte</span><span>Enter para abrir</span><span>Esc para cerrar</span></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"><svg class="icon"><use href="#i-check"/></svg><span id="toastMsg"></span></div>
+
+<script>
+/* ---------- datos de ejemplo ---------- */
+const TRI = {1:'var(--t1)',2:'var(--t2)',3:'var(--t3)',4:'var(--t4)',5:'var(--t5)'};
+const ROMAN = {1:'I',2:'II',3:'III',4:'IV',5:'V'};
+const EMS = [
+  {id:1,t:1,type:'Cardiovascular',addr:'Paseo Tabasco 1203, Centro',min:4,status:['Unidad en ruta','steel'],unit:'TAB-005',eta:6,pac:2,x:560,y:380},
+  {id:2,t:1,type:'Neurológica',addr:'Col. Gaviotas Norte',min:11,status:['En escena','warn'],unit:'DEMO-04',eta:0,pac:1,x:430,y:230},
+  {id:3,t:2,type:'Accidente vial',addr:'Periférico C. Pellicer, km 4',min:23,status:['Trasladando','ok'],unit:'TAB-123',eta:9,pac:3,x:690,y:310},
+  {id:4,t:2,type:'Pediátrica',addr:'Fracc. Lagunas',min:38,status:['Sin hospital · 2 pacientes','brand'],unit:'—',eta:null,pac:2,x:640,y:520},
+  {id:5,t:3,type:'Intoxicación',addr:'Av. Universidad, Magisterial',min:52,status:['En escena','warn'],unit:'IMSS-01',eta:0,pac:1,x:360,y:470},
+  {id:6,t:3,type:'Obstétrica',addr:'Col. Tamulté de las Barrancas',min:74,status:['Registrada','steel'],unit:'—',eta:null,pac:1,x:310,y:300},
+  {id:7,t:4,type:'Caída de altura',addr:'Centro, calle Reforma',min:60*24*3+120,stale:true,status:['Sin movimiento · revisar','warn'],unit:'—',eta:null,pac:1,x:500,y:560}
+];
+const UNITS = [
+  ['TAB-005','var(--steel)','En ruta'],['TAB-123','var(--steel)','En ruta'],['DEMO-04','var(--t2)','En escena'],['IMSS-01','var(--t2)','En escena'],
+  ['DEMO-05','var(--ok)','Libre'],['TAB-007','var(--ok)','Libre'],['CRM-02','var(--ok)','Libre'],['CRM-09','var(--ok)','Libre'],
+  ['TAB-011','var(--text-3)','Fuera'],['TAB-012','var(--text-3)','Taller']
+];
+const NEED = [
+  {t:1,type:'Neurológica',who:'Juanillo, 34 años',txt:'Rechazado por <b>Hospital Regional</b>: sin camas de neurología.',rej:true},
+  {t:2,type:'Pediátrica',who:'2 pacientes',txt:'Esperando respuesta de <b>Hospital del Niño</b> desde hace 6 min.'},
+  {t:3,type:'Intoxicación',who:'1 paciente',txt:'Sin hospital elegido todavía.'}
+];
+const HIST = [
+  ['Obstétrica',2,'Emergencia de prueba No. 11231273','4 ago 2026, 10:38 p. m.','—','Abierta'],
+  ['Intoxicación',3,'Intoxicado, prueba de app móvil','4 ago 2026, 6:16 p. m.','—','Abierta'],
+  ['Intoxicación',1,'Se intoxicó un paciente en vía pública','4 ago 2026, 5:47 p. m.','—','Abierta'],
+  ['Intoxicación',2,'Se intoxicó el paciente','4 ago 2026, 5:32 p. m.','10 min','Sin resolver'],
+  ['Neurológica',1,'Paciente con pérdida de conciencia','4 ago 2026, 4:58 p. m.','43 min','Sin resolver'],
+  ['Cardiovascular',1,'Dolor torácico, hombre de 60 años','4 ago 2026, 12:44 a. m.','16 h 58 min','Sin resolver'],
+  ['Pediátrica',1,'Niño con fiebre alta y convulsión','2 ago 2026, 12:40 a. m.','1 h 05 min','Resuelta'],
+  ['Neurológica',1,'Mareo y desorientación','2 ago 2026, 12:05 a. m.','52 min','Resuelta']
+];
+
+/* ---------- utilidades ---------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+function fmt(min){ if(min<60) return min+' min'; const h=Math.floor(min/60); if(h<24) return h+' h '+String(min%60).padStart(2,'0')+' min'; const d=Math.floor(h/24); return 'hace '+d+(d===1?' día':' días'); }
+function toast(m){ $('#toastMsg').textContent=m; const t=$('#toast'); t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
+const svgNS='http://www.w3.org/2000/svg';
+
+/* ---------- tema ---------- */
+(function(){
+  let saved=null; try{ saved=localStorage.getItem('sicem-theme'); }catch(e){}
+  if(saved) document.documentElement.dataset.theme=saved;
+  $('#themeBtn').onclick=()=>{
+    const n=document.documentElement.dataset.theme==='dark'?'light':'dark';
+    document.documentElement.dataset.theme=n; try{ localStorage.setItem('sicem-theme',n); }catch(e){}
+    if(typeof renderMap==='function') renderMap();
+  };
+})();
+
+/* ---------- reloj ---------- */
+function tick(){ const d=new Date(); $('#clock').textContent=d.toLocaleTimeString('es-MX',{hour12:false,timeZone:'America/Mexico_City'}); }
+tick(); setInterval(tick,1000);
+
+/* ---------- dashboard ---------- */
+let selected=1, filter='all';
+function visible(){ return EMS.filter(e=> filter==='all' || (filter==='crit'&&e.t<=2) || (filter==='mid'&&e.t===3) || (filter==='low'&&e.t>=4)); }
+function renderList(){
+  const L=$('#emList'); L.innerHTML='';
+  const items=visible(); $('#countList').textContent=items.length;
+  items.forEach(e=>{
+    const b=document.createElement('button');
+    b.className='em'+(e.t===1?' crit':''); b.style.setProperty('--c',TRI[e.t]);
+    b.setAttribute('role','option'); b.setAttribute('aria-selected',String(e.id===selected));
+    b.innerHTML=`<span class="rail"></span><span class="em-body">
+      <span class="em-top"><span class="tri" data-t="${e.t}">${ROMAN[e.t]}</span><span class="em-title">${e.type}</span><span class="timer num" data-min="${e.min}">${fmt(e.min)}</span></span>
+      <span class="em-addr"><svg class="icon"><use href="#i-pin"/></svg>${e.addr}</span>
+      <span class="em-foot"><span class="chip ${e.status[1]}">${e.stale?'<svg class="icon"><use href="#i-alert"/></svg>':'<span class="dot"></span>'}${e.status[0]}</span>${e.unit!=='—'?`<span class="unit-id">${e.unit}</span>`:''}</span></span>`;
+    b.onclick=()=>select(e.id); L.appendChild(b);
+  });
+}
+function renderNeed(){
+  const L=$('#needList'); L.innerHTML='';
+  NEED.forEach((n,i)=>{
+    const d=document.createElement('div'); d.className='need'+(n.rej?' rejected':''); d.style.setProperty('--c',TRI[n.t]);
+    d.innerHTML=`<div class="need-head"><span class="tri" data-t="${n.t}">${ROMAN[n.t]}</span><b style="font:600 14.5px var(--font-body)">${n.type}</b>${n.rej?'<span class="chip brand" style="margin-left:auto"><svg class="icon"><use href="#i-alert"/></svg>Rechazado</span>':''}</div>
+      <div class="need-meta"><b>${n.who}</b><br>${n.txt}</div>
+      <div class="actions"><button class="btn primary sm" data-a="${i}"><svg class="icon"><use href="#i-hosp"/></svg>${n.rej?'Elegir otro hospital':'Asignar hospital'}</button><button class="btn sm">Ver detalle</button></div>`;
+    L.appendChild(d);
+  });
+  $$('[data-a]',L).forEach(b=>b.onclick=()=>toast('Se abre el selector de hospital con camas disponibles'));
+}
+function renderUnits(){
+  $('#unitGrid').innerHTML=UNITS.map(u=>`<div class="unit" style="--c:${u[1]}"><i></i><span class="unit-id">${u[0]}</span><small>${u[2]}</small></div>`).join('');
+}
+function renderMap(){
+  const g=$('#mapLayer'); g.innerHTML='';
+  // ruta de la unidad hacia la emergencia seleccionada
+  const e=EMS.find(x=>x.id===selected);
+  if(e && e.eta){ const p=document.createElementNS(svgNS,'path'); p.setAttribute('class','route'); p.setAttribute('d',`M 330 600 C 420 540 ${e.x-80} ${e.y+60} ${e.x} ${e.y}`); g.appendChild(p); }
+  // hospitales
+  [[470,300],[650,430]].forEach(([x,y])=>{
+    const h=document.createElementNS(svgNS,'g'); h.innerHTML=`<rect x="${x-13}" y="${y-13}" width="26" height="26" rx="6" fill="var(--hosp)" stroke="var(--surface)" stroke-width="2.5"/><path d="M${x} ${y-6}v12M${x-6} ${y}h12" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`; g.appendChild(h);
+  });
+  // unidades
+  [[330,600,'var(--steel)'],[610,360,'var(--ok)'],[400,420,'var(--ok)'],[760,250,'var(--steel)']].forEach(([x,y,c])=>{
+    const u=document.createElementNS(svgNS,'g'); u.innerHTML=`<circle cx="${x}" cy="${y}" r="10" fill="${c}" stroke="var(--surface)" stroke-width="2.5"/><path d="M${x-4} ${y}h8M${x} ${y-4}v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`; g.appendChild(u);
+  });
+  // emergencias
+  visible().forEach(em=>{
+    const m=document.createElementNS(svgNS,'g'); m.setAttribute('class','mk'+(em.id===selected?' sel':'')); m.setAttribute('tabindex','0'); m.setAttribute('role','button');
+    m.setAttribute('aria-label',`${em.type}, nivel ${ROMAN[em.t]}, ${em.addr}`);
+    const c=TRI[em.t];
+    m.innerHTML=`${em.t<=2?`<circle class="pulse" cx="${em.x}" cy="${em.y}" r="14" fill="${c}"/>`:''}
+      <circle class="mk-ring" cx="${em.x}" cy="${em.y}" r="21"/>
+      <circle cx="${em.x}" cy="${em.y}" r="13" fill="${c}" stroke="var(--surface)" stroke-width="3"/>
+      <text x="${em.x}" y="${em.y+4}" text-anchor="middle" font-family="Public Sans,sans-serif" font-weight="700" font-size="11" fill="${em.t===3||document.documentElement.dataset.theme==='dark'?'#10151f':'#fff'}">${ROMAN[em.t]}</text>`;
+    m.onclick=()=>select(em.id); m.onkeydown=ev=>{ if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select(em.id);} };
+    g.appendChild(m);
+  });
+}
+function renderQuick(){
+  const e=EMS.find(x=>x.id===selected); const q=$('#quick'); if(!e){q.style.display='none';return;} q.style.display='grid';
+  q.innerHTML=`<div class="eta"><b class="num">${e.eta?e.eta:'—'}</b><span>${e.eta?'min de llegada':'sin unidad'}</span></div>
+    <h3><span class="tri" data-t="${e.t}" style="--c:${TRI[e.t]}">${ROMAN[e.t]}</span>${e.type} <span class="chip ${e.status[1]}">${e.status[0]}</span></h3>
+    <p>${e.addr} · ${e.pac} ${e.pac===1?'paciente':'pacientes'}${e.unit!=='—'?` · unidad <span class="unit-id">${e.unit}</span>`:''}</p>
+    <div class="actions"><button class="btn primary sm">Abrir emergencia</button><button class="btn sm">Agregar unidad</button></div>`;
+}
+function select(id){ selected=id; renderList(); renderMap(); renderQuick(); const s=$('.em[aria-selected="true"]'); if(s) s.scrollIntoView({block:'nearest'}); }
+$$('.seg [data-f]').forEach(b=>b.onclick=()=>{ filter=b.dataset.f; $$('.seg [data-f]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); renderList(); renderMap(); });
+// cronómetro vivo
+setInterval(()=>{ $$('.timer').forEach(t=>{ let m=+t.dataset.min; if(m<60*24){ m+=1/60; t.dataset.min=m; t.textContent=m<60?Math.floor(m)+' min '+String(Math.floor((m%1)*60)).padStart(2,'0')+' s':fmt(Math.floor(m)); } }); },1000);
+
+/* ---------- historial ---------- */
+(function(){
+  const rc={'Abierta':'steel','Sin resolver':'warn','Resuelta':'ok'};
+  $('#histBody').innerHTML=HIST.map(r=>`<tr>
+    <td class="type">${r[0]}</td>
+    <td><span class="tri" data-t="${r[1]}" style="--c:${TRI[r[1]]}">${ROMAN[r[1]]}</span></td>
+    <td class="desc">${r[2]}</td><td class="when num">${r[3]}</td><td class="num">${r[4]}</td>
+    <td><span class="chip ${rc[r[5]]}"><span class="dot"></span>${r[5]}</span></td>
+    <td><div class="row-actions"><button class="btn sm">Ver detalle</button><button class="btn sm ghost" aria-label="Más acciones, como generar reporte"><svg class="icon"><use href="#i-more"/></svg></button></div></td></tr>`).join('');
+})();
+
+/* ---------- mini mapa de Nueva emergencia ---------- */
+(function(){
+  $('#miniMap').innerHTML=`<svg viewBox="0 0 600 210" preserveAspectRatio="xMidYMid slice"><rect width="600" height="210" fill="var(--map-land)"/>
+    <path d="M-10 150 C100 120 200 170 320 140 C440 110 520 90 620 70" stroke="var(--map-water)" stroke-width="30" fill="none"/>
+    <g stroke="var(--map-road)" stroke-width="6" fill="none"><path d="M0 60H600M0 105H600M120 0V210M250 0V210M380 0V210M500 0V210"/></g>
+    <path d="M40 200 L300 100 L560 20" stroke="var(--map-road-major)" stroke-width="9" fill="none"/>
+    <circle class="pulse" cx="300" cy="100" r="12" fill="var(--t1)"/><circle cx="300" cy="100" r="11" fill="var(--t1)" stroke="var(--surface)" stroke-width="3"/>
+    <circle cx="170" cy="150" r="9" fill="var(--ok)" stroke="var(--surface)" stroke-width="2.5"/>
+    <path d="M170 150 C220 140 260 120 300 100" stroke="var(--steel)" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round" fill="none"/></svg>`;
+})();
+$('#toNext').onclick=()=>toast('Falta corregir el teléfono antes de continuar');
+
+/* ---------- navegación ---------- */
+const ROUTES={dashboard:'view-dashboard',nueva:'view-nueva',historial:'view-historial'};
+const TITLES={solicitudes:'Solicitudes',hospitales:'Hospitales',graficas:'Gráficas'};
+function route(){
+  const h=(location.hash||'#dashboard').slice(1);
+  const id=ROUTES[h]||'view-pendiente';
+  $$('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  $$('.nav a').forEach(a=>{ if(a.dataset.nav===h) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  if(!ROUTES[h]) $('#pendTitle').textContent=TITLES[h]||'Pantalla';
+}
+addEventListener('hashchange',route);
+
+/* ---------- paleta de comandos ---------- */
+const CMDS=[
+  {g:'Ir a',l:'Dashboard',k:'#dashboard'},{g:'Ir a',l:'Nueva emergencia',k:'#nueva',s:'N'},{g:'Ir a',l:'Historial',k:'#historial'},
+  {g:'Ir a',l:'Solicitudes',k:'#solicitudes'},{g:'Ir a',l:'Hospitales',k:'#hospitales'},{g:'Ir a',l:'Gráficas',k:'#graficas'},
+  ...EMS.map(e=>({g:'Emergencias activas',l:`${e.type} · ${e.addr}`,s:'Nivel '+ROMAN[e.t],em:e.id})),
+  ...UNITS.slice(0,4).map(u=>({g:'Unidades',l:u[0],s:u[2]}))
+];
+let palSel=0, palItems=[];
+function palRender(){
+  const q=$('#palInput').value.trim().toLowerCase(); const ul=$('#palList'); ul.innerHTML=''; palItems=[]; let last='';
+  CMDS.filter(c=>!q||c.l.toLowerCase().includes(q)).forEach(c=>{
+    if(c.g!==last){ const g=document.createElement('li'); g.className='g'; g.textContent=c.g; ul.appendChild(g); last=c.g; }
+    const li=document.createElement('li'); li.setAttribute('role','option'); li.innerHTML=`<span>${c.l}</span>${c.s?`<small>${c.s}</small>`:''}`;
+    li.onclick=()=>palGo(c); ul.appendChild(li); palItems.push({li,c});
+  });
+  if(!palItems.length){ ul.innerHTML='<li class="g" style="padding:18px 12px">No encontramos nada con ese texto. Prueba con el tipo de emergencia o el número de unidad.</li>'; }
+  palSel=0; palMark();
+}
+function palMark(){ palItems.forEach((p,i)=>p.li.setAttribute('aria-selected',String(i===palSel))); const s=palItems[palSel]; if(s) s.li.scrollIntoView({block:'nearest'}); }
+function palGo(c){ closePal(); if(c.k) location.hash=c.k; if(c.em){ location.hash='#dashboard'; setTimeout(()=>select(c.em),30); } }
+function openPal(){ $('#palette').classList.add('open'); $('#palInput').value=''; palRender(); $('#palInput').focus(); }
+function closePal(){ $('#palette').classList.remove('open'); }
+$('#openPalette').onclick=openPal;
+$('#palette').addEventListener('mousedown',e=>{ if(e.target.id==='palette') closePal(); });
+$('#palInput').addEventListener('input',palRender);
+addEventListener('keydown',e=>{
+  const open=$('#palette').classList.contains('open');
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); open?closePal():openPal(); return; }
+  if(open){
+    if(e.key==='Escape') closePal();
+    else if(e.key==='ArrowDown'){ e.preventDefault(); palSel=Math.min(palSel+1,palItems.length-1); palMark(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); palSel=Math.max(palSel-1,0); palMark(); }
+    else if(e.key==='Enter'&&palItems[palSel]){ e.preventDefault(); palGo(palItems[palSel].c); }
+    return;
+  }
+  if(!/input|textarea|select/i.test(document.activeElement.tagName) && e.key.toLowerCase()==='n' && !e.ctrlKey && !e.metaKey){ location.hash='#nueva'; }
+});
+
+renderList(); renderNeed(); renderUnits(); renderMap(); renderQuick(); route();
+</script>
+</body>
+</html>

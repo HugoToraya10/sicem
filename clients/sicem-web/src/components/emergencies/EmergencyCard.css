@@ -1,94 +1,96 @@
-.emergency-card {
-    background: white;
-    border: 1px solid #e4e4ec;
-    border-left: 3px solid;
-    border-radius: 6px;
-    padding: 12px 14px;
-    margin-bottom: 8px;
+.ec-wrap { position: relative; flex: none; }
+
+/* Ubicar en el mapa sin abrir el detalle */
+.ec-locate {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    background: var(--surface);
+    color: var(--text-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm);
     cursor: pointer;
-    transition: box-shadow 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ec-locate:hover { background: var(--steel-soft); color: var(--steel); border-color: var(--steel); }
+
+.ec {
+    display: grid;
+    grid-template-columns: 5px 1fr;
+    flex: none;
+    width: 100%;
+    padding: 0;
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.emergency-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+.ec:hover { border-color: var(--line-strong); box-shadow: var(--shadow-card); }
+.ec.ec-is-selected { border-color: var(--steel); box-shadow: 0 0 0 2px var(--steel); }
+
+.ec-rail { background: var(--c); }
+
+.ec-body { padding: 10px 12px; display: grid; gap: 5px; min-width: 0; }
+
+.ec-top { display: flex; align-items: center; gap: 8px; }
+
+.ec-tri {
+    display: inline-grid;
+    place-items: center;
+    min-width: 26px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 5px;
+    background: var(--c);
+    font: 700 11.5px var(--font-body);
+    letter-spacing: 0.02em;
 }
 
-.ec-type {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1a1a2e;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.ec-triage-badge {
-    color: white;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 8px;
-    text-transform: uppercase;
-}
+.ec-type { font: 600 14.5px var(--font-body); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ec-time { margin-left: auto; font: 600 13px var(--font-body); color: var(--text-2); white-space: nowrap; }
 
 .ec-loc {
-    font-size: 11.5px;
-    color: #666;
-    margin-top: 2px;
-}
-
-.ec-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 6px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px;
-    color: #9999aa;
-}
-
-.ec-badges {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-    flex-wrap: wrap;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--text-2);
+    min-width: 0;
+}
+.ec-loc .icon { color: var(--text-3); }
+.ec-loc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ec-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+.ec-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    white-space: nowrap;
+    background: var(--surface-2);
+    color: var(--text-2);
+    border: 1px solid var(--line);
 }
 
-.ec-badge {
-    display: inline-block;
-    font-size: 9.5px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
+.ec-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
 
-.ec-reception-badge {
-    display: inline-block;
-    font-size: 9.5px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
+.ec-chip-rejected { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
+.ec-chip-pending { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+/* "Sin movimiento" es un aviso discreto (contorno), para que las alertas de
+   verdad —rechazos y pendientes— sigan destacando. */
+.ec-chip-stalled { background: transparent; color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
 
-.ec-reception-rechazada {
-    color: #C0272D;
-    background: #fdeceb;
-}
-
-.ec-reception-pendiente {
-    color: #E67E22;
-    background: #fdf0e0;
-}
-
-.ec-reception-stalled {
-    color: #8E44AD;
-    background: #f3e8fb;
-}
-
-.emergency-card-stalled {
-    background: #fdfaff;
-}
+.ec-unit { font: 600 12px var(--font-id); color: var(--text); }

@@ -4,6 +4,11 @@ import { useAuth } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../config/api'
 import { connectUnitsSocket } from '../../sockets/unitsSocket'
 import { connectEmergencySocket } from '../../sockets/emergencySocket'
+import { useTheme, setTheme, isDarkReady } from '../../utils/theme'
+import Icon from '../ui/Icon'
+import CommandPalette from './CommandPalette'
+import SkinMenu from '../ui/SkinMenu'
+import { useRegion } from '../../context/useRegion'
 import './Navbar.css'
 
 const LAST_SEEN_KEY_PREFIX = 'sicem_failure_reports_last_seen_'
@@ -31,6 +36,25 @@ const Navbar = ({ userName, roleLabel, links }) => {
         return stored ? new Date(stored) : new Date(0)
     })
     const bellRef = useRef(null)
+    const [paletteOpen, setPaletteOpen] = useState(false)
+    const [menuOpen, setMenuOpen] = useState(false)
+    const theme = useTheme()
+    const { region } = useRegion()
+    const initials = (userName || 'U').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+
+    // Ctrl+K abre la paleta (combinación deliberada; también se abre con el botón).
+    // No hay atajos de una sola tecla: en una app de emergencias una tecla suelta
+    // nunca debe sacar al despachador de lo que está haciendo.
+    useEffect(() => {
+        const onKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault()
+                setPaletteOpen((v) => !v)
+            }
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [])
 
     const handleLogout = () => {
         logout()
@@ -115,9 +139,34 @@ const Navbar = ({ userName, roleLabel, links }) => {
         link.children.some((child) => location.pathname === child.to)
 
     return (
-        <nav className="navbar">
-            <span className="navbar-logo">SICEM</span>
-            <div className="navbar-links" ref={dropdownRef}>
+        <header className="app-header">
+        <a
+            href="#contenido"
+            className="skip-link"
+            onClick={(e) => {
+                e.preventDefault()
+                const target = document.querySelector('h1') || document.querySelector('main')
+                if (target) { target.setAttribute('tabindex', '-1'); target.focus() }
+            }}
+        >
+            Saltar al contenido
+        </a>
+        <nav className="navbar" aria-label="Principal">
+            <Link to="/dashboard" className="navbar-brand" aria-label="SICEM, ir al inicio">
+                <span className="navbar-brand-mark"><Icon name="plus" size={17} strokeWidth={2.8} /></span>
+                <span className="navbar-brand-text"><b>SICEM</b><small>{region.state ? `Emergencias médicas · ${region.state}` : 'Emergencias médicas'}</small></span>
+            </Link>
+            <button
+                type="button"
+                className="navbar-menu-btn"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-expanded={menuOpen}
+                aria-controls="navbar-links"
+                aria-label={menuOpen ? 'Cerrar el menú' : 'Abrir el menú'}
+            >
+                <Icon name={menuOpen ? 'x' : 'menu'} size={20} />
+            </button>
+            <div id="navbar-links" className={`navbar-links ${menuOpen ? 'open' : ''}`} ref={dropdownRef} onClick={(e) => { if (e.target.closest('a')) setMenuOpen(false) }}>
                 {links.map((link) => {
                     if (isDropdownItem(link)) {
                         const isOpen = openDropdown === link.label
@@ -128,7 +177,7 @@ const Navbar = ({ userName, roleLabel, links }) => {
                                     onClick={() => setOpenDropdown(isOpen ? null : link.label)}
                                 >
                                     {link.label}
-                                    <span className={`navbar-dropdown-arrow ${isOpen ? 'open' : ''}`}>▾</span>
+                                    <Icon name="chevron" size={14} className={`navbar-dropdown-arrow ${isOpen ? 'open' : ''}`} />
                                 </button>
                                 {isOpen && (
                                     <div className="navbar-dropdown-menu">
@@ -158,11 +207,24 @@ const Navbar = ({ userName, roleLabel, links }) => {
                         </Link>
                     )
                 })}
+                {/* Solo en ventanas angostas (la barra los oculta): perfil y salir viven en el menú */}
+                <Link to="/perfil" className="navbar-menu-only">Mi perfil</Link>
+                <button type="button" className="navbar-menu-only navbar-menu-logout" onClick={handleLogout}>Cerrar sesión</button>
             </div>
             <div className="navbar-right">
+                <button className="navbar-search" onClick={() => setPaletteOpen(true)} aria-label="Buscar o ir a una pantalla o emergencia">
+                    <Icon name="search" size={16} />
+                    <span>Buscar o ir a…</span>
+                    <kbd>Ctrl K</kbd>
+                </button>
                 <div className="navbar-bell-wrap" ref={bellRef}>
-                    <button className="navbar-bell" onClick={toggleBell} title="Fallas reportadas">
-                        🔔
+                    <button
+                        className="navbar-bell"
+                        onClick={toggleBell}
+                        aria-label={unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones'}
+                        title="Notificaciones"
+                    >
+                        <Icon name="bell" size={18} />
                         {unreadCount > 0 && <span className="navbar-bell-badge">{unreadCount}</span>}
                     </button>
                     {bellOpen && (
@@ -224,15 +286,28 @@ const Navbar = ({ userName, roleLabel, links }) => {
                         </div>
                     )}
                 </div>
-                <Link to="/perfil" className={`navbar-user ${location.pathname === '/perfil' ? 'active' : ''}`}>
-                    <span className="navbar-user-dot" />
-                    {userName} — {roleLabel}
+                <SkinMenu />
+                {isDarkReady(location.pathname) && (
+                    <button
+                        className="navbar-bell"
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        aria-label="Cambiar entre tema claro y oscuro"
+                        title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+                    >
+                        <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={18} />
+                    </button>
+                )}
+                <Link to="/perfil" className={`navbar-user ${location.pathname === '/perfil' ? 'active' : ''}`} title={`${userName} — ${roleLabel}`} aria-label={`Mi perfil: ${userName}, ${roleLabel}`}>
+                    <span className="navbar-avatar" aria-hidden="true">{initials}</span>
+                    <span className="navbar-user-text"><b>{userName}</b><small>{roleLabel}</small></span>
                 </Link>
                 <button className="navbar-logout-btn" onClick={handleLogout}>
                     Cerrar sesión
                 </button>
             </div>
+            <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} links={links} token={token} />
         </nav>
+        </header>
     )
 }
 

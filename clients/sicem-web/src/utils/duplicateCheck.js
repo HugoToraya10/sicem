@@ -1,3 +1,5 @@
+const toast = (message) => window.dispatchEvent(new CustomEvent('sicem:notify', { detail: { message, tone: 'error' } }))
+
 const findDuplicate = (list, field, value) => {
     const normalized = String(value ?? '').trim().toLowerCase()
     if (!normalized) return null
@@ -11,9 +13,9 @@ export const blockIfDuplicate = (list, field, value, label) => {
     if (!existing) return false
 
     if (existing.is_active) {
-        alert(`Ya existe un registro activo con ese ${label}.`)
+        toast(`Ya existe un registro activo con ese ${label}.`)
     } else {
-        alert(`Ya existe un registro con ese ${label}, actualmente inactivo. Actívalo en lugar de crear uno duplicado.`)
+        toast(`Ya existe un registro con ese ${label}, actualmente inactivo. Actívalo en lugar de crear uno duplicado.`)
     }
     return true
 }

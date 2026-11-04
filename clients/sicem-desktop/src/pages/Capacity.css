@@ -1,20 +1,5 @@
-.capacity-layout { padding: 20px 24px; }
-
-.general-beds-card {
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-    background: white; border: 1px solid #e4e4ec; border-radius: 10px;
-    padding: 16px 20px; margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
-}
-.general-beds-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-.general-beds-numbers { font-size: 20px; color: #1a1a2e; }
-.general-beds-numbers strong { color: #1565C0; font-size: 24px; }
-.general-beds-hint { font-size: 10.5px; color: #999; font-style: italic; flex-basis: 100%; }
-.general-beds-update-btn { display: inline-block; width: auto; margin-top: 0; margin-left: auto; }
-
-.section-title {
-    font-size: 16px; font-weight: 700; margin-bottom: 16px;
-    padding-bottom: 10px; border-bottom: 2px solid #1565C0;
-}
-.capacity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.empty-state { color: #888; font-size: 13px; }
+.general-beds-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 26px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.general-beds-label { margin: 0 0 4px; font: 600 18px var(--font-display); }
+.general-beds-hint { margin: 0; max-width: 70ch; font-size: 13.5px; color: var(--text-2); }
+.capacity-heading { margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font: 600 20px var(--font-display); }
+.capacity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }

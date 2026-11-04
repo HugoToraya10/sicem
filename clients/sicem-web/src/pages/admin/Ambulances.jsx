@@ -1,4 +1,5 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
+import { roleLabel } from '../../config/roles'
 import { useAuth } from '../../context/AuthContext';
 import { toLowerCaseKeys } from '../../utils/formatData';
 import Navbar from '../../components/layout/Navbar';
@@ -6,10 +7,17 @@ import { getNavLinks } from '../../utils/Navlinks';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
 import { connectUnitsSocket } from '../../sockets/unitsSocket';
+import './Institutions.css'
 import './Ambulances.css';
 import {API_BASE_URL} from '../../config/api'
+import { useDialogs } from '../../context/useDialogs'
+import Icon from '../../components/ui/Icon'
+import MoreMenu from '../../components/ui/MoreMenu'
+import '../../styles/entities.css'
+import AnimatedNumber from '../../components/ui/AnimatedNumber'
+import SkeletonCards from '../../components/ui/SkeletonCards'
+import { Drawer } from '../../components/ui/Overlay'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 const emptyForm = { unitNumber: '', licensePlate: '', ambulanceTypeId: '', ambulanceStatusId: '', institutionId: '' }
 const emptyTypeForm = { ambulanceType: '' }
@@ -21,11 +29,13 @@ const emptyEditStatusForm = { ambulanceStatusId: '', name: '', description: '' }
 const TABS = ['Ambulancias', 'Tipos', 'Estados']
 
 const Ambulances = () => {
+    const { notify, confirm } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
     const [activeTab, setActiveTab] = useState('Ambulancias')
 
     const [ambulances, setAmbulances] = useState([]);
+    const [loaded, setLoaded] = useState(false);
     const [ambulanceTypes, setAmbulanceTypes] = useState([]);
     const [ambulanceStatuses, setAmbulanceStatuses] = useState([]);
     const [institutions, setInstitutions] = useState([]);
@@ -111,7 +121,7 @@ const Ambulances = () => {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
-            .then(({ data }) => setAmbulances(data.map(a => toLowerCaseKeys(a))))
+            .then(({ data }) => { setAmbulances(data.map(a => toLowerCaseKeys(a))); setLoaded(true) })
             .catch(error => console.error('Error consultando ambulancias. ', error))
     }
     useEffect(() => { fetchAmbulances() }, []);
@@ -182,7 +192,7 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(({ data }) => setAmbulanceHistory((data || []).map(a => toLowerCaseKeys(a))))
-            .catch(error => { console.error('Error consultando historial de la ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando historial de la ambulancia. ', error); notify(error.message, 'error') })
     }
 
     const toggleCrew = (amb) => {
@@ -208,12 +218,12 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => { setForm(emptyForm); setShowForm(false); fetchAmbulances(); })
-            .catch(error => { console.error('Error registrando ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando ambulancia. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleActive = (amb) => {
+    const handleToggleActive = async (amb) => {
         const action = amb.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} la unidad ${amb.unit_number}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} la unidad ${amb.unit_number}?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/unidades/alternar-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -221,7 +231,7 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => fetchAmbulances())
-            .catch(error => { console.error('Error cambiando estado de la ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de la ambulancia. ', error); notify(error.message, 'error') })
     }
 
     const handleSearch = () => {
@@ -237,7 +247,7 @@ const Ambulances = () => {
                 const results = Array.isArray(data) ? data : (data ? [data] : [])
                 setAmbulances(results.map(a => toLowerCaseKeys(a)))
             })
-            .catch(error => { console.error('Error buscando ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error buscando ambulancia. ', error); notify(error.message, 'error') })
             .finally(() => setSearching(false))
     }
 
@@ -267,7 +277,7 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingAmbulance(null); fetchAmbulances(); })
-            .catch(error => { console.error('Error actualizando ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando ambulancia. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------tipos: crear / desactivar--------------------------------------------------
@@ -282,7 +292,7 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => { setTypeForm(emptyTypeForm); setShowTypeForm(false); fetchTypes(); })
-            .catch(error => { console.error('Error creando tipo de ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando tipo de ambulancia. ', error); notify(error.message, 'error') })
     }
 
     const openEditType = (t) => {
@@ -299,12 +309,12 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingType(null); fetchTypes(); })
-            .catch(error => { console.error('Error actualizando tipo de ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando tipo de ambulancia. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleType = (t) => {
+    const handleToggleType = async (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el tipo "${t.ambulance_type}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el tipo "${t.ambulance_type}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/unidades/alternar-tipo-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -312,7 +322,7 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => fetchTypes())
-            .catch(error => { console.error('Error cambiando estado de tipo. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de tipo. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------estados: crear / desactivar--------------------------------------------------
@@ -327,7 +337,7 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => { setStatusForm(emptyStatusForm); setShowStatusForm(false); fetchStatuses(); })
-            .catch(error => { console.error('Error creando estado de ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando estado de ambulancia. ', error); notify(error.message, 'error') })
     }
 
     const openEditStatus = (s) => {
@@ -344,12 +354,12 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingStatus(null); fetchStatuses(); })
-            .catch(error => { console.error('Error actualizando estado de ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando estado de ambulancia. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleStatus = (s) => {
+    const handleToggleStatus = async (s) => {
         const action = s.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el estado "${s.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el estado "${s.name}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/unidades/alternar-estado-ambulancia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -357,7 +367,7 @@ const Ambulances = () => {
         })
             .then(parseResponse)
             .then(() => fetchStatuses())
-            .catch(error => { console.error('Error cambiando estado. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado. ', error); notify(error.message, 'error') })
     }
 
     const typeNameById = (id) => ambulanceTypes.find(t => t.ambulance_type_id === id)?.ambulance_type || '—'
@@ -366,10 +376,10 @@ const Ambulances = () => {
 
     return (
         <div className="ambulances-page">
-            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabels[user?.roleId] || ''} links={navLinks} />
+            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabel(user?.roleId)} links={navLinks} />
 
-            <div className="ambulances-body">
-                <h2 className="ambulances-title">Gestión de Ambulancias</h2>
+            <div role="main" id="contenido" className="ambulances-body">
+                <h1 className="ambulances-title">Gestión de ambulancias</h1>
 
                 <div className="ambulances-tabs">
                     {TABS.map((tab) => (
@@ -383,7 +393,7 @@ const Ambulances = () => {
                 {activeTab === 'Ambulancias' && (
                     <>
                         <div className="ambulances-search-row">
-                            <select value={searchMode || ''} onChange={(e) => setSearchMode(e.target.value || null)}>
+                            <select aria-label="Buscar por" value={searchMode || ''} onChange={(e) => setSearchMode(e.target.value || null)}>
                                 <option value="">Buscar por...</option>
                                 <option value="unitNumber">Número de unidad</option>
                                 <option value="licensePlate">Placa</option>
@@ -403,19 +413,18 @@ const Ambulances = () => {
                         </div>
 
                         <div className="ambulances-tab-header">
-                            <select className="status-filter-select" value={ambulancesFilter} onChange={(e) => setAmbulancesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={ambulancesFilter} onChange={(e) => setAmbulancesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
                             <button className="ambulances-add-btn" onClick={() => setShowForm(!showForm)}>
-                                + Nueva Ambulancia
+                                + Nueva ambulancia
                             </button>
                         </div>
 
-                        {showForm && (
+                        <Drawer open={Boolean(showForm)} onClose={() => setShowForm(false)} title="Registrar nueva ambulancia" size="md">
                             <form className="ambulances-form" onSubmit={handleSubmit}>
-                                <h3>Registrar Nueva Ambulancia</h3>
                                 <div className="ambulances-form-row">
                                     <div className="ambulances-field">
                                         <label>Número de unidad</label>
@@ -429,7 +438,7 @@ const Ambulances = () => {
                                 <div className="ambulances-form-row">
                                     <div className="ambulances-field">
                                         <label>Tipo de ambulancia</label>
-                                        <select value={form.ambulanceTypeId} onChange={(e) => handleFieldChange('ambulanceTypeId', e.target.value)} required>
+                                        <select aria-label="Tipo de ambulancia" value={form.ambulanceTypeId} onChange={(e) => handleFieldChange('ambulanceTypeId', e.target.value)} required>
                                             <option value="">Selecciona un tipo</option>
                                             {ambulanceTypes.map((t) => (
                                                 <option key={t.ambulance_type_id} value={t.ambulance_type_id}>{t.ambulance_type}</option>
@@ -438,7 +447,7 @@ const Ambulances = () => {
                                     </div>
                                     <div className="ambulances-field">
                                         <label>Estado inicial</label>
-                                        <select value={form.ambulanceStatusId} onChange={(e) => handleFieldChange('ambulanceStatusId', e.target.value)} required>
+                                        <select aria-label="Estado inicial" value={form.ambulanceStatusId} onChange={(e) => handleFieldChange('ambulanceStatusId', e.target.value)} required>
                                             <option value="">Selecciona un estado</option>
                                             {ambulanceStatuses.map((s) => (
                                                 <option key={s.ambulance_status_id} value={s.ambulance_status_id}>{s.name}</option>
@@ -448,7 +457,7 @@ const Ambulances = () => {
                                 </div>
                                 <div className="ambulances-field">
                                     <label>Institución</label>
-                                    <select value={form.institutionId} onChange={(e) => handleFieldChange('institutionId', e.target.value)} required>
+                                    <select aria-label="Institución" value={form.institutionId} onChange={(e) => handleFieldChange('institutionId', e.target.value)} required>
                                         <option value="">Selecciona una institución</option>
                                         {institutions.map((inst) => (
                                             <option key={inst.institution_id} value={inst.institution_id}>{inst.name}</option>
@@ -460,11 +469,10 @@ const Ambulances = () => {
                                     <button type="button" className="ambulances-form-cancel" onClick={() => setShowForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingAmbulance !== null && (
+                        <Drawer open={Boolean(editingAmbulance !== null)} onClose={() => setEditingAmbulance(null)} title="Editar ambulancia" size="md">
                             <form className="ambulances-form" onSubmit={handleUpdateAmbulance}>
-                                <h3>Editar Ambulancia</h3>
                                 <div className="ambulances-form-row">
                                     <div className="ambulances-field">
                                         <label>Número de unidad</label>
@@ -478,7 +486,7 @@ const Ambulances = () => {
                                 <div className="ambulances-form-row">
                                     <div className="ambulances-field">
                                         <label>Tipo de ambulancia</label>
-                                        <select value={editForm.ambulanceTypeId} onChange={(e) => setEditForm(p => ({ ...p, ambulanceTypeId: e.target.value }))} required>
+                                        <select aria-label="Tipo de ambulancia" value={editForm.ambulanceTypeId} onChange={(e) => setEditForm(p => ({ ...p, ambulanceTypeId: e.target.value }))} required>
                                             <option value="">Selecciona un tipo</option>
                                             {ambulanceTypes.map((t) => (
                                                 <option key={t.ambulance_type_id} value={t.ambulance_type_id}>{t.ambulance_type}</option>
@@ -487,7 +495,7 @@ const Ambulances = () => {
                                     </div>
                                     <div className="ambulances-field">
                                         <label>Institución</label>
-                                        <select value={editForm.institutionId} onChange={(e) => setEditForm(p => ({ ...p, institutionId: e.target.value }))} required>
+                                        <select aria-label="Institución" value={editForm.institutionId} onChange={(e) => setEditForm(p => ({ ...p, institutionId: e.target.value }))} required>
                                             <option value="">Selecciona una institución</option>
                                             {institutions.map((inst) => (
                                                 <option key={inst.institution_id} value={inst.institution_id}>{inst.name}</option>
@@ -500,94 +508,95 @@ const Ambulances = () => {
                                     <button type="button" className="ambulances-form-cancel" onClick={() => setEditingAmbulance(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="ambulances-table-wrapper">
-                            <table className="ambulances-table">
-                                <thead>
-                                    <tr>
-                                        <th>Unidad</th><th>Placa</th><th>Tipo</th><th>Estado</th><th>Institución</th><th>Activa</th><th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filterByStatus(ambulances, ambulancesFilter).map((amb) => (
-                                        <Fragment key={amb.ambulance_id}>
-                                        <tr>
-                                            <td className="ambulances-unit">{amb.unit_number}</td>
-                                            <td className="ambulances-plate">{amb.license_plate}</td>
-                                            <td>{typeNameById(amb.ambulance_type_id)}</td>
-                                            <td>{statusNameById(amb.ambulance_status_id)}</td>
-                                            <td>{institutionNameById(amb.institution_id)}</td>
-                                            <td>
-                                                <span className={`ambulances-status ${amb.is_active ? 'status-active' : 'status-inactive'}`}>
-                                                    {amb.is_active ? 'Activa' : 'Inactiva'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button className="ambulances-toggle-btn" onClick={() => openEditAmbulance(amb)}>Editar</button>
-                                                <button className="ambulances-toggle-btn" onClick={() => toggleCrew(amb)}>Tripulación</button>
-                                                <button className="ambulances-toggle-btn" onClick={() => toggleAmbulanceHistory(amb)}>Historial</button>
-                                                <button className="ambulances-toggle-btn" onClick={() => handleToggleActive(amb)}>
-                                                    {amb.is_active ? 'Desactivar' : 'Activar'}
-                                                </button>
-                                            </td>
-                                        </tr>
+                        <ul className="stat-strip" aria-label="Resumen de la flota">
+                            <li><b><AnimatedNumber value={ambulances.length} /></b><span>unidades</span></li>
+                            <li><b><AnimatedNumber value={ambulances.filter((a) => parseInt(a.ambulance_status_id) === 1 && a.is_active).length} /></b><span>disponibles</span></li>
+                            <li><b><AnimatedNumber value={ambulances.filter((a) => [2, 3, 4].includes(parseInt(a.ambulance_status_id))).length} /></b><span>en servicio</span></li>
+                            <li className={ambulances.some((a) => !a.is_active) ? 'warn' : ''}><b><AnimatedNumber value={ambulances.filter((a) => !a.is_active).length} /></b><span>inactivas</span></li>
+                        </ul>
+
+                        {!loaded && <SkeletonCards />}
+                        <div className="entity-grid" hidden={!loaded}>
+                            {filterByStatus(ambulances, ambulancesFilter).map((amb) => {
+                                const statusId = parseInt(amb.ambulance_status_id)
+                                const accent = { 1: 'acc-free', 2: 'acc-route', 3: 'acc-scene', 4: 'acc-transfer' }[statusId] || 'acc-off'
+                                const crewList = crew.filter((x) => x.assigned_ambulance_id && String(x.assigned_ambulance_id) === String(amb.ambulance_id))
+                                const onlineCount = crewList.filter((x) => onlineParamedicIds.has(String(x.user_profile_id))).length
+                                return (
+                                    <article key={amb.ambulance_id} className={`entity ${accent}${amb.is_active ? '' : ' is-off'}`} aria-label={`Unidad ${amb.unit_number}`}>
+                                        <div className="entity-head">
+                                            <span className="entity-avatar" aria-hidden="true"><Icon name="ambulance" size={22} /></span>
+                                            <div className="entity-titles">
+                                                <h2 className="entity-title ambulances-unit">{amb.unit_number}</h2>
+                                                <p className="entity-sub">Placa <span className="ambulances-plate">{amb.license_plate}</span></p>
+                                            </div>
+                                            <span className={`pill ${amb.is_active ? 'pill-ok' : 'pill-warn'}`}>{amb.is_active ? 'Activa' : 'Inactiva'}</span>
+                                        </div>
+                                        <div className="entity-chips">
+                                            <span className="pill pill-steel">{statusNameById(amb.ambulance_status_id) || 'Sin estado'}</span>
+                                            <span className="pill">{typeNameById(amb.ambulance_type_id) || 'Sin tipo'}</span>
+                                        </div>
+                                        <dl className="entity-facts">
+                                            <div><dt>Institución</dt><dd>{institutionNameById(amb.institution_id) || '—'}</dd></div>
+                                            <div><dt>Tripulación</dt><dd>{crewList.length === 0 ? 'Sin paramédicos' : `${crewList.length} ${crewList.length === 1 ? 'paramédico' : 'paramédicos'}${onlineCount ? ` · ${onlineCount} en línea` : ''}`}</dd></div>
+                                        </dl>
+
                                         {crewAmbulanceId === amb.ambulance_id && (
-                                            <tr>
-                                                <td colSpan={7}>
-                                                    <div className="ambulance-crew">
-                                                        <strong>Paramédicos que conducen esta unidad:</strong>
-                                                        {crew.filter((p) => p.assigned_ambulance_id && String(p.assigned_ambulance_id) === String(amb.ambulance_id)).length === 0 ? (
-                                                            <span className="ambulance-crew-empty">Esta unidad no tiene paramédicos vinculados.</span>
-                                                        ) : (
-                                                            crew.filter((p) => p.assigned_ambulance_id && String(p.assigned_ambulance_id) === String(amb.ambulance_id)).map((p) => {
-                                                                const isOnline = onlineParamedicIds.has(String(p.user_profile_id))
-                                                                return (
-                                                                    <div key={p.user_profile_id} className="ambulance-crew-row">
-                                                                        {isOnline && <span className="crew-online-dot" title="Conectado ahora mismo" />}
-                                                                        <span className={`crew-name ${isOnScheduleNow(p.shift_windows) ? 'crew-on-schedule' : ''}`}>
-                                                                            {p.first_name} {p.first_surname}
-                                                                        </span>
-                                                                        <span className="crew-schedule">{formatSchedule(p.shift_windows)}</span>
-                                                                        <span className="crew-shift-state">
-                                                                            {isOnScheduleNow(p.shift_windows) ? '· En horario de turno' : '· Fuera de turno'}
-                                                                        </span>
-                                                                        {isOnline && <span className="crew-online-label">En línea</span>}
-                                                                    </div>
-                                                                )
-                                                            })
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                            <div className="entity-panel">
+                                                <strong>Paramédicos que conducen esta unidad</strong>
+                                                {crewList.length === 0 ? (
+                                                    <span>Esta unidad no tiene paramédicos vinculados.</span>
+                                                ) : (
+                                                    crewList.map((x) => {
+                                                        const isOnline = onlineParamedicIds.has(String(x.user_profile_id))
+                                                        const onShift = isOnScheduleNow(x.shift_windows)
+                                                        return (
+                                                            <div key={x.user_profile_id} className="ambulance-crew-row">
+                                                                {isOnline && <span className="crew-online-dot" title="Conectado ahora mismo" />}
+                                                                <span className={`crew-name ${onShift ? 'crew-on-schedule' : ''}`}>{x.first_name} {x.first_surname}</span>
+                                                                <span className="crew-schedule">{formatSchedule(x.shift_windows)}</span>
+                                                                <span className={`pill ${onShift ? 'pill-ok' : ''}`}>{onShift ? 'En horario' : 'Fuera de turno'}</span>
+                                                                {isOnline && <span className="pill pill-steel">En línea</span>}
+                                                            </div>
+                                                        )
+                                                    })
+                                                )}
+                                            </div>
                                         )}
                                         {historyAmbulanceId === amb.ambulance_id && (
-                                            <tr>
-                                                <td colSpan={7}>
-                                                    <div className="ambulance-history">
-                                                        <strong>Historial de emergencias atendidas:</strong>
-                                                        {ambulanceHistory.length === 0 ? (
-                                                            <span>Esta unidad no ha atendido ninguna emergencia todavía.</span>
-                                                        ) : (
-                                                            ambulanceHistory.map((h) => (
-                                                                <div key={h.assignment_id} className="ambulance-history-row">
-                                                                    <span>{h.emergency_type_name || 'Emergencia'} — {h.description}</span>
-                                                                    <span className="ambulance-history-dates">
-                                                                        Asignada: {h.assigned_at ? new Date(h.assigned_at).toLocaleString('es-MX') : '—'}
-                                                                        {h.unassigned_at ? ` · Desasignada: ${new Date(h.unassigned_at).toLocaleString('es-MX')}` : ''}
-                                                                    </span>
-                                                                </div>
-                                                            ))
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                            <div className="entity-panel">
+                                                <strong>Historial de emergencias atendidas</strong>
+                                                {ambulanceHistory.length === 0 ? (
+                                                    <span>Esta unidad no ha atendido ninguna emergencia todavía.</span>
+                                                ) : (
+                                                    ambulanceHistory.map((h) => (
+                                                        <div key={h.assignment_id} className="ambulance-history-row">
+                                                            <span>{h.emergency_type_name || 'Emergencia'} — {h.description}</span>
+                                                            <span className="ambulance-history-dates">
+                                                                Asignada: {h.assigned_at ? new Date(h.assigned_at).toLocaleString('es-MX') : '—'}
+                                                                {h.unassigned_at ? ` · Desasignada: ${new Date(h.unassigned_at).toLocaleString('es-MX')}` : ''}
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
                                         )}
-                                        </Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(ambulances, ambulancesFilter).length === 0 && <p className="ambulances-empty">No hay ambulancias que coincidan con el filtro.</p>}
+
+                                        <div className="entity-actions">
+                                            <button type="button" className="ambulances-toggle-btn" onClick={() => openEditAmbulance(amb)}>Editar</button>
+                                            <button type="button" className="ambulances-toggle-btn" onClick={() => toggleCrew(amb)}>{crewAmbulanceId === amb.ambulance_id ? 'Ocultar tripulación' : 'Tripulación'}</button>
+                                            <span className="spacer" />
+                                            <MoreMenu items={[
+                                                { label: 'Historial de la unidad', onClick: () => toggleAmbulanceHistory(amb) },
+                                                { label: amb.is_active ? 'Desactivar unidad' : 'Activar unidad', onClick: () => handleToggleActive(amb), danger: Boolean(amb.is_active) },
+                                            ]} />
+                                        </div>
+                                    </article>
+                                )
+                            })}
+                            {filterByStatus(ambulances, ambulancesFilter).length === 0 && <p className="entity-empty">No hay ambulancias que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}
@@ -596,19 +605,18 @@ const Ambulances = () => {
                 {activeTab === 'Tipos' && (
                     <>
                         <div className="ambulances-tab-header">
-                            <select className="status-filter-select" value={typesFilter} onChange={(e) => setTypesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={typesFilter} onChange={(e) => setTypesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
                             <button className="ambulances-add-btn" onClick={() => setShowTypeForm(!showTypeForm)}>
-                                + Nuevo Tipo
+                                + Nuevo tipo
                             </button>
                         </div>
 
-                        {showTypeForm && (
+                        <Drawer open={Boolean(showTypeForm)} onClose={() => setShowTypeForm(false)} title="Nuevo Tipo de Ambulancia" size="md">
                             <form className="ambulances-form" onSubmit={handleCreateType}>
-                                <h3>Nuevo Tipo de Ambulancia</h3>
                                 <div className="ambulances-field">
                                     <label>Nombre del tipo</label>
                                     <input type="text" value={typeForm.ambulanceType} onChange={(e) => setTypeForm({ ambulanceType: e.target.value })} maxLength={100} required />
@@ -618,11 +626,10 @@ const Ambulances = () => {
                                     <button type="button" className="ambulances-form-cancel" onClick={() => setShowTypeForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingType !== null && (
+                        <Drawer open={Boolean(editingType !== null)} onClose={() => setEditingType(null)} title="Editar Tipo de Ambulancia" size="md">
                             <form className="ambulances-form" onSubmit={handleUpdateType}>
-                                <h3>Editar Tipo de Ambulancia</h3>
                                 <div className="ambulances-field">
                                     <label>Nombre del tipo</label>
                                     <input type="text" value={editTypeForm.ambulanceType} onChange={(e) => setEditTypeForm(p => ({ ...p, ambulanceType: e.target.value }))} maxLength={100} required />
@@ -632,31 +639,29 @@ const Ambulances = () => {
                                     <button type="button" className="ambulances-form-cancel" onClick={() => setEditingType(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="ambulances-table-wrapper">
-                            <table className="ambulances-table">
-                                <thead><tr><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(ambulanceTypes, typesFilter).map((t) => (
-                                        <tr key={t.ambulance_type_id}>
-                                            <td>{t.ambulance_type}</td>
-                                            <td>
-                                                <span className={`ambulances-status ${t.is_active ? 'status-active' : 'status-inactive'}`}>
-                                                    {t.is_active ? 'Activo' : 'Inactivo'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button className="ambulances-toggle-btn" onClick={() => openEditType(t)}>Editar</button>
-                                                <button className="ambulances-toggle-btn" onClick={() => handleToggleType(t)}>
-                                                    {t.is_active ? 'Desactivar' : 'Activar'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(ambulanceTypes, typesFilter).length === 0 && <p className="ambulances-empty">No hay tipos que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(ambulanceTypes, typesFilter).map((t) => {
+                                const inUse = ambulances.filter((a) => String(a.ambulance_type_id) === String(t.ambulance_type_id)).length
+                                return (
+                                    <article key={t.ambulance_type_id} className={`entity acc-route${t.is_active ? '' : ' is-off'}`}>
+                                        <div className="entity-head">
+                                            <div className="entity-titles">
+                                                <h2 className="entity-title">{t.ambulance_type}</h2>
+                                                <p className="entity-sub">{inUse} {inUse === 1 ? 'unidad' : 'unidades'} de este tipo</p>
+                                            </div>
+                                            <span className={`pill ${t.is_active ? 'pill-ok' : 'pill-warn'}`}>{t.is_active ? 'Activo' : 'Inactivo'}</span>
+                                        </div>
+                                        <div className="entity-actions">
+                                            <button type="button" className="ambulances-toggle-btn" onClick={() => openEditType(t)}>Editar</button>
+                                            <span className="spacer" />
+                                            <MoreMenu items={[{ label: t.is_active ? 'Desactivar tipo' : 'Activar tipo', onClick: () => handleToggleType(t), danger: Boolean(t.is_active) }]} />
+                                        </div>
+                                    </article>
+                                )
+                            })}
+                            {filterByStatus(ambulanceTypes, typesFilter).length === 0 && <p className="entity-empty">No hay tipos que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}
@@ -665,19 +670,18 @@ const Ambulances = () => {
                 {activeTab === 'Estados' && (
                     <>
                         <div className="ambulances-tab-header">
-                            <select className="status-filter-select" value={statusesFilter} onChange={(e) => setStatusesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={statusesFilter} onChange={(e) => setStatusesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
                             <button className="ambulances-add-btn" onClick={() => setShowStatusForm(!showStatusForm)}>
-                                + Nuevo Estado
+                                + Nuevo estado
                             </button>
                         </div>
 
-                        {showStatusForm && (
+                        <Drawer open={Boolean(showStatusForm)} onClose={() => setShowStatusForm(false)} title="Nuevo Estado de Ambulancia" size="md">
                             <form className="ambulances-form" onSubmit={handleCreateStatus}>
-                                <h3>Nuevo Estado de Ambulancia</h3>
                                 <div className="ambulances-form-row">
                                     <div className="ambulances-field">
                                         <label>Nombre</label>
@@ -693,11 +697,10 @@ const Ambulances = () => {
                                     <button type="button" className="ambulances-form-cancel" onClick={() => setShowStatusForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingStatus !== null && (
+                        <Drawer open={Boolean(editingStatus !== null)} onClose={() => setEditingStatus(null)} title="Editar Estado de Ambulancia" size="md">
                             <form className="ambulances-form" onSubmit={handleUpdateStatus}>
-                                <h3>Editar Estado de Ambulancia</h3>
                                 <div className="ambulances-form-row">
                                     <div className="ambulances-field">
                                         <label>Nombre</label>
@@ -713,32 +716,32 @@ const Ambulances = () => {
                                     <button type="button" className="ambulances-form-cancel" onClick={() => setEditingStatus(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="ambulances-table-wrapper">
-                            <table className="ambulances-table">
-                                <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(ambulanceStatuses, statusesFilter).map((s) => (
-                                        <tr key={s.ambulance_status_id}>
-                                            <td>{s.name}</td>
-                                            <td>{s.description}</td>
-                                            <td>
-                                                <span className={`ambulances-status ${s.is_active ? 'status-active' : 'status-inactive'}`}>
-                                                    {s.is_active ? 'Activo' : 'Inactivo'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button className="ambulances-toggle-btn" onClick={() => openEditStatus(s)}>Editar</button>
-                                                <button className="ambulances-toggle-btn" onClick={() => handleToggleStatus(s)}>
-                                                    {s.is_active ? 'Desactivar' : 'Activar'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(ambulanceStatuses, statusesFilter).length === 0 && <p className="ambulances-empty">No hay estados que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(ambulanceStatuses, statusesFilter).map((st) => {
+                                const sid = parseInt(st.ambulance_status_id)
+                                const accent = { 1: 'acc-free', 2: 'acc-route', 3: 'acc-scene', 4: 'acc-transfer' }[sid] || 'acc-off'
+                                const inUse = ambulances.filter((a) => String(a.ambulance_status_id) === String(st.ambulance_status_id)).length
+                                return (
+                                    <article key={st.ambulance_status_id} className={`entity ${accent}${st.is_active ? '' : ' is-off'}`}>
+                                        <div className="entity-head">
+                                            <div className="entity-titles">
+                                                <h2 className="entity-title">{st.name}</h2>
+                                                <p className="entity-sub">{st.description}</p>
+                                            </div>
+                                            <span className={`pill ${st.is_active ? 'pill-ok' : 'pill-warn'}`}>{st.is_active ? 'Activo' : 'Inactivo'}</span>
+                                        </div>
+                                        <p className="entity-sub">{inUse} {inUse === 1 ? 'unidad' : 'unidades'} en este estado</p>
+                                        <div className="entity-actions">
+                                            <button type="button" className="ambulances-toggle-btn" onClick={() => openEditStatus(st)}>Editar</button>
+                                            <span className="spacer" />
+                                            <MoreMenu items={[{ label: st.is_active ? 'Desactivar estado' : 'Activar estado', onClick: () => handleToggleStatus(st), danger: Boolean(st.is_active) }]} />
+                                        </div>
+                                    </article>
+                                )
+                            })}
+                            {filterByStatus(ambulanceStatuses, statusesFilter).length === 0 && <p className="entity-empty">No hay estados que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}

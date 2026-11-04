@@ -1,0 +1,81 @@
+.mc {
+    position: absolute;
+    top: 12px;
+    right: 384px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 600;
+}
+
+.mc-group {
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-panel);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.mc-btn {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mc-btn + .mc-btn { border-top: 1px solid var(--line); }
+.mc-btn:first-child { border-radius: var(--r-md) var(--r-md) 0 0; }
+.mc-btn:last-child { border-radius: 0 0 var(--r-md) var(--r-md); }
+.mc-btn:only-child { border-radius: var(--r-md); }
+.mc-btn:hover { background: var(--surface-2); }
+.mc-btn-on { background: var(--steel-soft); color: var(--steel); }
+.mc-btn-alert { color: var(--brand); }
+
+.mc-popover {
+    position: absolute;
+    right: 48px;
+    top: 0;
+    width: 230px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-panel);
+    padding: 12px 14px;
+}
+
+.mc-popover-title { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--text-3); }
+.mc-popover-title:not(:first-child) { margin-top: 12px; }
+
+.mc-check { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 14px; cursor: pointer; }
+.mc-check input { width: 16px; height: 16px; accent-color: var(--steel); }
+
+.mc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.mc-chips button {
+    height: 26px;
+    padding: 0 9px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text-2);
+    border-radius: 13px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mc-chips button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--surface); }
+
+/* Con el panel derecho plegado, la barra se pega al borde */
+.stage-right-collapsed .mc { right: 56px; }
+
+@media (max-width: 1180px) {
+    .mc { right: 334px; }
+}

@@ -1,0 +1,17 @@
+.adp-section + .adp-section { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.adp-section h3 { margin: 0 0 12px; font: 650 15px var(--font-display); display: flex; align-items: center; gap: 8px; }
+.adp-count { font: 600 12px var(--font-id); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; color: var(--text-2); }
+.adp-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; margin: 0; }
+.adp-facts dt { font-size: 12.5px; color: var(--text-3); }
+.adp-facts dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.adp-facts dd.mono { font-family: var(--font-id); font-size: 14px; }
+.adp-empty { margin: 0; font-size: 14px; color: var(--text-2); }
+.adp-crew { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.adp-crew li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+.adp-crew li > div { flex: 1; min-width: 0; }
+.adp-crew b { display: block; font-size: 14.5px; }
+.adp-crew b.on-schedule { color: var(--ok); }
+.adp-crew small { display: block; margin-top: 2px; font: 500 12px var(--font-id); color: var(--text-2); }
+.adp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); flex: none; }
+.adp-dot.on { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-soft); }
+.adp-online { font-size: 12px; font-weight: 600; color: var(--ok); background: var(--ok-soft); padding: 2px 9px; border-radius: 999px; }

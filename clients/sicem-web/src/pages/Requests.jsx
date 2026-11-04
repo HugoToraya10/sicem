@@ -1,4 +1,5 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
+import { roleLabel } from '../config/roles'
 import { useAuth } from '../context/AuthContext';
 import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
@@ -7,18 +8,15 @@ import { getNavLinks } from '../utils/Navlinks';
 import { parseResponse } from '../utils/apiRequest';
 import { connectEmergencySocket } from '../sockets/emergencySocket';
 import {API_BASE_URL} from '../config/api'
+import { useDialogs } from '../context/useDialogs'
+import Icon from '../components/ui/Icon'
+import '../styles/entities.css'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 // request_status_id: 1 = Pendiente, 2 = Aceptada, 3 = Rechazada, 4 = Cancelada
-const statusClass = {
-    1: 'status-pending',
-    2: 'status-accepted',
-    3: 'status-rejected',
-    4: 'status-cancelled',
-}
 
 const Requests = () => {
+    const { notify, confirm } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
     const [requests, setRequests] = useState([]);
@@ -49,12 +47,14 @@ const Requests = () => {
         return () => emergencySocket.disconnect()
     }, [token]);
 
+    const countByStatus = (value) => requests.filter((r) => String(r.request_status_id) === value).length
+
     const visibleRequests = statusFilter === 'all'
         ? requests
         : requests.filter(r => String(r.request_status_id) === statusFilter)
 
-    const handleCancelRequest = (req) => {
-        if (!window.confirm('¿Seguro que quieres cancelar esta solicitud interinstitucional?')) return
+    const handleCancelRequest = async (req) => {
+        if (!(await confirm({ title: 'Confirmar', message: '¿Seguro que quieres cancelar esta solicitud interinstitucional?', confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/emergencias/cancelar-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -62,7 +62,7 @@ const Requests = () => {
         })
             .then(parseResponse)
             .then(() => fetchRequests())
-            .catch(error => { console.error('Error cancelando la solicitud. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cancelando la solicitud. ', error); notify(error.message, 'error') })
     }
 
     const formatTime = (dateString) => {
@@ -75,92 +75,60 @@ const Requests = () => {
         <div className="requests-page">
             <Navbar
                 userName={user?.firstName || 'Usuario'}
-                roleLabel={roleLabels[user?.roleId] || ''}
+                roleLabel={roleLabel(user?.roleId)}
                 links={navLinks}
             />
 
-            <div className="requests-body">
-                <h2 className="requests-title">Solicitudes Interinstitucionales</h2>
+            <div role="main" id="contenido" className="requests-body">
+                <h1 className="requests-title">Solicitudes interinstitucionales</h1>
+                <p className="requests-subtitle">Unidades que se piden prestadas a otras instituciones. Se actualiza solo cuando alguien responde.</p>
 
-                <div className="requests-filter-row">
-                    <select className="status-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="all">Todos</option>
-                        <option value="1">Pendientes</option>
-                        <option value="2">Aceptadas</option>
-                        <option value="3">Rechazadas</option>
-                        <option value="4">Canceladas</option>
-                    </select>
+                <div className="requests-filter-row" role="group" aria-label="Filtrar por estado">
+                    {[['all', 'Todas', requests.length], ['1', 'Pendientes', countByStatus('1')], ['2', 'Aceptadas', countByStatus('2')], ['3', 'Rechazadas', countByStatus('3')], ['4', 'Canceladas', countByStatus('4')]].map(([value, label, count]) => (
+                        <button key={value} type="button" className="requests-chip" aria-pressed={statusFilter === value} onClick={() => setStatusFilter(value)}>
+                            {label} <span className="requests-chip-count">{count}</span>
+                        </button>
+                    ))}
                 </div>
 
-                <div className="requests-table-wrapper">
-                    <table className="requests-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Emergencia</th>
-                                <th>Institución solicitante</th>
-                                <th>Institución receptora</th>
-                                <th>Unidad propuesta</th>
-                                <th>Estado</th>
-                                <th>Hora</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visibleRequests.map((req) => (
-                                <Fragment key={req.inter_institutional_request_id}>
-                                    <tr>
-                                        <td className="req-id">#{String(req.inter_institutional_request_id).padStart(3, '0')}</td>
-                                        <td>
-                                            {req.emergency_type_name || 'Emergencia'}
-                                            {req.emergency_description ? ` · ${req.emergency_description}` : ''}
-                                        </td>
-                                        <td>{req.requesting_institution}</td>
-                                        <td>{req.receiving_institution}</td>
-                                        <td className="req-unit">{req.unit_number || '—'}</td>
-                                        <td>
-                                            <span className={`req-status ${statusClass[req.request_status_id] || ''}`}>
-                                                {req.status_name}
-                                            </span>
-                                        </td>
-                                        <td className="req-time">{formatTime(req.requested_at)}</td>
-                                        <td>
-                                            <button
-                                                className="req-view-btn"
-                                                onClick={() => setExpandedId(expandedId === req.inter_institutional_request_id ? null : req.inter_institutional_request_id)}
-                                            >
-                                                Ver
-                                            </button>
-                                            {parseInt(req.request_status_id) === 1 && (parseInt(req.user_profile_id) === parseInt(user?.profileId) || parseInt(user?.roleId) === 1) && (
-                                                <button
-                                                    className="req-cancel-btn"
-                                                    onClick={() => handleCancelRequest(req)}
-                                                >
-                                                    Cancelar
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                    {expandedId === req.inter_institutional_request_id && (
-                                        <tr className="req-detail-row">
-                                            <td colSpan={8}>
-                                                <div className="req-detail-content">
-                                                    <span><strong>Solicitada:</strong> {req.requested_at ? new Date(req.requested_at).toLocaleString('es-MX') : '—'}</span>
-                                                    <span><strong>Respondida:</strong> {req.responded_at ? new Date(req.responded_at).toLocaleString('es-MX') : 'Sin respuesta todavía'}</span>
-                                                    {req.rejection_reason && (
-                                                        <span><strong>Motivo de rechazo:</strong> {req.rejection_reason}</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </Fragment>
-                            ))}
-                        </tbody>
-                    </table>
-
+                <div className="entity-rows">
+                    {visibleRequests.map((req) => {
+                        const sid = parseInt(req.request_status_id)
+                        const accent = { 1: 'var(--warn)', 2: 'var(--ok)', 3: 'var(--brand)', 4: 'var(--text-3)' }[sid] || 'var(--line-strong)'
+                        const tone = { 1: 'pill-warn', 2: 'pill-ok', 3: 'pill-bad', 4: '' }[sid] || ''
+                        const canCancel = sid === 1 && (parseInt(req.user_profile_id) === parseInt(user?.profileId) || parseInt(user?.roleId) === 1)
+                        const open = expandedId === req.inter_institutional_request_id
+                        return (
+                            <article key={req.inter_institutional_request_id} className="entity-row" style={{ '--accent': accent }}>
+                                <span className="entity-id">#{String(req.inter_institutional_request_id).padStart(3, '0')}</span>
+                                <div className="row-main">
+                                    <h2 className="row-title">{req.emergency_type_name || 'Emergencia'}</h2>
+                                    <p className="row-desc">{req.emergency_description || 'Sin descripción'}</p>
+                                    <p className="row-desc" style={{ marginTop: 6 }}>
+                                        <b>{req.requesting_institution}</b> <Icon name="arrow" size={13} /> <b>{req.receiving_institution}</b>
+                                    </p>
+                                </div>
+                                <div className="row-meta">
+                                    <span><b>Unidad</b> <span className="req-unit">{req.unit_number || '—'}</span></span>
+                                    <span><b>Hora</b> {formatTime(req.requested_at)}</span>
+                                </div>
+                                <div className="row-actions">
+                                    <span className={`pill ${tone}`}>{req.status_name}</span>
+                                    <button type="button" className="req-view-btn" onClick={() => setExpandedId(open ? null : req.inter_institutional_request_id)}>{open ? 'Ocultar' : 'Detalles'}</button>
+                                    {canCancel && <button type="button" className="req-cancel-btn" onClick={() => handleCancelRequest(req)}>Cancelar</button>}
+                                </div>
+                                {open && (
+                                    <div className="entity-panel row-panel">
+                                        <span><strong>Solicitada:</strong> {req.requested_at ? new Date(req.requested_at).toLocaleString('es-MX') : '—'}</span>
+                                        <span><strong>Respondida:</strong> {req.responded_at ? new Date(req.responded_at).toLocaleString('es-MX') : 'Sin respuesta todavía'}</span>
+                                        {req.rejection_reason && <span><strong>Motivo de rechazo:</strong> {req.rejection_reason}</span>}
+                                    </div>
+                                )}
+                            </article>
+                        )
+                    })}
                     {visibleRequests.length === 0 && (
-                        <p className="requests-empty">No hay solicitudes que coincidan con el filtro.</p>
+                        <p className="entity-empty">{requests.length === 0 ? 'Todavía no hay solicitudes. Aparecerán aquí cuando se pida una unidad a otra institución.' : 'Ninguna solicitud tiene este estado. Prueba con otro filtro.'}</p>
                     )}
                 </div>
             </div>

@@ -4,6 +4,11 @@ import { useAuth } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../config/api'
 import { connectUnitsSocket } from '../../sockets/unitsSocket'
 import { connectEmergencySocket } from '../../sockets/emergencySocket'
+import { useTheme, setTheme } from '../../utils/theme'
+import { useRegion } from '../../context/useRegion'
+import { useDialogs } from '../../context/useDialogs'
+import Icon from '../ui/Icon'
+import SkinMenu from '../ui/SkinMenu'
 import './Navbar.css'
 
 const LAST_SEEN_KEY_PREFIX = 'sicem_failure_reports_last_seen_'
@@ -12,6 +17,7 @@ const Navbar = ({ userName, roleLabel, links }) => {
     const location = useLocation()
     const navigate = useNavigate()
     const { logout, token, user } = useAuth()
+    const { notify, confirm } = useDialogs()
     const [openDropdown, setOpenDropdown] = useState(null)
     const dropdownRef = useRef(null)
 
@@ -25,6 +31,10 @@ const Navbar = ({ userName, roleLabel, links }) => {
         return stored ? new Date(stored) : new Date(0)
     })
     const bellRef = useRef(null)
+    const [menuOpen, setMenuOpen] = useState(false)
+    const theme = useTheme()
+    const { region } = useRegion()
+    const initials = (userName || 'U').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
     const handleLogout = () => {
         logout()
@@ -85,9 +95,15 @@ const Navbar = ({ userName, roleLabel, links }) => {
 
     const [unassigningId, setUnassigningId] = useState(null)
 
-    const handleUnassign = (report) => {
+    const handleUnassign = async (report) => {
         if (!report.ambulance_id || !report.emergency_id) return
-        if (!window.confirm(`¿Seguro que quieres desasignar la unidad ${report.unit_number || ''} de la emergencia? Quedará marcada "Fuera de servicio" hasta que el propio paramédico la reactive.`)) return
+        const accepted = await confirm({
+            title: 'Desasignar unidad',
+            message: `¿Desasignar la unidad ${report.unit_number || ''} de la emergencia? Quedará marcada "Fuera de servicio" hasta que el propio paramédico la reactive.`,
+            confirmLabel: 'Desasignar',
+            danger: true,
+        })
+        if (!accepted) return
         setUnassigningId(report.ambulance_failure_report_id)
         fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
             method: 'PATCH',
@@ -96,21 +112,27 @@ const Navbar = ({ userName, roleLabel, links }) => {
         })
             .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
             .then(({ ok, body }) => {
-                if (!ok) return alert(body.message || 'No se pudo desasignar la unidad.')
+                if (!ok) return notify(body.message || 'No se pudo desasignar la unidad.', 'error')
                 setFailureReports((current) => current.map((r) =>
                     r.ambulance_failure_report_id === report.ambulance_failure_report_id ? { ...r, unassigned: true } : r
                 ))
             })
-            .catch(() => alert('No se pudo desasignar la unidad. Intenta de nuevo.'))
+            .catch(() => notify('No se pudo desasignar la unidad. Intenta de nuevo.', 'error'))
             .finally(() => setUnassigningId(null))
     }
 
     // Falla reportada SIN emergencia asociada (el paramédico no estaba en
     // curso cuando reportó) — no hay nada que desasignar, pero el hospital
     // igual necesita poder sacarla de servicio directo desde aquí.
-    const handleMarkOutOfService = (report) => {
+    const handleMarkOutOfService = async (report) => {
         if (!report.ambulance_id) return
-        if (!window.confirm(`¿Marcar la unidad ${report.unit_number || ''} como "Fuera de servicio"?`)) return
+        const accepted = await confirm({
+            title: 'Marcar fuera de servicio',
+            message: `¿Marcar la unidad ${report.unit_number || ''} como "Fuera de servicio"?`,
+            confirmLabel: 'Marcar',
+            danger: true,
+        })
+        if (!accepted) return
         setUnassigningId(report.ambulance_failure_report_id)
         fetch(`${API_BASE_URL}/unidades/actualizar-estado-ambulancia`, {
             method: 'PATCH',
@@ -119,12 +141,12 @@ const Navbar = ({ userName, roleLabel, links }) => {
         })
             .then((res) => res.json().then((body) => ({ ok: res.ok, body })))
             .then(({ ok, body }) => {
-                if (!ok) return alert(body.message || 'No se pudo actualizar el estado.')
+                if (!ok) return notify(body.message || 'No se pudo actualizar el estado.', 'error')
                 setFailureReports((current) => current.map((r) =>
                     r.ambulance_failure_report_id === report.ambulance_failure_report_id ? { ...r, unassigned: true } : r
                 ))
             })
-            .catch(() => alert('No se pudo actualizar el estado. Intenta de nuevo.'))
+            .catch(() => notify('No se pudo actualizar el estado. Intenta de nuevo.', 'error'))
             .finally(() => setUnassigningId(null))
     }
 
@@ -148,9 +170,34 @@ const Navbar = ({ userName, roleLabel, links }) => {
         link.children.some((child) => location.pathname === child.to)
 
     return (
-        <nav className="navbar">
-            <span className="navbar-logo">SICEM</span>
-            <div className="navbar-links" ref={dropdownRef}>
+        <header className="app-header">
+        <a
+            href="#contenido"
+            className="skip-link"
+            onClick={(e) => {
+                e.preventDefault()
+                const target = document.querySelector('h1') || document.querySelector('main')
+                if (target) { target.setAttribute('tabindex', '-1'); target.focus() }
+            }}
+        >
+            Saltar al contenido
+        </a>
+        <nav className="navbar" aria-label="Principal">
+            <Link to="/pacientes-en-camino" className="navbar-brand" aria-label="SICEM, ir al inicio">
+                <span className="navbar-brand-mark"><Icon name="plus" size={17} strokeWidth={2.8} /></span>
+                <span className="navbar-brand-text"><b>SICEM</b><small>{region.state ? `Portal hospitalario · ${region.state}` : 'Portal hospitalario'}</small></span>
+            </Link>
+            <button
+                type="button"
+                className="navbar-menu-btn"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-expanded={menuOpen}
+                aria-controls="navbar-links"
+                aria-label={menuOpen ? 'Cerrar el menú' : 'Abrir el menú'}
+            >
+                <Icon name={menuOpen ? 'x' : 'menu'} size={20} />
+            </button>
+            <div id="navbar-links" className={`navbar-links ${menuOpen ? 'open' : ''}`} ref={dropdownRef} onClick={(e) => { if (e.target.closest('a')) setMenuOpen(false) }}>
                 {links.map((link) => {
                     if (isDropdownItem(link)) {
                         const isOpen = openDropdown === link.label
@@ -161,7 +208,7 @@ const Navbar = ({ userName, roleLabel, links }) => {
                                     onClick={() => setOpenDropdown(isOpen ? null : link.label)}
                                 >
                                     {link.label}
-                                    <span className={`navbar-dropdown-arrow ${isOpen ? 'open' : ''}`}>▾</span>
+                                    <Icon name="chevron" size={14} className={`navbar-dropdown-arrow ${isOpen ? 'open' : ''}`} />
                                 </button>
                                 {isOpen && (
                                     <div className="navbar-dropdown-menu">
@@ -191,11 +238,17 @@ const Navbar = ({ userName, roleLabel, links }) => {
                         </Link>
                     )
                 })}
+                <button type="button" className="navbar-menu-only navbar-menu-logout" onClick={handleLogout}>Cerrar sesión</button>
             </div>
             <div className="navbar-right">
                 <div className="navbar-bell-wrap" ref={bellRef}>
-                    <button className="navbar-bell" onClick={toggleBell} title="Fallas reportadas">
-                        🔔
+                    <button
+                        className="navbar-bell"
+                        onClick={toggleBell}
+                        aria-label={unreadCount > 0 ? `Fallas reportadas, ${unreadCount} sin leer` : 'Fallas reportadas'}
+                        title="Fallas reportadas"
+                    >
+                        <Icon name="bell" size={18} />
                         {unreadCount > 0 && <span className="navbar-bell-badge">{unreadCount}</span>}
                     </button>
                     {bellOpen && (
@@ -247,15 +300,25 @@ const Navbar = ({ userName, roleLabel, links }) => {
                         </div>
                     )}
                 </div>
-                <span className="navbar-user">
-                    <span className="navbar-user-dot" />
-                    {userName} — {roleLabel}
+                <SkinMenu />
+                <button
+                    className="navbar-bell"
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    aria-label="Cambiar entre tema claro y oscuro"
+                    title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+                >
+                    <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={18} />
+                </button>
+                <span className="navbar-user" title={`${userName} — ${roleLabel}`}>
+                    <span className="navbar-avatar" aria-hidden="true">{initials}</span>
+                    <span className="navbar-user-text"><b>{userName}</b><small>{roleLabel}</small></span>
                 </span>
                 <button className="navbar-logout-btn" onClick={handleLogout}>
                     Cerrar sesión
                 </button>
             </div>
         </nav>
+        </header>
     )
 }
 

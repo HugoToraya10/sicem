@@ -1,14 +1,21 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
+import { roleLabel } from '../../config/roles'
+import MoreMenu from '../../components/ui/MoreMenu'
+import '../../styles/entities.css'
 import { useAuth } from '../../context/AuthContext';
 import { toLowerCaseKeys } from '../../utils/formatData';
 import Navbar from '../../components/layout/Navbar';
 import { getNavLinks } from '../../utils/Navlinks';
 import { parseResponse } from '../../utils/apiRequest';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
+import './Institutions.css'
 import './Users.css';
 import {API_BASE_URL} from '../../config/api'
+import { useDialogs } from '../../context/useDialogs'
+import AnimatedNumber from '../../components/ui/AnimatedNumber'
+import SkeletonCards from '../../components/ui/SkeletonCards'
+import { Drawer } from '../../components/ui/Overlay'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 const WEEKDAYS = [
     { value: 1, label: 'Lun' }, { value: 2, label: 'Mar' }, { value: 3, label: 'Mié' },
@@ -38,10 +45,13 @@ const emptyPatientForm = {
 const emptyCredentialsForm = { userCredentialId: '', email: '', password: '' }
 
 const Users = () => {
+    const { notify, confirm } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
 
     const [users, setUsers] = useState([]);
+    const [usersError, setUsersError] = useState(false)
+    const [loaded, setLoaded] = useState(false)
     const [roles, setRoles] = useState([]);
     const [institutions, setInstitutions] = useState([]);
     const [crumAmbulances, setCrumAmbulances] = useState([]);
@@ -106,9 +116,9 @@ const Users = () => {
         fetch(`${API_BASE_URL}/usuarios/obtener-usuarios`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
-            .then(res => res.json())
-            .then(({ data }) => setUsers(data.map(u => toLowerCaseKeys(u))))
-            .catch(error => console.error('Error consultando usuarios. ', error))
+            .then(parseResponse)
+            .then(({ data }) => { setUsersError(false); setUsers(data.map(u => toLowerCaseKeys(u))); setLoaded(true) })
+            .catch(error => { console.error('Error consultando usuarios. ', error); setUsersError(true) })
     }
 
     const fetchCredentialHistory = (userCredentialId) => {
@@ -117,7 +127,7 @@ const Users = () => {
         })
             .then(parseResponse)
             .then(({ history }) => setCredentialHistory((history || []).map(h => toLowerCaseKeys(h))))
-            .catch(error => { console.error('Error consultando historial de cuenta. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando historial de cuenta. ', error); notify(error.message, 'error') })
     }
 
     const toggleCredentialHistory = (u) => {
@@ -190,7 +200,7 @@ const Users = () => {
                 const detail = Array.isArray(userData) ? userData[0] : userData
                 setUserDetail(detail ? toLowerCaseKeys(detail) : null)
             })
-            .catch(error => { console.error('Error consultando detalle de usuario. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando detalle de usuario. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------registrar / actualizar empleado--------------------------------------------------
@@ -275,7 +285,7 @@ const Users = () => {
             })
                 .then(parseResponse)
                 .then(() => { setShowForm(false); fetchUsers(); })
-                .catch(error => { console.error('Error actualizando usuario. ', error); alert(error.message) })
+                .catch(error => { console.error('Error actualizando usuario. ', error); notify(error.message, 'error') })
         } else {
             if (blockIfDuplicate(users, 'email', form.email, 'correo')) return
             if (blockIfDuplicate(users, 'curp', form.cveUnicaRegistroPob, 'CURP')) return
@@ -301,14 +311,14 @@ const Users = () => {
             })
                 .then(parseResponse)
                 .then(() => { setShowForm(false); fetchUsers(); })
-                .catch(error => { console.error('Error registrando usuario. ', error); alert(error.message) })
+                .catch(error => { console.error('Error registrando usuario. ', error); notify(error.message, 'error') })
         }
     }
 
-    const handleToggleActive = (u) => {
+    const handleToggleActive = async (u) => {
         if (!u.user_credential_id) return
         const action = u.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} a ${u.first_name} ${u.first_surname || ''}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} a ${u.first_name} ${u.first_surname || ''}?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/usuarios/invertir-estado-usuario`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -316,13 +326,13 @@ const Users = () => {
         })
             .then(parseResponse)
             .then(() => fetchUsers())
-            .catch(error => { console.error('Error cambiando estado del usuario. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado del usuario. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleInstitutionAdmin = (u) => {
+    const handleToggleInstitutionAdmin = async (u) => {
         const nextValue = !u.is_institution_admin
         const action = nextValue ? 'otorgar' : 'quitar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el privilegio de administrador de institución a ${u.first_name} ${u.first_surname || ''}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el privilegio de administrador de institución a ${u.first_name} ${u.first_surname || ''}?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/usuarios/alternar-admin-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -330,7 +340,7 @@ const Users = () => {
         })
             .then(parseResponse)
             .then(() => fetchUsers())
-            .catch(error => { console.error('Error cambiando privilegio de administrador de institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando privilegio de administrador de institución. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------registrar paciente--------------------------------------------------
@@ -374,7 +384,7 @@ const Users = () => {
         })
             .then(parseResponse)
             .then(() => { setShowPatientForm(false); fetchUsers(); })
-            .catch(error => { console.error('Error registrando paciente. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando paciente. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------editar credenciales--------------------------------------------------
@@ -399,33 +409,32 @@ const Users = () => {
         })
             .then(parseResponse)
             .then(() => { setShowCredentialsForm(false); fetchUsers(); })
-            .catch(error => { console.error('Error actualizando credenciales. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando credenciales. ', error); notify(error.message, 'error') })
     }
 
     return (
         <div className="users-page">
             <Navbar
                 userName={user?.firstName || 'Usuario'}
-                roleLabel={roleLabels[user?.roleId] || ''}
+                roleLabel={roleLabel(user?.roleId)}
                 links={navLinks}
             />
 
-            <div className="users-body">
+            <div role="main" id="contenido" className="users-body">
                 <div className="users-header">
-                    <h2 className="users-title">Gestión de Usuarios</h2>
+                    <h1 className="users-title">Gestión de usuarios</h1>
                     <div className="users-header-actions">
                         <button className="users-secondary-btn" onClick={openPatientForm}>
-                            + Registrar Paciente
+                            + Registrar paciente
                         </button>
                         <button className="users-add-btn" onClick={openCreateForm}>
-                            + Nuevo Empleado
+                            + Nuevo empleado
                         </button>
                     </div>
                 </div>
 
-                {showCredentialsForm && (
+                <Drawer open={Boolean(showCredentialsForm)} onClose={() => setShowCredentialsForm(false)} title="Editar Credenciales de Acceso" size="md">
                     <form className="users-form" onSubmit={handleUpdateCredentials}>
-                        <h3>Editar Credenciales de Acceso</h3>
                         <div className="users-form-row">
                             <div className="users-field">
                                 <label>Correo electrónico</label>
@@ -441,11 +450,10 @@ const Users = () => {
                             <button type="button" className="users-form-cancel" onClick={() => setShowCredentialsForm(false)}>Cancelar</button>
                         </div>
                     </form>
-                )}
+                    </Drawer>
 
-                {showPatientForm && (
+                <Drawer open={Boolean(showPatientForm)} onClose={() => setShowPatientForm(false)} title="Registrar nuevo paciente" size="md">
                     <form className="users-form" onSubmit={handleRegisterPatient}>
-                        <h3>Registrar Nuevo Paciente</h3>
 
                         <label className="users-checkbox-row">
                             <input
@@ -501,7 +509,7 @@ const Users = () => {
 
                         <div className="users-field">
                             <label>Institución de referencia</label>
-                            <select value={patientForm.institutionId} onChange={(e) => handlePatientFieldChange('institutionId', e.target.value)} required>
+                            <select aria-label="Institución de referencia" value={patientForm.institutionId} onChange={(e) => handlePatientFieldChange('institutionId', e.target.value)} required>
                                 <option value="">Selecciona una institución</option>
                                 {institutions.map((inst) => (
                                     <option key={inst.institution_id} value={inst.institution_id}>{inst.name}</option>
@@ -525,11 +533,10 @@ const Users = () => {
                             <button type="button" className="users-form-cancel" onClick={() => setShowPatientForm(false)}>Cancelar</button>
                         </div>
                     </form>
-                )}
+                    </Drawer>
 
-                {showForm && (
+                <Drawer open={Boolean(showForm)} onClose={() => setShowForm(false)} title={editingUserProfileId ? 'Editar empleado' : 'Registrar nuevo empleado'} size="md">
                     <form className="users-form" onSubmit={handleSubmit}>
-                        <h3>{editingUserProfileId ? 'Editar Empleado' : 'Registrar Nuevo Empleado'}</h3>
 
                         {!editingUserProfileId && (
                             <div className="users-form-row">
@@ -547,7 +554,7 @@ const Users = () => {
                         <div className="users-form-row">
                             <div className="users-field">
                                 <label>Rol</label>
-                                <select value={form.roleId} onChange={(e) => handleFieldChange('roleId', e.target.value)} required>
+                                <select aria-label="Rol" value={form.roleId} onChange={(e) => handleFieldChange('roleId', e.target.value)} required>
                                     <option value="">Selecciona un rol</option>
                                     {roles.filter(r => r.role_id !== 5).map((r) => (
                                         <option key={r.role_id} value={r.role_id}>{r.role_type}</option>
@@ -556,7 +563,7 @@ const Users = () => {
                             </div>
                             <div className="users-field">
                                 <label>Institución</label>
-                                <select value={form.institutionId} onChange={(e) => handleFieldChange('institutionId', e.target.value)} required>
+                                <select aria-label="Institución" value={form.institutionId} onChange={(e) => handleFieldChange('institutionId', e.target.value)} required>
                                     <option value="">Selecciona una institución</option>
                                     {institutions.map((inst) => (
                                         <option key={inst.institution_id} value={inst.institution_id}>{inst.name}</option>
@@ -570,7 +577,7 @@ const Users = () => {
                                 <div className="users-form-row">
                                     <div className="users-field">
                                         <label>Ambulancia asignada</label>
-                                        <select value={form.assignedAmbulanceId} onChange={(e) => handleFieldChange('assignedAmbulanceId', e.target.value)} required>
+                                        <select aria-label="Ambulancia asignada" value={form.assignedAmbulanceId} onChange={(e) => handleFieldChange('assignedAmbulanceId', e.target.value)} required>
                                             <option value="">Selecciona una ambulancia (institución CRUM)</option>
                                             {[
                                                 ...crumAmbulances,
@@ -670,10 +677,10 @@ const Users = () => {
                             </button>
                         </div>
                     </form>
-                )}
+                    </Drawer>
 
                 <div className="users-filter-row">
-                    <select className="status-filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                    <select aria-label="Filtrar por rol" className="status-filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
                         <option value="all">Todos los roles</option>
                         <option value="1">Administrador</option>
                         <option value="2">Despachador</option>
@@ -681,7 +688,7 @@ const Users = () => {
                         <option value="4">Hospital</option>
                         <option value="5">Paciente</option>
                     </select>
-                    <select className="status-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <select aria-label="Filtrar por estado" className="status-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         <option value="all">Todos</option>
                         <option value="active">Activos</option>
                         <option value="inactive">Inactivos</option>
@@ -695,116 +702,114 @@ const Users = () => {
                     />
                 </div>
 
-                <div className="users-table-wrapper">
-                    <table className="users-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre completo</th>
-                                <th>Correo</th>
-                                <th>Rol</th>
-                                <th>Teléfono</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visibleUsers.map((u) => (
-                                <Fragment key={u.user_profile_id}>
-                                    <tr>
-                                        <td className="users-id">#{u.user_profile_id}</td>
-                                        <td>{u.first_name} {u.first_surname} {u.second_surname}</td>
-                                        <td>{u.email || '—'}</td>
-                                        <td>{roleLabels[u.role_id] || '—'}</td>
-                                        <td className="users-phone">{u.phone_number || '—'}</td>
-                                        <td>
-                                            <span className={`users-status ${u.is_active ? 'status-active' : 'status-inactive'}`}>
-                                                {u.is_active ? 'Activo' : (u.user_credential_id ? 'Inactivo' : 'Sin cuenta')}
+                <ul className="stat-strip" aria-label="Resumen de usuarios">
+                    <li><b><AnimatedNumber value={users.length} /></b><span>usuarios</span></li>
+                    <li><b><AnimatedNumber value={users.filter((x) => x.is_active).length} /></b><span>activos</span></li>
+                    <li className={users.some((x) => !x.user_credential_id) ? 'warn' : ''}><b><AnimatedNumber value={users.filter((x) => !x.user_credential_id).length} /></b><span>sin cuenta</span></li>
+                    <li><b><AnimatedNumber value={visibleUsers.length} /></b><span>con este filtro</span></li>
+                </ul>
+
+                {!loaded && !usersError && <SkeletonCards />}
+                <div className="entity-grid" hidden={!loaded}>
+                    {visibleUsers.map((u) => {
+                        const roleId = parseInt(u.role_id)
+                        const accent = { 1: 'acc-admin', 2: 'acc-dispatch', 3: 'acc-medic', 4: 'acc-hospital', 5: 'acc-patient' }[roleId] || 'acc-patient'
+                        const fullName = [u.first_name, u.first_surname, u.second_surname].filter(Boolean).join(' ') || 'Sin nombre'
+                        const initials = [u.first_name, u.first_surname].filter(Boolean).map((n) => n[0]).join('').toUpperCase() || '?'
+                        const isSelf = parseInt(u.user_profile_id) === parseInt(user?.profileId)
+                        const statusText = u.is_active ? 'Activo' : (u.user_credential_id ? 'Inactivo' : 'Sin cuenta')
+                        const statusTone = u.is_active ? 'pill-ok' : (u.user_credential_id ? 'pill-warn' : 'pill-bad')
+                        return (
+                            <article key={u.user_profile_id} className={`entity ${accent}${u.is_active ? '' : ' is-off'}`} aria-label={fullName}>
+                                <div className="entity-head">
+                                    <span className="entity-avatar" aria-hidden="true">{initials}</span>
+                                    <div className="entity-titles">
+                                        <h2 className="entity-title">{fullName}</h2>
+                                        <p className="entity-sub">{u.email || 'Sin correo (no tiene cuenta)'}</p>
+                                    </div>
+                                    <span className="entity-id">#{u.user_profile_id}</span>
+                                </div>
+                                <div className="entity-chips">
+                                    <span className="pill pill-steel">{roleLabel(u.role_id) || 'Sin rol'}</span>
+                                    <span className={`pill ${statusTone}`}>{statusText}</span>
+                                    {roleId === 4 && u.is_institution_admin ? <span className="pill pill-hosp">Admin de institución</span> : null}
+                                    {isSelf ? <span className="pill">Tú</span> : null}
+                                </div>
+                                <dl className="entity-facts">
+                                    <div><dt>Teléfono</dt><dd>{u.phone_number || '—'}</dd></div>
+                                    {roleId === 3 && <div><dt>Ambulancia</dt><dd>{u.assigned_ambulance_id ? (ambulanceUnitById(u.assigned_ambulance_id) || `#${u.assigned_ambulance_id}`) : 'Sin asignar'}</dd></div>}
+                                </dl>
+
+                                {expandedUserId === u.user_profile_id && userDetail && (
+                                    <div className="entity-panel">
+                                        <span><strong>CURP:</strong> {userDetail.curp || '—'}</span>
+                                        <span><strong>Fecha de nacimiento:</strong> {userDetail.birth_date ? new Date(userDetail.birth_date).toLocaleDateString('es-MX') : '—'}</span>
+                                        <span><strong>Contacto de emergencia:</strong> {userDetail.emergency_contact || '—'}</span>
+                                        <span><strong>Teléfono de emergencia:</strong> {userDetail.emergency_phone || '—'}</span>
+                                        <span><strong>Institución:</strong> {userDetail.institution_id || '—'}</span>
+                                        {roleId === 4 && (
+                                            <span>
+                                                <button type="button" className="users-toggle-btn" onClick={() => handleToggleInstitutionAdmin(u)}>
+                                                    {u.is_institution_admin ? 'Quitar privilegio de administrador' : 'Dar privilegio de administrador'}
+                                                </button>
                                             </span>
-                                        </td>
-                                        <td className="users-actions">
-                                            <button className="users-view-btn" onClick={() => toggleUserDetail(u.user_profile_id)}>Ver</button>
-                                            <button className="users-edit-btn" onClick={() => openEditForm(u)}>Editar</button>
-                                            <button className="users-cred-btn" onClick={() => openCredentialsForm(u)} disabled={!u.user_credential_id}>Credenciales</button>
-                                            <button className="users-cred-btn" onClick={() => toggleCredentialHistory(u)} disabled={!u.user_credential_id}>Historial</button>
-                                            {parseInt(u.role_id) === 3 && (
-                                                <button className="users-cred-btn" onClick={() => toggleParamedicSchedule(u)}>Horario</button>
-                                            )}
-                                            <button
-                                                className="users-toggle-btn"
-                                                onClick={() => handleToggleActive(u)}
-                                                disabled={!u.user_credential_id || parseInt(u.user_profile_id) === parseInt(user?.profileId)}
-                                                title={parseInt(u.user_profile_id) === parseInt(user?.profileId) ? 'No puedes desactivar tu propia cuenta' : undefined}
-                                            >
-                                                {u.is_active ? 'Desactivar' : 'Activar'}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {expandedUserId === u.user_profile_id && userDetail && (
-                                        <tr className="users-detail-row">
-                                            <td colSpan={7}>
-                                                <div className="users-detail-content">
-                                                    <span><strong>CURP:</strong> {userDetail.curp || '—'}</span>
-                                                    <span><strong>Fecha de nacimiento:</strong> {userDetail.birth_date ? new Date(userDetail.birth_date).toLocaleDateString('es-MX') : '—'}</span>
-                                                    <span><strong>Contacto de emergencia:</strong> {userDetail.emergency_contact || '—'}</span>
-                                                    <span><strong>Teléfono de emergencia:</strong> {userDetail.emergency_phone || '—'}</span>
-                                                    <span><strong>Institución ID:</strong> {userDetail.institution_id || '—'}</span>
-                                                    {parseInt(u.role_id) === 4 && (
-                                                        <span>
-                                                            <strong>Admin de su institución:</strong>{' '}
-                                                            <span className={`users-status ${u.is_institution_admin ? 'status-active' : 'status-inactive'}`}>
-                                                                {u.is_institution_admin ? 'Sí' : 'No'}
-                                                            </span>{' '}
-                                                            <button className="users-toggle-btn" onClick={() => handleToggleInstitutionAdmin(u)}>
-                                                                {u.is_institution_admin ? 'Quitar privilegio' : 'Dar privilegio'}
-                                                            </button>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {paramedicScheduleUserId === u.user_profile_id && (
-                                        <tr className="users-detail-row">
-                                            <td colSpan={7}>
-                                                <div className="users-detail-content">
-                                                    <span>
-                                                        <strong>Ambulancia asignada:</strong>{' '}
-                                                        {u.assigned_ambulance_id
-                                                            ? (ambulanceUnitById(u.assigned_ambulance_id) || `#${u.assigned_ambulance_id}`)
-                                                            : 'Sin ambulancia asignada'}
-                                                    </span>
-                                                    <span><strong>Horario / turnos:</strong> {formatSchedule(u.shift_windows)}</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {historyUserId === u.user_profile_id && (
-                                        <tr className="users-detail-row">
-                                            <td colSpan={7}>
-                                                <div className="users-detail-content">
-                                                    <strong>Historial de la cuenta:</strong>
-                                                    <span className="users-history-scope-note">Este historial registra únicamente activaciones y desactivaciones de la cuenta, no ediciones de perfil.</span>
-                                                    {credentialHistory.length === 0 ? (
-                                                        <span>Sin activaciones o desactivaciones registradas todavía.</span>
-                                                    ) : (
-                                                        credentialHistory.map((h) => (
-                                                            <span key={h.user_credential_history_id}>
-                                                                {h.is_active ? 'Activada' : 'Desactivada'} — {new Date(h.changed_at).toLocaleString('es-MX')}
-                                                            </span>
-                                                        ))
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </Fragment>
-                            ))}
-                        </tbody>
-                    </table>
+                                        )}
+                                    </div>
+                                )}
+                                {paramedicScheduleUserId === u.user_profile_id && (
+                                    <div className="entity-panel">
+                                        <span><strong>Ambulancia asignada:</strong> {u.assigned_ambulance_id ? (ambulanceUnitById(u.assigned_ambulance_id) || `#${u.assigned_ambulance_id}`) : 'Sin ambulancia asignada'}</span>
+                                        <span><strong>Horario / turnos:</strong> {formatSchedule(u.shift_windows)}</span>
+                                    </div>
+                                )}
+                                {historyUserId === u.user_profile_id && (
+                                    <div className="entity-panel">
+                                        <strong>Historial de la cuenta</strong>
+                                        <span className="users-history-scope-note">Solo registra activaciones y desactivaciones, no ediciones de perfil.</span>
+                                        {credentialHistory.length === 0 ? (
+                                            <span>Sin activaciones o desactivaciones registradas todavía.</span>
+                                        ) : (
+                                            credentialHistory.map((h) => (
+                                                <span key={h.user_credential_history_id}>{h.is_active ? 'Activada' : 'Desactivada'} — {new Date(h.changed_at).toLocaleString('es-MX')}</span>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="entity-actions">
+                                    <button type="button" className="users-view-btn" onClick={() => toggleUserDetail(u.user_profile_id)}>
+                                        {expandedUserId === u.user_profile_id ? 'Ocultar datos' : 'Ver datos'}
+                                    </button>
+                                    <button type="button" className="users-edit-btn" onClick={() => openEditForm(u)}>Editar</button>
+                                    <span className="spacer" />
+                                    <MoreMenu
+                                        items={[
+                                            { label: 'Credenciales', onClick: () => openCredentialsForm(u), disabled: !u.user_credential_id },
+                                            { label: 'Historial de la cuenta', onClick: () => toggleCredentialHistory(u), disabled: !u.user_credential_id },
+                                            roleId === 3 && { label: 'Horario y ambulancia', onClick: () => toggleParamedicSchedule(u) },
+                                            {
+                                                label: u.is_active ? 'Desactivar cuenta' : 'Activar cuenta',
+                                                onClick: () => handleToggleActive(u),
+                                                disabled: !u.user_credential_id || isSelf,
+                                                danger: Boolean(u.is_active),
+                                                title: isSelf ? 'No puedes desactivar tu propia cuenta' : undefined,
+                                            },
+                                        ]}
+                                    />
+                                </div>
+                            </article>
+                        )
+                    })}
 
                     {visibleUsers.length === 0 && (
-                        <p className="users-empty">No hay usuarios que coincidan con el filtro.</p>
+                        usersError ? (
+                            <p className="entity-empty" role="alert">
+                                No pudimos cargar los usuarios. Revisa que el servicio de usuarios esté en línea.{' '}
+                                <button type="button" className="users-secondary-btn" onClick={fetchUsers}>Reintentar</button>
+                            </p>
+                        ) : (
+                            <p className="entity-empty">No hay usuarios que coincidan con el filtro. Prueba con otro rol o quita la búsqueda.</p>
+                        )
                     )}
                 </div>
             </div>

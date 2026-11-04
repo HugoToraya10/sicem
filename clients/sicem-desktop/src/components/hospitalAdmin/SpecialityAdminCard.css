@@ -1,39 +1,18 @@
-.speciality-admin-card {
-    border: 1px solid #e4e4ec; border-radius: 10px; padding: 18px; background: white;
-    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04); transition: box-shadow 0.15s ease;
-}
-.speciality-admin-card:hover { box-shadow: 0 4px 12px rgba(20, 20, 40, 0.08); }
-.speciality-admin-card-inactive { opacity: 0.6; }
-
-.speciality-admin-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.speciality-admin-header h5 {
-    font-size: 12px; font-weight: 700; color: #555;
-    text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-.speciality-admin-status {
-    font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 10px;
-    text-transform: uppercase; white-space: nowrap;
-}
-.speciality-admin-status.status-active { background: #e2efda; color: #276221; }
-.speciality-admin-status.status-inactive { background: #ffc7ce; color: #9c0006; }
-
-.speciality-admin-numbers { display: flex; gap: 16px; margin-bottom: 6px; }
-.sa-item { text-align: center; }
-.sa-num { font-size: 22px; font-weight: 700; color: #222; }
-.sa-label { font-size: 10px; color: #888; }
-
-.speciality-admin-hint { font-size: 10px; color: #999; margin: 0 0 10px; font-style: italic; }
-
-.speciality-admin-actions, .speciality-admin-edit-row { display: flex; gap: 6px; }
-.speciality-admin-edit-row input {
-    width: 70px; border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 12px;
-}
-
-.sa-btn {
-    flex: 1; background: white; border: 1px solid #1565C0; color: #1565C0;
-    border-radius: 4px; padding: 6px; font-size: 11px; cursor: pointer;
-}
-.sa-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.sa-btn.save { background: #1565C0; color: white; }
-.sa-btn.cancel { border-color: #ccc; color: #666; }
+/* Administración de una especialidad */
+.speciality-admin-card { display: grid; gap: 10px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.speciality-admin-card-inactive { opacity: 0.7; }
+.speciality-admin-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.speciality-admin-header h3 { margin: 0; font: 600 18px var(--font-display); }
+.speciality-admin-status { padding: 1px 9px; border-radius: 11px; font-size: 12.5px; font-weight: 600; }
+.speciality-admin-status.status-active { background: var(--ok-soft); color: var(--ok); }
+.speciality-admin-status.status-inactive { background: var(--surface-2); color: var(--text-2); }
+.speciality-admin-numbers { display: flex; gap: 22px; }
+.sa-num { font: 600 26px/1.1 var(--font-display); }
+.sa-label { font-size: 13px; color: var(--text-2); }
+.speciality-admin-hint { margin: 0; font-size: 13px; color: var(--text-2); }
+.speciality-admin-actions, .speciality-admin-edit-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.speciality-admin-edit-row input { width: 100px; height: 36px; padding: 0 10px; background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-md); font: 500 14px var(--font-body); }
+.sa-btn { height: 36px; padding: 0 14px; background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-md); font: 600 13.5px var(--font-body); cursor: pointer; }
+.sa-btn:hover:not(:disabled) { background: var(--surface-2); }
+.sa-btn.save { background: var(--text); border-color: var(--text); color: var(--surface); }
+.sa-btn:disabled { opacity: 0.55; cursor: not-allowed; }

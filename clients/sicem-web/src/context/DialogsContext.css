@@ -1,0 +1,39 @@
+.toast-region {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 2500;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(420px, calc(100vw - 40px));
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--nav-bg);
+    color: #fff;
+    border-left: 4px solid var(--steel);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-panel);
+    font-size: 14px;
+    line-height: 1.4;
+    animation: toast-in 0.2s ease;
+}
+.toast .icon { margin-top: 2px; flex: none; }
+.toast-ok { border-left-color: var(--ok); }
+.toast-error { border-left-color: var(--brand); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.dlg-message { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.55; white-space: pre-line; }
+.dlg-field label { display: block; font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
+.dlg-field :is(textarea, input) { width: 100%; font-family: var(--font-body); font-size: 15px; }
+.dlg-field textarea { min-height: 96px; resize: vertical; }
+.toast { pointer-events: auto; }
+.toast span { flex: 1; }
+.toast-close { flex: none; width: 24px; height: 24px; margin: -2px -6px 0 4px; display: grid; place-items: center; padding: 0; background: transparent; color: inherit; border: 0; border-radius: var(--r-sm); opacity: .7; cursor: pointer; }
+.toast-close:hover { opacity: 1; background: rgba(255, 255, 255, .14); }

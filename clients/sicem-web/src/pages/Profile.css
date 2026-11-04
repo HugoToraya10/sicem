@@ -1,25 +1,14 @@
-/* Solo lo que no tiene equivalente en Institutions.css. */
+/* Lo propio del Perfil. Página, formularios y botones vienen de admin/Institutions.css. */
+.profile-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px 24px; max-width: 920px; }
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; margin-bottom: 18px; }
+.profile-saved-msg { background: var(--ok-soft); color: var(--ok); font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: var(--r-md); margin-bottom: 16px; }
 
-.profile-card {
-    background: white;
-    border: 1px solid #e4e4ec;
-    border-radius: 8px;
-    padding: 20px;
-}
+/* Datos del perfil (etiqueta + valor) */
+.profile-card .detail-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.profile-card .field-label { font-size: 12.5px; color: var(--text-3); font-weight: 600; }
+.profile-card .field-value { font-size: 14.5px; color: var(--text); overflow-wrap: anywhere; }
 
-.profile-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-bottom: 18px;
-}
-
-.profile-saved-msg {
-    background: #e2efda;
-    color: #276221;
-    font-size: 12.5px;
-    font-weight: 600;
-    padding: 10px 14px;
-    border-radius: 6px;
-    margin-bottom: 16px;
-}
+.profile-head { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.profile-avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--steel); color: #fff; display: grid; place-items: center; font: 600 24px var(--font-display); flex-shrink: 0; }
+.profile-name { margin: 0 0 4px; font: 600 22px var(--font-display); color: var(--text); }
+.profile-meta { margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--text-2); }

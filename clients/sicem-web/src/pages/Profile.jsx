@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
+import { roleLabel } from '../config/roles'
 import { useAuth } from '../context/AuthContext';
 import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
 import { getNavLinks } from '../utils/Navlinks';
 import '../pages/admin/Institutions.css';
 import { parseResponse } from '../utils/apiRequest';
+import '../styles/entities.css'
 import './Profile.css';
 import {API_BASE_URL} from '../config/api'
+import { useDialogs } from '../context/useDialogs'
+import SkinPicker from '../components/ui/SkinPicker'
+import { Drawer } from '../components/ui/Overlay'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 const emptyForm = {
     firstName: '', firstSurname: '', secondSurname: '', phone: '',
@@ -16,10 +20,12 @@ const emptyForm = {
 }
 
 const Profile = () => {
+    const { notify } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
 
     const [profile, setProfile] = useState(null);
+    const [loadError, setLoadError] = useState(false);
     const [editing, setEditing] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [saved, setSaved] = useState(false);
@@ -35,12 +41,13 @@ const Profile = () => {
         fetch(`${API_BASE_URL}/usuarios/obtener-usuario-id/${user.profileId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
-            .then(res => res.json())
+            .then(parseResponse)
             .then(({ user: userData }) => {
                 const detail = Array.isArray(userData) ? userData[0] : userData
+                setLoadError(!detail)
                 setProfile(detail ? toLowerCaseKeys(detail) : null)
             })
-            .catch(error => console.error('Error consultando el perfil. ', error))
+            .catch(error => { console.error('Error consultando el perfil. ', error); setLoadError(true) })
     }
 
     useEffect(() => { fetchProfile() }, [user?.profileId]);
@@ -91,7 +98,7 @@ const Profile = () => {
         })
             .then(parseResponse)
             .then(() => { setEditing(false); setSaved(true); fetchProfile(); })
-            .catch(error => { console.error('Error actualizando el perfil. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando el perfil. ', error); notify(error.message, 'error') })
     }
 
     const openChangePassword = () => {
@@ -113,26 +120,32 @@ const Profile = () => {
         })
             .then(parseResponse)
             .then(() => { setChangingPassword(false); setCredentialsSaved(true); fetchProfile(); })
-            .catch(error => { console.error('Error actualizando las credenciales. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando las credenciales. ', error); notify(error.message, 'error') })
     }
 
     return (
         <div className="institutions-page">
-            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabels[user?.roleId] || ''} links={navLinks} />
+            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabel(user?.roleId)} links={navLinks} />
 
-            <div className="institutions-body">
-                <h2 className="institutions-title">Mi Perfil</h2>
+            <div role="main" id="contenido" className="institutions-body">
+                <h1 className="institutions-title">Mi perfil</h1>
 
                 {profile === null ? (
-                    <p className="institutions-empty">Cargando...</p>
+                    loadError ? (
+                        <div className="institutions-empty" role="alert">
+                            <p>No pudimos cargar tu perfil. Revisa tu conexión o inténtalo de nuevo.</p>
+                            <button type="button" className="institutions-secondary-btn" onClick={() => { setLoadError(false); fetchProfile() }}>Reintentar</button>
+                        </div>
+                    ) : (
+                        <p className="institutions-empty" role="status">Cargando…</p>
+                    )
                 ) : (
                     <>
                         {saved && <p className="profile-saved-msg">Datos actualizados con éxito.</p>}
                         {credentialsSaved && <p className="profile-saved-msg">Contraseña actualizada con éxito.</p>}
 
-                        {!editing && changingPassword && (
+                        <Drawer open={Boolean(!editing && changingPassword)} onClose={() => setChangingPassword(false)} title="Cambiar Contraseña" size="md">
                             <form className="institutions-form" onSubmit={handleChangePassword}>
-                                <h3>Cambiar Contraseña</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Correo electrónico</label>
@@ -148,23 +161,18 @@ const Profile = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setChangingPassword(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {!editing && !changingPassword ? (
+                        <>
                             <div className="profile-card">
+                                <div className="profile-head">
+                                    <span className="profile-avatar" aria-hidden="true">{(profile.first_name || '?').charAt(0).toUpperCase()}</span>
+                                    <div>
+                                        <h2 className="profile-name">{[profile.first_name, profile.first_surname, profile.second_surname].filter(Boolean).join(' ')}</h2>
+                                        <p className="profile-meta"><span className="pill">{roleLabel(profile.role_id) || '—'}</span> {profile.email || ''}</p>
+                                    </div>
+                                </div>
                                 <div className="profile-grid">
-                                    <div className="detail-field">
-                                        <span className="field-label">Nombre completo</span>
-                                        <span className="field-value">{[profile.first_name, profile.first_surname, profile.second_surname].filter(Boolean).join(' ')}</span>
-                                    </div>
-                                    <div className="detail-field">
-                                        <span className="field-label">Correo</span>
-                                        <span className="field-value">{profile.email || '—'}</span>
-                                    </div>
-                                    <div className="detail-field">
-                                        <span className="field-label">Rol</span>
-                                        <span className="field-value">{roleLabels[profile.role_id] || '—'}</span>
-                                    </div>
                                     <div className="detail-field">
                                         <span className="field-label">Teléfono</span>
                                         <span className="field-value">{profile.phone_number || '—'}</span>
@@ -193,9 +201,9 @@ const Profile = () => {
                                     )}
                                 </div>
                             </div>
-                        ) : editing && (
+                            <SkinPicker />
+                            <Drawer open={editing} onClose={() => setEditing(false)} title="Editar mi perfil" size="md">
                             <form className="institutions-form" onSubmit={handleSubmit}>
-                                <h3>Editar Mi Perfil</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre(s)</label>
@@ -239,11 +247,12 @@ const Profile = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditing(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
+                            </>
 
                         {parseInt(user?.roleId) === 5 && (
                             <div className="profile-card" style={{ marginTop: 20 }}>
-                                <h3 style={{ marginBottom: 12 }}>Mis Emergencias</h3>
+                                <h3 style={{ marginBottom: 12 }}>Mis emergencias</h3>
                                 {myEmergencies.length === 0 ? (
                                     <p className="institutions-empty">No tienes emergencias registradas todavía.</p>
                                 ) : (

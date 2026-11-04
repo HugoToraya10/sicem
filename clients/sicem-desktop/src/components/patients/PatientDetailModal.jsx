@@ -1,12 +1,22 @@
 import { useState, useEffect } from 'react'
+import { useDialogs } from '../../context/useDialogs'
+import { readableTextOn } from '../../utils/color'
+import { triageRoman } from '../../utils/triage'
+import { formatDate, formatDateTime } from '../../utils/time'
+import Icon from '../ui/Icon'
+import { Modal } from '../ui/Overlay'
 import { API_BASE_URL } from '../../config/api'
 import { useAuth } from '../../context/AuthContext'
 import { toLowerCaseKeys } from '../../utils/formatData'
 import MapArea from '../map/MapArea'
 import './PatientDetailModal.css'
 
+// 36.80 -> 36.8, 91.00 -> 91
+const fmtNum = (v) => { const n = Number(v); return Number.isNaN(n) ? v : String(n) }
+
 const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPatientUpdated }) => {
     const { user } = useAuth()
+    const { notify, confirm } = useDialogs()
     const [notes, setNotes] = useState([])
     const [loadingNotes, setLoadingNotes] = useState(true)
     const [ambulanceLocation, setAmbulanceLocation] = useState(null)
@@ -124,8 +134,13 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     // Confirmación de llegada FÍSICA — distinta de Aceptar/Rechazar (esa es la
     // decisión administrativa de antes de que llegue). Mientras no exista
     // sicem-mobile, es el propio hospital quien la dispara.
-    const handleConfirmDelivery = () => {
-        if (!window.confirm('¿Confirmas que este paciente ya llegó físicamente a tu institución?')) return
+    const handleConfirmDelivery = async () => {
+        const ok = await confirm({
+            title: 'Confirmar llegada física',
+            message: '¿Confirmas que este paciente ya llegó físicamente a tu institución?',
+            confirmLabel: 'Sí, ya llegó',
+        })
+        if (!ok) return
         setConfirmingDelivery(true)
         fetch(`${API_BASE_URL}/emergencias/confirmar-llegada-paciente`, {
             method: "PATCH",
@@ -140,12 +155,13 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
                 // actualice su propia lista sin que haga falta salir y volver a
                 // entrar a la pantalla.
                 onPatientUpdated?.(patient.emergency_patient_id, { delivered_at: deliveredNow })
+                notify('Llegada confirmada.', 'ok')
                 // Si esta era la última entrega pendiente, la emergencia ya se
                 // cerró sola en el backend — el modal ya no tiene nada más que
                 // mostrar de "en camino", así que se cierra solo.
                 if (data?.emergencyClosed) onClose()
             })
-            .catch(error => { console.error('Error confirmando llegada. ', error); alert(error.message) })
+            .catch(error => { console.error('Error confirmando llegada. ', error); notify(error.message, 'error') })
             .finally(() => setConfirmingDelivery(false))
     }
 
@@ -153,8 +169,13 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
     // demás acciones, esto NO depende de que la emergencia siga abierta: lo
     // normal es que la emergencia ya se haya cerrado sola (todos entregados)
     // mucho antes de que este paciente en particular reciba su alta.
-    const handleDischarge = () => {
-        if (!window.confirm('¿Confirmas el alta de este paciente? Esto libera la cama que tenía reservada.')) return
+    const handleDischarge = async () => {
+        const ok = await confirm({
+            title: 'Dar de alta al paciente',
+            message: 'Esto libera la cama que tenía reservada. ¿Confirmas el alta?',
+            confirmLabel: 'Dar de alta',
+        })
+        if (!ok) return
         setDischarging(true)
         fetch(`${API_BASE_URL}/emergencias/dar-alta-paciente`, {
             method: "PATCH",
@@ -166,164 +187,176 @@ const PatientDetailModal = ({ patient, token, onClose, onAccept, onReject, onPat
                 const dischargedNow = new Date().toISOString()
                 setDischargedAt(dischargedNow)
                 onPatientUpdated?.(patient.emergency_patient_id, { discharged_at: dischargedNow })
+                notify('Paciente dado de alta. La cama quedó libre.', 'ok')
             })
-            .catch(error => { console.error('Error dando de alta. ', error); alert(error.message) })
+            .catch(error => { console.error('Error dando de alta. ', error); notify(error.message, 'error') })
             .finally(() => setDischarging(false))
     }
 
     const hasAnyAction = (!isClosed && (isPending || canConfirmDelivery)) || deliveredAt
 
+    const splitList = (txt) => String(txt || '').split(/[,;]+/).map((t) => t.trim()).filter(Boolean)
+    const allergyList = splitList(patient.allergies)
+    const conditionList = splitList(patient.conditions)
+    const medicationList = splitList(patient.medications)
+    const affiliatedElsewhere = Boolean(patient.curp || patient.patient_identification_number) && Boolean(patient.patient_institution_id)
+        && parseInt(patient.patient_institution_id) !== parseInt(user?.institutionId)
+
+    const footer = hasAnyAction ? (
+        <>
+            {!isClosed && isPending && (
+                <>
+                    <button type="button" className="btn btn-outline-danger" onClick={() => { onReject(patient.emergency_patient_id); onClose() }}>Rechazar</button>
+                    <button type="button" className="btn btn-ok" onClick={() => { onAccept(patient.emergency_patient_id); onClose() }}>Aceptar paciente</button>
+                </>
+            )}
+            {!isClosed && canConfirmDelivery && (
+                <button type="button" className="btn btn-primary" onClick={handleConfirmDelivery} disabled={Boolean(deliveredAt) || confirmingDelivery}>
+                    {deliveredAt ? 'Llegada ya confirmada' : (confirmingDelivery ? 'Confirmando…' : 'Confirmar llegada física')}
+                </button>
+            )}
+            {deliveredAt && (
+                <button type="button" className="btn" onClick={handleDischarge} disabled={Boolean(dischargedAt) || discharging}>
+                    {dischargedAt ? 'Ya dado de alta' : (discharging ? 'Dando de alta…' : 'Dar de alta y liberar cama')}
+                </button>
+            )}
+        </>
+    ) : null
+
+    const Vital = ({ label, value, unit, warn }) => (
+        <div className={`pd-vital${warn ? ' warn' : ''}`}><span>{label}</span><b>{value}{unit && <small>{unit}</small>}</b></div>
+    )
+
     return (
-        // Mismo patrón de overlay que antes, solo que ahora el modal es mucho
-        // más grande (casi pantalla completa) porque ya no cabe todo en un
-        // recuadro pequeño — dos columnas: info a la izquierda, mapa fijo arriba
-        // a la derecha.
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-box modal-box-large" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                    <div className="modal-header-info">
-                        <h3>{fullName}</h3>
-                        {patient.triage_level && (
-                            <span className="triage-badge" style={{ background: patient.triage_hex_color || '#888' }}>
-                                Triage {patient.triage_level} · {patient.triage_color_name}
-                            </span>
-                        )}
-                        {Boolean(patient.patient_institution_id)
-                            && parseInt(patient.patient_institution_id) !== parseInt(user?.institutionId) && (
-                            <span className="other-inst-badge" title={`Este paciente está afiliado a ${patient.patient_institution_name || 'otra institución'}`}>
-                                Afiliado a: {patient.patient_institution_name || 'otra institución'}
-                            </span>
-                        )}
-                        {deliveredAt && <span className="delivered-badge">✓ Entregado</span>}
-                        {dischargedAt && <span className="discharged-badge">✓ Dado de alta</span>}
-                    </div>
-                    <button className="modal-close" onClick={onClose}>×</button>
-                </div>
-
-                <div className="modal-body-columns">
-                    <div className="modal-column-main">
-                        <div className="modal-section">
-                            <h5>Emergencia</h5>
-                            <p>{patient.description || 'Sin descripción'}</p>
-                            {patient.notes && <p className="modal-notes">Notas: {patient.notes}</p>}
-                            {patient.reporter_name && (
-                                <p>Reportó: {patient.reporter_name}{patient.reporter_phone ? ` · ${patient.reporter_phone}` : ''}</p>
-                            )}
-                            {eta && (
-                                <p className="modal-eta">
-                                    <strong>Llegada estimada:</strong> {eta.estimated_arrival ? new Date(eta.estimated_arrival).toLocaleString('es-MX') : 'Sin definir'}
-                                    {eta.notes ? ` — ${eta.notes}` : ''}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="modal-section">
-                            <h5>Traslado</h5>
-                            <p>Unidad {patient.unit_number || 'sin asignar'} · {patient.institution_name || '—'}</p>
-                            <p>CURP: {patient.curp || 'Sin identificar'}</p>
-                            {patient.patient_institution_name && (
-                                <p>Afiliado a: {patient.patient_institution_name} {patient.patient_identification_number ? `(${patient.patient_identification_number})` : ''}</p>
-                            )}
-                        </div>
-
-                        <div className="modal-section">
-                            <h5>Información clínica</h5>
-                            <p>Tipo de sangre: {patient.blood_type || 'Desconocido'}</p>
-                            {(patient.weight || patient.height) && (
-                                <p>
-                                    {patient.weight ? `Peso: ${patient.weight} kg` : ''}
-                                    {patient.weight && patient.height ? ' · ' : ''}
-                                    {patient.height ? `Talla: ${patient.height} m` : ''}
-                                </p>
-                            )}
-                            <p>Alergias: {patient.allergies || 'Ninguna registrada'}</p>
-                            <p>Condiciones: {patient.conditions || 'Ninguna registrada'}</p>
-                            <p>Medicamentos: {patient.medications || 'Ninguno registrado'}</p>
-                            {patient.clinical_record_notes && <p>Notas del expediente: {patient.clinical_record_notes}</p>}
-                        </div>
-
-                        <div className="modal-section">
-                            <h5>Signos vitales reportados en campo</h5>
-                            {loadingNotes && <p className="modal-empty">Cargando...</p>}
-                            {!loadingNotes && notes.length === 0 && (
-                                <p className="modal-empty">Sin reportes de campo todavía.</p>
-                            )}
-                            {notes.map((note) => (
-                                <div key={note.emergency_note_id} className="vitals-entry">
-                                    <div className="vitals-time">{new Date(note.recorded_at).toLocaleTimeString()}</div>
-                                    <div className="vitals-grid">
-                                        {note.blood_pressure && <span>PA: {note.blood_pressure}</span>}
-                                        {note.heart_rate && <span>FC: {note.heart_rate} lpm</span>}
-                                        {note.temperature && <span>Temp: {note.temperature}°C</span>}
-                                        {note.oxygen_saturation && <span>SpO2: {note.oxygen_saturation}%</span>}
-                                        {note.respiratory_rate && <span>FR: {note.respiratory_rate}</span>}
-                                    </div>
-                                    {note.initial_diagnosis && <p><strong>Diagnóstico:</strong> {note.initial_diagnosis}</p>}
-                                    {note.treatment_applied && <p><strong>Tratamiento:</strong> {note.treatment_applied}</p>}
-                                </div>
-                            ))}
-                        </div>
-
-                        {otherPatients.length > 0 && (
-                            <div className="modal-section">
-                                <h5>Otros pacientes de esta misma emergencia ({otherPatients.length})</h5>
-                                {otherPatients.map((p) => (
-                                    <p key={p.emergency_patient_id}>
-                                        {[p.first_name, p.first_surname].filter(Boolean).join(' ') || 'Paciente no identificado'}
-                                        {p.destination_institution_id
-                                            ? (parseInt(p.destination_institution_id) === parseInt(user?.institutionId) ? ' — también viene a tu institución' : ' — trasladado a otra institución')
-                                            : ' — sin destino asignado todavía'}
-                                    </p>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="modal-section">
-                            <h5>Historial de emergencias anteriores</h5>
-                            {history.length === 0 && <p className="modal-empty">Sin visitas anteriores registradas.</p>}
-                            {history.map((h) => (
-                                <p key={h.emergency_id}>
-                                    {new Date(h.created_at).toLocaleDateString('es-MX')} — {h.type_name || 'Sin tipo'} ({h.status_name || 'Sin estado'})
-                                </p>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="modal-column-map">
-                        {hasMapData ? (
-                            <MapArea
-                                ambulanceLocation={ambulanceLocation ? { ...ambulanceLocation, unitNumber: patient.unit_number, color: patient.triage_hex_color } : null}
-                                emergencyLocation={patient.emergency_latitude ? { latitude: patient.emergency_latitude, longitude: patient.emergency_longitude } : null}
-                                routeCoordinates={routeCoordinates}
-                            />
-                        ) : (
-                            <p className="modal-empty map-empty">Sin ubicación disponible todavía.</p>
-                        )}
-                    </div>
-                </div>
-
-                {hasAnyAction && (
-                    <div className="modal-actions">
-                        {!isClosed && isPending && (
-                            <>
-                                <button className="btn-accept" onClick={() => { onAccept(patient.emergency_patient_id); onClose() }}>Aceptar</button>
-                                <button className="btn-reject" onClick={() => { onReject(patient.emergency_patient_id); onClose() }}>Rechazar</button>
-                            </>
-                        )}
-                        {!isClosed && canConfirmDelivery && (
-                            <button className="btn-deliver" onClick={handleConfirmDelivery} disabled={Boolean(deliveredAt) || confirmingDelivery}>
-                                {deliveredAt ? 'Llegada ya confirmada' : (confirmingDelivery ? 'Confirmando...' : 'Confirmar llegada física')}
-                            </button>
-                        )}
-                        {deliveredAt && (
-                            <button className="btn-discharge" onClick={handleDischarge} disabled={Boolean(dischargedAt) || discharging}>
-                                {dischargedAt ? 'Ya dado de alta' : (discharging ? 'Dando de alta...' : 'Dar de alta (liberar cama)')}
-                            </button>
-                        )}
-                    </div>
+        <Modal open onClose={onClose} size="full" eyebrow={`Emergencia #${patient.emergency_id}`} title={fullName} footer={footer}>
+            <div className="pd-chips">
+                {patient.triage_level && (
+                    <span className="chip" style={{ background: patient.triage_hex_color || 'var(--text-3)', color: readableTextOn(patient.triage_hex_color), borderColor: 'transparent' }}>
+                        Triage {triageRoman(patient.triage_level)}{patient.triage_color_name ? ` · ${patient.triage_color_name}` : ''}
+                    </span>
                 )}
+                {patient.reception_status_name && <span className="chip">{patient.reception_status_name}</span>}
+                {affiliatedElsewhere && (
+                    <span className="chip chip-warn" title={`Este paciente está afiliado a ${patient.patient_institution_name || 'otra institución'}`}>
+                        Afiliado a {patient.patient_institution_name || 'otra institución'}
+                    </span>
+                )}
+                {deliveredAt && <span className="chip chip-ok"><Icon name="check" />Entregado</span>}
+                {dischargedAt && <span className="chip chip-steel"><Icon name="check" />Dado de alta</span>}
             </div>
-        </div>
+
+            <div className="pd-grid">
+                <div className="pd-main" tabIndex={0} role="region" aria-label="Datos del paciente">
+                    <section className="pd-card">
+                        <h3>Qué pasó</h3>
+                        <p className="pd-lead">{patient.description || 'Sin descripción'}</p>
+                        {patient.notes && <p className="pd-muted">Notas: {patient.notes}</p>}
+                        {patient.reporter_name && <p className="pd-muted">Reportó {patient.reporter_name}{patient.reporter_phone ? ` · ${patient.reporter_phone}` : ''}</p>}
+                        {eta && (
+                            <p className="pd-eta"><Icon name="clock" size={16} /><span><b>Llegada estimada:</b> {eta.estimated_arrival ? formatDateTime(eta.estimated_arrival) : 'Sin definir'}{eta.notes ? ` — ${eta.notes}` : ''}</span></p>
+                        )}
+                    </section>
+
+                    <section className="pd-card">
+                        <h3>Traslado</h3>
+                        <dl className="pd-facts">
+                            <div><dt>Unidad</dt><dd>{patient.unit_number || 'Sin asignar'}</dd></div>
+                            <div><dt>Institución de origen</dt><dd>{patient.institution_name || '—'}</dd></div>
+                            <div><dt>CURP</dt><dd className="mono">{patient.curp || 'Sin identificar'}</dd></div>
+                            {(patient.curp || patient.patient_identification_number) && patient.patient_institution_name && (
+                                <div><dt>Afiliación</dt><dd>{patient.patient_institution_name}{patient.patient_identification_number ? ` (${patient.patient_identification_number})` : ''}</dd></div>
+                            )}
+                        </dl>
+                    </section>
+
+                    <section className="pd-card">
+                        <h3>Información clínica</h3>
+                        <dl className="pd-facts">
+                            <div><dt>Sangre</dt><dd className="pd-blood">{patient.blood_type || 'Desconocido'}</dd></div>
+                            {patient.weight && <div><dt>Peso</dt><dd>{patient.weight} kg</dd></div>}
+                            {patient.height && <div><dt>Talla</dt><dd>{patient.height} m</dd></div>}
+                        </dl>
+                        <div className="pd-tags">
+                            <h4>Alergias</h4>
+                            {allergyList.length ? <ul>{allergyList.map((a) => <li key={a} className="pd-tag bad">{a}</li>)}</ul> : <p className="pd-muted">Ninguna registrada</p>}
+                            <h4>Condiciones</h4>
+                            {conditionList.length ? <ul>{conditionList.map((a) => <li key={a} className="pd-tag warn">{a}</li>)}</ul> : <p className="pd-muted">Ninguna registrada</p>}
+                            <h4>Medicamentos</h4>
+                            {medicationList.length ? <ul>{medicationList.map((a) => <li key={a} className="pd-tag">{a}</li>)}</ul> : <p className="pd-muted">Ninguno registrado</p>}
+                        </div>
+                        {patient.clinical_record_notes && <p className="pd-muted">Notas del expediente: {patient.clinical_record_notes}</p>}
+                    </section>
+
+                    <section className="pd-card">
+                        <h3>Signos vitales en campo</h3>
+                        {loadingNotes && <p className="pd-muted">Cargando…</p>}
+                        {!loadingNotes && notes.length === 0 && <p className="pd-muted">Sin reportes de campo todavía.</p>}
+                        {notes.map((note) => (
+                            <div key={note.emergency_note_id} className="pd-note">
+                                <div className="pd-note-time">{new Date(note.recorded_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</div>
+                                <div className="pd-vitals">
+                                    {note.blood_pressure && <Vital label="Presión" value={note.blood_pressure} />}
+                                    {note.heart_rate && <Vital label="Frec. cardiaca" value={fmtNum(note.heart_rate)} unit=" lpm" />}
+                                    {note.oxygen_saturation && <Vital label="SpO₂" value={fmtNum(note.oxygen_saturation)} unit="%" warn={Number(note.oxygen_saturation) < 92} />}
+                                    {note.temperature && <Vital label="Temperatura" value={fmtNum(note.temperature)} unit=" °C" />}
+                                    {note.respiratory_rate && <Vital label="Frec. resp." value={fmtNum(note.respiratory_rate)} unit=" rpm" />}
+                                    {note.glucose_level && <Vital label="Glucosa" value={fmtNum(note.glucose_level)} unit=" mg/dL" />}
+                                    {note.glasgow_scale && <Vital label="Glasgow" value={fmtNum(note.glasgow_scale)} />}
+                                    {note.pain_scale !== null && note.pain_scale !== undefined && note.pain_scale !== '' && <Vital label="Dolor" value={fmtNum(note.pain_scale)} unit="/10" />}
+                                </div>
+                                {(note.consciousness_level || note.pupils || note.patient_status) && (
+                                    <p className="pd-note-line">
+                                        {note.consciousness_level && <><b>Conciencia:</b> {note.consciousness_level}. </>}
+                                        {note.pupils && <><b>Pupilas:</b> {note.pupils}. </>}
+                                        {note.patient_status && <><b>Estado:</b> {note.patient_status}.</>}
+                                    </p>
+                                )}
+                                {note.initial_diagnosis && <p className="pd-note-line"><b>Diagnóstico:</b> {note.initial_diagnosis}</p>}
+                                {note.treatment_applied && <p className="pd-note-line"><b>Tratamiento:</b> {note.treatment_applied}</p>}
+                            </div>
+                        ))}
+                    </section>
+
+                    {otherPatients.length > 0 && (
+                        <section className="pd-card">
+                            <h3>Otros pacientes de esta emergencia ({otherPatients.length})</h3>
+                            <ul className="pd-list">
+                                {otherPatients.map((op) => (
+                                    <li key={op.emergency_patient_id}>
+                                        <b>{[op.first_name, op.first_surname].filter(Boolean).join(' ') || 'Paciente no identificado'}</b>
+                                        <span>{op.destination_institution_id
+                                            ? (parseInt(op.destination_institution_id) === parseInt(user?.institutionId) ? 'También viene a tu institución' : 'Trasladado a otra institución')
+                                            : 'Sin destino asignado todavía'}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
+                    )}
+
+                    <section className="pd-card">
+                        <h3>Emergencias anteriores</h3>
+                        {history.length === 0 && <p className="pd-muted">Sin visitas anteriores registradas.</p>}
+                        <ul className="pd-list">
+                            {history.map((h) => (
+                                <li key={h.emergency_id}><b>{h.type_name || 'Sin tipo'}</b><span>{formatDate(h.created_at)} · {h.status_name || 'Sin estado'}</span></li>
+                            ))}
+                        </ul>
+                    </section>
+                </div>
+
+                <div className="pd-map">
+                    {hasMapData ? (
+                        <MapArea
+                            ambulanceLocation={ambulanceLocation ? { ...ambulanceLocation, unitNumber: patient.unit_number, color: patient.triage_hex_color } : null}
+                            emergencyLocation={patient.emergency_latitude ? { latitude: patient.emergency_latitude, longitude: patient.emergency_longitude } : null}
+                            routeCoordinates={routeCoordinates}
+                        />
+                    ) : (
+                        <p className="pd-muted pd-map-empty">Sin ubicación disponible todavía.</p>
+                    )}
+                </div>
+            </div>
+        </Modal>
     )
 }
 

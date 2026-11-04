@@ -38,6 +38,7 @@ router.get('/tipos-ambulancia', unitController.getAllAmbulanceTypes); // ✅ New
 router.get('/ambulancias-crum', unitController.getCrumAmbulances); // ✅ sicem-web (registrar paramédico)
 router.get('/estados-ambulancia', unitController.getAllAmbulanceStatuses); // TODO
 router.get('/ubicacion/:ambulanceId', middleware.verifyToken, unitController.getLocationsByAmbulance); // ✅ Dashboard.jsx
+router.get('/ubicaciones', middleware.verifyToken, unitController.getLatestLocationsAll); // tablero: última ubicación de todas las ambulancias
 router.get('/mi-turno-activo', middleware.verifyToken, unitController.getMyActiveShift); // ✅ sicem-mobile
 router.get('/mi-traslado-actual', middleware.verifyToken, unitController.getMyActiveTransfer); // ✅ sicem-mobile
 router.get('/reportes-falla', middleware.verifyToken, unitController.getFailureReports); // ✅ sicem-web / sicem-desktop (panel de fallas)

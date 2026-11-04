@@ -1,29 +1,44 @@
 import { useMap, MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet'
 import { useEffect } from 'react'
 import L from 'leaflet'
+import { readableTextOn } from '../../utils/color'
+import { useRegion } from '../../context/useRegion'
+import { TILE_URL, TILE_ATTRIBUTION } from '../../config/services'
 import 'leaflet/dist/leaflet.css'
 import './MapArea.css'
 
-// Villahermosa, Tabasco — centro por defecto del mapa
-const DEFAULT_CENTER = [17.9869, -92.9303]
 
+// Colores como variables de tokens.css, para que sigan al tema (claro/oscuro)
 const statusColors = {
-    1: '#2E7D32', // Disponible
-    2: '#C0272D', // En camino
-    3: '#E65100', // En escena
-    4: '#8E44AD', // Trasladando
-    5: '#888888', // Fuera de servicio
+    1: 'var(--u-free)',     // Disponible
+    2: 'var(--u-route)',    // En camino
+    3: 'var(--u-scene)',    // En escena
+    4: 'var(--u-transfer)', // Trasladando
+    5: 'var(--u-off)',      // Fuera de servicio
 }
 
-const createAmbulanceIcon = (statusId) => {
-    const color = statusColors[statusId] || '#888888'
+const ROMAN = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V' }
+
+// El nivel de triage puede llegar como número (1) o ya en romano ('I'); se normaliza a número.
+const levelNumber = (level) => Number(level) || ({ I: 1, II: 2, III: 3, IV: 4, V: 5 })[String(level).toUpperCase()] || null
+
+// Cache: react-leaflet recrea el marcador si el objeto icon cambia, y eso reinicia
+// las animaciones. Mismo estado visual = mismo objeto icon.
+const iconCache = new Map()
+const cached = (key, make) => {
+    if (!iconCache.has(key)) iconCache.set(key, make())
+    return iconCache.get(key)
+}
+
+const createAmbulanceIcon = (statusId) => cached(`amb-${statusId}`, () => {
+    const color = statusColors[statusId] || 'var(--u-off)'
     return L.divIcon({
         className: 'ambulance-marker',
         html: `<div class="ambulance-marker-dot" style="background:${color}"></div>`,
         iconSize: [18, 18],
         iconAnchor: [9, 9],
     })
-}
+})
 
 const emergencyIcon = L.divIcon({
     className: 'emergency-marker',
@@ -31,6 +46,43 @@ const emergencyIcon = L.divIcon({
     iconSize: [24, 24],
     iconAnchor: [12, 24],
 })
+
+// Marcador de una emergencia activa: círculo con el nivel de triage en romano, del
+// color del triage; las de nivel I y II pulsan para que se vean de lejos.
+const createEmergencyPinIcon = (em, selected) => {
+    const level = levelNumber(em.triage_level)
+    const color = em.triage_hex_color || 'var(--t1)'
+    const critical = level !== null && level <= 2
+    return cached(`em-${level}-${color}-${selected}`, () => L.divIcon({
+        className: 'em-marker',
+        html: `<div class="em-marker-wrap ${selected ? 'selected' : ''}" style="--c:${color}">
+                 ${critical ? '<span class="em-marker-pulse"></span>' : ''}
+                 <span class="em-marker-dot" style="color:${readableTextOn(color)}">${ROMAN[level] || ''}</span>
+               </div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+    }))
+}
+
+// Leaflet calcula su tamaño al montarse; si el contenedor cambia después (ventana,
+// paneles) el mapa queda a medias con una franja gris. Esto lo recalcula.
+// Entrega la instancia del mapa a quien lo contiene (para controles externos: zoom, encuadre…)
+const MapReady = ({ onMapReady }) => {
+    const map = useMap()
+    useEffect(() => { onMapReady(map) }, [map])
+    return null
+}
+
+const ResizeFix = () => {
+    const map = useMap()
+    useEffect(() => {
+        const el = map.getContainer()
+        const observer = new ResizeObserver(() => map.invalidateSize())
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [map])
+    return null
+}
 
 // Morado — mismo color que usa sicem-mobile para el hospital destino en su
 // propio mapa (mapa.js), y el mismo que aquí arriba ya representa
@@ -57,6 +109,16 @@ const ClickListener = ({ onMapClick }) => {
 
 // Mueve la vista del mapa cuando cambian las coordenadas del centro deseado
 // (por ejemplo, cuando el geocoding de Nominatim encuentra una dirección)
+// Cuando se conoce la región de la institución (después de cargarla), centra el mapa ahí.
+// No actúa si la pantalla ya enfoca algo concreto (una emergencia, una búsqueda).
+const RegionView = ({ region, enabled }) => {
+    const map = useMap()
+    useEffect(() => {
+        if (enabled && region.known) map.setView(region.center, region.zoom, { animate: false })
+    }, [enabled, region.source, region.center[0], region.center[1]])
+    return null
+}
+
 const MapCenterController = ({ center }) => {
     const map = useMap()
     useEffect(() => {
@@ -76,19 +138,30 @@ const MapCenterController = ({ center }) => {
 // routes: opcional, array de { coordinates: [[lat,lng], ...], color? } — una o varias trazas
 // completas (p. ej. de cada unidad asignada hasta la emergencia), ya resueltas contra un
 // servicio de ruteo
-const MapArea = ({ ambulances = [], emergencyLocation = null, hospitals = [], onMapClick = null, flyToLocation = null, routes = [] }) => {
+// emergencies: opcional, array de emergencias activas con latitude, longitude, triage_level,
+// triage_hex_color — se pintan como marcadores con su nivel de triage
+const MapArea = ({ ambulances = [], emergencyLocation = null, hospitals = [], emergencies = [], selectedEmergencyId = null, onEmergencyClick = null, onMapClick = null, flyToLocation = null, routes = [], legendCentered = false, hideZoomControl = false, onMapReady = null }) => {
+    const { region } = useRegion()
+    const focusLat = parseFloat(emergencyLocation?.latitude)
+    const focusLon = parseFloat(emergencyLocation?.longitude)
+    const hasFocus = Number.isFinite(focusLat) && Number.isFinite(focusLon)
+
     return (
         <div className="map-area">
             <MapContainer
-                center={DEFAULT_CENTER}
-                zoom={13}
+                center={hasFocus ? [focusLat, focusLon] : region.center}
+                zoom={hasFocus ? 14 : region.zoom}
                 scrollWheelZoom={true}
+                zoomControl={!hideZoomControl}
                 className="leaflet-container-full"
             >
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution={TILE_ATTRIBUTION}
+                    url={TILE_URL}
                 />
+                <ResizeFix />
+                <RegionView region={region} enabled={!hasFocus && !flyToLocation} />
+                {onMapReady && <MapReady onMapReady={onMapReady} />}
                 {flyToLocation && <MapCenterController center={flyToLocation} />}
                 {onMapClick && <ClickListener onMapClick={onMapClick} />}
 
@@ -98,6 +171,8 @@ const MapArea = ({ ambulances = [], emergencyLocation = null, hospitals = [], on
                             key={amb.ambulance_id}
                             position={[parseFloat(amb.latitude), parseFloat(amb.longitude)]}
                             icon={createAmbulanceIcon(amb.ambulance_status_id)}
+                            title={`Unidad ${amb.unit_number}`}
+                            alt={`Unidad ${amb.unit_number}`}
                         >
                             <Popup>
                                 <strong>{amb.unit_number}</strong><br />
@@ -107,12 +182,12 @@ const MapArea = ({ ambulances = [], emergencyLocation = null, hospitals = [], on
                     ) : null
                 ))}
 
-                {routes.map((route, index) => (
+                {(routes || []).map((route, index) => (
                     route.coordinates?.length > 0 && (
                         <Polyline
                             key={index}
                             positions={route.coordinates}
-                            pathOptions={{ color: route.color || '#1565C0', weight: 4, opacity: 0.8 }}
+                            pathOptions={{ color: route.color || '#1D6B66', weight: 4, opacity: 0.85 }}
                         />
                     )
                 ))}
@@ -121,10 +196,26 @@ const MapArea = ({ ambulances = [], emergencyLocation = null, hospitals = [], on
                     <Marker
                         position={[parseFloat(emergencyLocation.latitude), parseFloat(emergencyLocation.longitude)]}
                         icon={emergencyIcon}
+                        title="Ubicación de la emergencia"
+                        alt="Ubicación de la emergencia"
                     >
                         <Popup>Ubicación de la emergencia</Popup>
                     </Marker>
                 )}
+
+                {emergencies.map((em) => (
+                    em.latitude && em.longitude ? (
+                        <Marker
+                            key={`em-${em.emergency_id}`}
+                            position={[parseFloat(em.latitude), parseFloat(em.longitude)]}
+                            icon={createEmergencyPinIcon(em, String(em.emergency_id) === String(selectedEmergencyId))}
+                            title={`${em.type_name || 'Emergencia'}${em.triage_level ? `, nivel ${em.triage_level}` : ''}. ${em.description || ''}`}
+                            alt={`${em.type_name || 'Emergencia'}${em.triage_level ? `, nivel ${em.triage_level}` : ''}`}
+                            zIndexOffset={String(em.emergency_id) === String(selectedEmergencyId) ? 1000 : 500}
+                            eventHandlers={onEmergencyClick ? { click: () => onEmergencyClick(em) } : undefined}
+                        />
+                    ) : null
+                ))}
 
                 {hospitals.map((hosp) => (
                     hosp.latitude && hosp.longitude ? (
@@ -132,6 +223,8 @@ const MapArea = ({ ambulances = [], emergencyLocation = null, hospitals = [], on
                             key={`hosp-${hosp.institution_id}`}
                             position={[parseFloat(hosp.latitude), parseFloat(hosp.longitude)]}
                             icon={hospitalIcon}
+                            title={hosp.name}
+                            alt={hosp.name}
                         >
                             <Popup>
                                 <strong>{hosp.name}</strong><br />
@@ -142,11 +235,12 @@ const MapArea = ({ ambulances = [], emergencyLocation = null, hospitals = [], on
                 ))}
             </MapContainer>
 
-            <div className="map-legend">
-                <div className="legend-item"><span className="legend-dot" style={{ background: '#2E7D32' }} />Disponible</div>
-                <div className="legend-item"><span className="legend-dot" style={{ background: '#C0272D' }} />En ruta</div>
-                <div className="legend-item"><span className="legend-dot" style={{ background: '#E65100' }} />En escena</div>
-                {hospitals.length > 0 && <div className="legend-item"><span className="legend-dot" style={{ background: '#8E44AD' }} />Hospital</div>}
+            <div className={`map-legend ${legendCentered ? 'map-legend-centered' : ''}`}>
+                <div className="legend-item"><span className="legend-dot" style={{ background: 'var(--u-free)' }} />Disponible</div>
+                <div className="legend-item"><span className="legend-dot" style={{ background: 'var(--u-route)' }} />En ruta</div>
+                <div className="legend-item"><span className="legend-dot" style={{ background: 'var(--u-scene)' }} />En escena</div>
+                {emergencies.length > 0 && <div className="legend-item"><span className="legend-dot" style={{ background: 'var(--t1)' }} />Emergencia (nivel de triage)</div>}
+                {hospitals.length > 0 && <div className="legend-item"><span className="legend-dot" style={{ background: 'var(--hosp)' }} />Hospital</div>}
                 {onMapClick && <div className="legend-hint">Haz clic para marcar la ubicación</div>}
             </div>
         </div>

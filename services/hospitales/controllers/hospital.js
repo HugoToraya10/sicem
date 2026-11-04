@@ -473,6 +473,21 @@ const getInstitutionsForDestination = (req, res) => {
     });
 }
 
+// Dónde opera una institución (coordenadas, ciudad, estado) — lo usan los clientes para centrar
+// el mapa y acotar la búsqueda de direcciones sin depender de la IP.
+const getRegionContext = (req, res) => {
+    const { institutionId } = req.params;
+    hospitalModel.getRegionContext(institutionId, (e, r) => {
+        if (e) {
+            return res.status(500).json({message: "Error del servidor."});
+        }
+        if (r.length === 0) {
+            return res.status(404).json({message: "Institución no encontrada."});
+        }
+        res.status(200).json({message: "Contexto regional", data: r[0]});
+    });
+}
+
 const getInstitutionByName = (req, res) => {
     const { name } = req.params;
     hospitalModel.getInstitutionByName(name, (e, r) => {
@@ -619,7 +634,7 @@ module.exports = {
     registerInstitution, createSpeciality, createInstitutionType, createInstitutionsSpecialities, createInstitutionNotification,
     toggleInstitution, toggleCrumInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
     updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS,
-    updateInstitutionType, updateSpeciality, updateInstitution, getInstitutionsForDestination,
+    updateInstitutionType, updateSpeciality, updateInstitution, getInstitutionsForDestination, getRegionContext,
     getAllInstitutionsAdmin, getAllInstitutionTypesAdmin, getAllSpecialitiesAdmin,
     getAllInstitutions, getInstitutionByName, getInstitutionNotifications, getInstitutionNotificationByName,
     getAllInstitutionSpecialities, getInstitutionSpecialityByName, getAllSpecialities, getSpecialityByName, getAllInstitutionTypes

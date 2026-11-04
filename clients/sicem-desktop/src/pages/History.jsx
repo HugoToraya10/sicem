@@ -5,15 +5,20 @@ import { toLowerCaseKeys } from '../utils/formatData'
 import { generatePatientReport } from '../utils/generatePatientReport'
 import PatientDetailModal from '../components/patients/PatientDetailModal'
 import RejectReasonModal from '../components/patients/RejectReasonModal'
+import { useDialogs } from '../context/useDialogs'
+import { formatDateTime } from '../utils/time'
+import { readableTextOn } from '../utils/color'
+import { triageRoman } from '../utils/triage'
 import './History.css'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
 
 const statusLabel = (p) => {
-    if (p.discharged_at) return { text: 'Dado de alta', className: 'discharged' }
-    if (p.delivered_at) return { text: 'Entregado', className: 'delivered' }
-    if (p.reception_status_name === 'Rechazada') return { text: 'Rechazado', className: 'rejected' }
-    if (p.reception_status_name === 'Aceptada') return { text: 'Aceptado (en camino)', className: 'accepted' }
-    if (p.closed_at) return { text: 'Cerrada sin resolver', className: 'closedUnresolved' }
-    return { text: 'Pendiente', className: 'pending' }
+    if (p.discharged_at) return { text: 'Dado de alta', className: 'discharged', chip: 'chip-steel' }
+    if (p.delivered_at) return { text: 'Entregado', className: 'delivered', chip: 'chip-ok' }
+    if (p.reception_status_name === 'Rechazada') return { text: 'Rechazado', className: 'rejected', chip: 'chip-brand' }
+    if (p.reception_status_name === 'Aceptada') return { text: 'Aceptado (en camino)', className: 'accepted', chip: 'chip-ok' }
+    if (p.closed_at) return { text: 'Cerrada sin resolver', className: 'closedUnresolved', chip: 'chip-warn' }
+    return { text: 'Pendiente', className: 'pending', chip: '' }
 }
 
 // Los valores tienen que coincidir con las clases que devuelve statusLabel —
@@ -43,6 +48,7 @@ const EMERGENCY_STATE_FILTERS = [
 // Seguimiento (casos activos); aquí es para buscar/auditar/consultar.
 const History = () => {
     const { user, token } = useAuth()
+    const { notify } = useDialogs()
     const [patients, setPatients] = useState([])
     const [searchQuery, setSearchQuery] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
@@ -60,7 +66,7 @@ const History = () => {
         if (generatingReportId) return
         setGeneratingReportId(p.emergency_patient_id)
         generatePatientReport(p, token)
-            .catch((e) => alert(`No se pudo generar el reporte: ${e?.message || 'error desconocido'}`))
+            .catch((e) => notify(`No se pudo generar el reporte: ${e?.message || 'error desconocido'}`, 'error'))
             .finally(() => setGeneratingReportId(null))
     }
 
@@ -94,8 +100,8 @@ const History = () => {
             body: JSON.stringify({ emergencyPatientId, accepted: true })
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo confirmar la recepción'); return body }))
-            .then(() => fetchHistory())
-            .catch(error => { console.error('Error aceptando paciente. ', error); alert(error.message || 'No se pudo confirmar la recepción. Intenta de nuevo.') })
+            .then(() => { fetchHistory(); notify('Paciente aceptado.', 'ok') })
+            .catch(error => { console.error('Error aceptando paciente. ', error); notify(error.message || 'No se pudo confirmar la recepción. Intenta de nuevo.', 'error') })
     }
 
     const handleReject = (emergencyPatientId) => {
@@ -110,8 +116,8 @@ const History = () => {
             body: JSON.stringify({ emergencyPatientId, accepted: false, rejectionReason })
         })
             .then(res => { if (!res.ok) throw new Error('No se pudo rechazar'); return res.json() })
-            .then(() => { fetchHistory(); setRejectingPatientId(null) })
-            .catch(error => { console.error('Error rechazando paciente. ', error); alert('No se pudo rechazar al paciente. Intenta de nuevo.') })
+            .then(() => { fetchHistory(); setRejectingPatientId(null); notify('Paciente rechazado.', 'ok') })
+            .catch(error => { console.error('Error rechazando paciente. ', error); notify('No se pudo rechazar al paciente. Intenta de nuevo.', 'error') })
     }
 
     const matchesSearch = (p, query) => {
@@ -134,29 +140,40 @@ const History = () => {
         .filter((p) => triageFilter === 'all' || p.triage_level === triageFilter)
         .filter((p) => matchesSearch(p, searchQuery))
 
-    return (
-        <div className="history-layout">
-            <div className="section-title">Historial de Pacientes</div>
+    const hasFilters = searchQuery || statusFilter !== 'all' || emergencyStateFilter !== 'all' || triageFilter !== 'all'
 
-            <div className="history-filters">
+    return (
+        <div className="page">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Historial</h1>
+                    <p className="page-sub">Todo lo que ha pasado por tu institución, del más reciente al más antiguo. Para lo que requiere acción ahora, usa En camino y Seguimiento.</p>
+                </div>
+                <ul className="stat-row" aria-label="Resumen">
+                    <li><b><AnimatedNumber value={visiblePatients.length} /></b><span>{hasFilters ? 'con este filtro' : 'registros'}</span></li>
+                </ul>
+            </div>
+
+            <div className="filters" role="search">
                 <input
-                    type="text"
-                    className="history-search-input"
-                    placeholder="Buscar por nombre, CURP o descripción..."
+                    type="search"
+                    className="input grow"
+                    aria-label="Buscar en el historial"
+                    placeholder="Nombre, CURP o descripción"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <select className="history-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <select className="select" aria-label="Filtrar por estado del paciente" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                     {STATUS_FILTERS.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                 </select>
-                <select className="history-filter-select" value={emergencyStateFilter} onChange={(e) => setEmergencyStateFilter(e.target.value)}>
+                <select className="select" aria-label="Filtrar por estado de la emergencia" value={emergencyStateFilter} onChange={(e) => setEmergencyStateFilter(e.target.value)}>
                     {EMERGENCY_STATE_FILTERS.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                 </select>
-                <select className="history-filter-select" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
+                <select className="select" aria-label="Filtrar por nivel de triage" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
                     <option value="all">Todos los niveles de triage</option>
                     {triageCatalog.map((t) => (
                         <option key={t.triage_level_id} value={t.level}>Triage {t.level}</option>
@@ -164,50 +181,36 @@ const History = () => {
                 </select>
             </div>
 
-            <div className="history-table-wrapper">
-                <table className="history-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Paciente</th>
-                            <th>CURP</th>
-                            <th>Emergencia</th>
-                            <th>Estado</th>
-                            <th>Emergencia cerrada</th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {visiblePatients.map((p) => {
-                            const status = statusLabel(p)
-                            const fullName = [p.first_name, p.first_surname, p.second_surname].filter(Boolean).join(' ') || 'Paciente no identificado'
-                            return (
-                                <tr key={p.emergency_patient_id} onClick={() => setSelectedPatient(p)} className="history-row">
-                                    <td>{new Date(p.created_at).toLocaleString('es-MX')}</td>
-                                    <td>{fullName}</td>
-                                    <td>{p.curp || '—'}</td>
-                                    <td>{p.description || 'Sin descripción'}</td>
-                                    <td><span className={`history-status-pill ${status.className}`}>{status.text}</span></td>
-                                    <td>{p.closed_at ? new Date(p.closed_at).toLocaleString('es-MX') : '—'}</td>
-                                    <td><button className="btn-detail" onClick={(e) => { e.stopPropagation(); setSelectedPatient(p) }}>Ver detalle</button></td>
-                                    <td>
-                                        <button
-                                            className="btn-detail"
-                                            onClick={(e) => { e.stopPropagation(); handleGenerateReport(p) }}
-                                            disabled={generatingReportId !== null}
-                                        >
-                                            {generatingReportId === p.emergency_patient_id ? 'Generando...' : 'Generar reporte'}
-                                        </button>
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
+            <div className="entity-rows">
+                {visiblePatients.map((p) => {
+                    const status = statusLabel(p)
+                    const fullName = [p.first_name, p.first_surname, p.second_surname].filter(Boolean).join(' ') || 'Paciente no identificado'
+                    const level = triageRoman(p.triage_level)
+                    return (
+                        <article key={p.emergency_patient_id} className="entity-row" style={{ '--accent': p.triage_hex_color || 'var(--line-strong)' }} onClick={() => setSelectedPatient(p)}>
+                            <span className="tri-badge" style={{ '--c': p.triage_hex_color || 'var(--text-3)', color: readableTextOn(p.triage_hex_color) }} title={level ? `Triage ${level}` : 'Sin triage'}>{level || '—'}</span>
+                            <div className="row-main">
+                                <h2 className="row-title">{fullName}</h2>
+                                <p className="row-desc">{p.description || 'Sin descripción'}</p>
+                            </div>
+                            <div className="row-meta">
+                                <span><b>Registro</b> {formatDateTime(p.created_at)}</span>
+                                <span><b>Cierre</b> {p.closed_at ? formatDateTime(p.closed_at) : '—'}</span>
+                                <span><b>CURP</b> <span className="mono">{p.curp || '—'}</span></span>
+                            </div>
+                            <div className="row-actions">
+                                <span className={`pill ${status.className === 'rejected' ? 'pill-bad' : status.className === 'closedUnresolved' ? 'pill-warn' : status.className === 'discharged' ? 'pill-steel' : status.className === 'pending' ? '' : 'pill-ok'}`}>{status.text}</span>
+                                <button type="button" className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); setSelectedPatient(p) }}>Ver detalle</button>
+                                <button type="button" className="btn btn-sm" onClick={(e) => { e.stopPropagation(); handleGenerateReport(p) }} disabled={generatingReportId !== null}>
+                                    {generatingReportId === p.emergency_patient_id ? 'Generando…' : 'Generar reporte'}
+                                </button>
+                            </div>
+                        </article>
+                    )
+                })}
                 {visiblePatients.length === 0 && (
-                    <p className="empty-state">
-                        {searchQuery || statusFilter !== 'all' || emergencyStateFilter !== 'all' || triageFilter !== 'all' ? 'Sin resultados para este filtro.' : 'Sin historial de pacientes todavía.'}
+                    <p className="entity-empty">
+                        {hasFilters ? 'Sin resultados para este filtro. Quita algún filtro para ver más.' : 'Todavía no hay pacientes en el historial.'}
                     </p>
                 )}
             </div>

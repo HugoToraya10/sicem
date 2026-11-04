@@ -5,7 +5,14 @@ import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
 import { connectUnitsSocket } from '../sockets/unitsSocket'
 import PatientDetailModal from '../components/patients/PatientDetailModal'
+import Icon from '../components/ui/Icon'
+import { useDialogs } from '../context/useDialogs'
+import { readableTextOn } from '../utils/color'
+import { formatElapsed } from '../utils/time'
+import { triageRoman } from '../utils/triage'
+import '../components/patients/IncomingPatientCard.css'
 import './Tracking.css'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
 
 // Menor max_wait_minutes = triage más urgente; sin triage se manda al final.
 const priorityScore = (p) => {
@@ -23,6 +30,7 @@ const sortByPriority = (list) => [...list].sort((a, b) => {
 // Pacientes en Camino) ni "ya resuelto" (eso es Historial).
 const Tracking = () => {
     const { user, token } = useAuth()
+    const { notify, confirm } = useDialogs()
     const [patients, setPatients] = useState([])
     const [selectedPatient, setSelectedPatient] = useState(null)
 
@@ -83,75 +91,85 @@ const Tracking = () => {
     // y misma confirmación que PatientDetailModal, solo que aquí es un clic en
     // vez de abrir-detalle-y-buscar-el-botón. La velocidad es el punto de esta
     // pantalla.
-    const handleConfirmDelivery = (emergencyPatientId) => {
-        if (!window.confirm('¿Confirmas que este paciente ya llegó físicamente a tu institución?')) return
+    const handleConfirmDelivery = async (emergencyPatientId) => {
+        const ok = await confirm({ title: 'Confirmar llegada física', message: '¿Confirmas que este paciente ya llegó físicamente a tu institución?', confirmLabel: 'Sí, ya llegó' })
+        if (!ok) return
         fetch(`${API_BASE_URL}/emergencias/confirmar-llegada-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId })
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo confirmar'); return body }))
-            .then(() => handlePatientUpdated(emergencyPatientId, { delivered_at: new Date().toISOString() }))
-            .catch(error => { console.error('Error confirmando llegada. ', error); alert(error.message) })
+            .then(() => { handlePatientUpdated(emergencyPatientId, { delivered_at: new Date().toISOString() }); notify('Llegada confirmada.', 'ok') })
+            .catch(error => { console.error('Error confirmando llegada. ', error); notify(error.message, 'error') })
     }
 
-    const handleDischarge = (emergencyPatientId) => {
-        if (!window.confirm('¿Confirmas el alta de este paciente? Esto libera la cama que tenía reservada.')) return
+    const handleDischarge = async (emergencyPatientId) => {
+        const ok = await confirm({ title: 'Dar de alta al paciente', message: 'Esto libera la cama que tenía reservada. ¿Confirmas el alta?', confirmLabel: 'Dar de alta' })
+        if (!ok) return
         fetch(`${API_BASE_URL}/emergencias/dar-alta-paciente`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ emergencyPatientId })
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo dar de alta'); return body }))
-            .then(() => handlePatientUpdated(emergencyPatientId, { discharged_at: new Date().toISOString() }))
-            .catch(error => { console.error('Error dando de alta. ', error); alert(error.message) })
+            .then(() => { handlePatientUpdated(emergencyPatientId, { discharged_at: new Date().toISOString() }); notify('Paciente dado de alta. La cama quedó libre.', 'ok') })
+            .catch(error => { console.error('Error dando de alta. ', error); notify(error.message, 'error') })
     }
 
     const renderCard = (p, action) => {
         const fullName = [p.first_name, p.first_surname, p.second_surname].filter(Boolean).join(' ') || 'Paciente no identificado'
         const isUrgent = Boolean(p.paramedic_concluded_at) && !p.delivered_at
+        const level = triageRoman(p.triage_level)
+        const color = p.triage_hex_color || 'var(--text-3)'
         return (
-            <div
-                key={p.emergency_patient_id}
-                className={`tracking-card${isUrgent ? ' tc-urgent' : ''}`}
-                style={{ borderLeftColor: isUrgent ? '#C0272D' : (p.triage_hex_color || '#1565C0') }}
-                onClick={() => setSelectedPatient(p)}
-            >
-                <div className="tc-name-row">
-                    <span className="tc-name">{fullName}</span>
-                    {isUrgent && <span className="tc-urgent-badge">🚑 Unidad ya llegó</span>}
-                    {p.triage_level && (
-                        <span className="tc-triage-badge" style={{ background: p.triage_hex_color || '#888' }}>
-                            {p.triage_level} · {p.triage_color_name}
-                        </span>
-                    )}
+            <article key={p.emergency_patient_id} className={`ipc${isUrgent ? ' ipc-urgent' : ''}`} style={{ '--c': isUrgent ? 'var(--brand)' : color }} aria-label={fullName}>
+                <span className="ipc-rail" />
+                <div className="ipc-main">
+                    <div className="ipc-top">
+                        {level && <span className="tri" style={{ '--c': color, color: readableTextOn(p.triage_hex_color) }} title={p.triage_color_name ? `Triage nivel ${level} (${p.triage_color_name})` : `Triage nivel ${level}`}>{level}</span>}
+                        <h3 className="ipc-name">{fullName}</h3>
+                        {isUrgent && <span className="chip chip-brand"><Icon name="alert" />Unidad ya llegó</span>}
+                        {p.created_at && <span className="chip"><Icon name="clock" />{formatElapsed(p.created_at)}</span>}
+                    </div>
+                    <p className="ipc-meta">{p.speciality_name || 'Sin especialidad'} · CURP: {p.curp || 'sin CURP'}</p>
                 </div>
-                <div className="tc-detail">{p.speciality_name || 'Sin especialidad'} · CURP: {p.curp || 'Sin CURP'}</div>
-                <div className="tc-actions">
-                    <button className={action.className} onClick={(e) => { e.stopPropagation(); action.onClick(p.emergency_patient_id) }}>{action.label}</button>
-                    <button className="tc-detail-btn" onClick={(e) => { e.stopPropagation(); setSelectedPatient(p) }}>Ver detalle</button>
+                <div className="ipc-actions">
+                    <button type="button" className={`btn ${action.tone}`} onClick={() => action.onClick(p.emergency_patient_id)}>{action.label}</button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setSelectedPatient(p)}>Ver detalle</button>
                 </div>
-            </div>
+            </article>
         )
     }
 
     return (
-        <div className="tracking-layout">
-            <div className="tracking-section">
-                <div className="section-title">Esperando Llegada ({waitingArrival.length})</div>
-                <div className="tracking-grid">
-                    {waitingArrival.map((p) => renderCard(p, { label: 'Confirmar llegada', className: 'tc-deliver-btn', onClick: handleConfirmDelivery }))}
-                    {waitingArrival.length === 0 && <p className="empty-state">Sin pacientes aceptados esperando llegar.</p>}
+        <div className="page">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Seguimiento</h1>
+                    <p className="page-sub">Pacientes que ya aceptaste: confirma cuando lleguen y da el alta para liberar su cama.</p>
                 </div>
+                <ul className="stat-row" aria-label="Resumen">
+                    <li><b><AnimatedNumber value={waitingArrival.length} /></b><span>por llegar</span></li>
+                    <li><b><AnimatedNumber value={waitingDischarge.length} /></b><span>por dar de alta</span></li>
+                </ul>
             </div>
 
-            <div className="tracking-section">
-                <div className="section-title">Esperando Alta ({waitingDischarge.length})</div>
-                <div className="tracking-grid">
-                    {waitingDischarge.map((p) => renderCard(p, { label: 'Dar de alta', className: 'tc-discharge-btn', onClick: handleDischarge }))}
-                    {waitingDischarge.length === 0 && <p className="empty-state">Sin pacientes internados esperando alta.</p>}
+            <section className="tracking-section" aria-labelledby="trk-arrival">
+                <h2 id="trk-arrival" className="tracking-title">Esperando llegada <span className="count">{waitingArrival.length}</span></h2>
+                <div className="cards">
+                    {waitingArrival.map((p) => renderCard(p, { label: 'Confirmar llegada', tone: 'btn-primary', onClick: handleConfirmDelivery }))}
+                    {waitingArrival.length === 0 && <p className="empty">Ningún paciente aceptado viene en camino.</p>}
                 </div>
-            </div>
+            </section>
+
+            <section className="tracking-section" aria-labelledby="trk-discharge">
+                <h2 id="trk-discharge" className="tracking-title">Esperando alta <span className="count">{waitingDischarge.length}</span></h2>
+                <div className="cards">
+                    {waitingDischarge.map((p) => renderCard(p, { label: 'Dar de alta', tone: 'btn-ok', onClick: handleDischarge }))}
+                    {waitingDischarge.length === 0 && <p className="empty">Ningún paciente internado espera alta.</p>}
+                </div>
+            </section>
 
             {selectedPatient && (
                 <PatientDetailModal

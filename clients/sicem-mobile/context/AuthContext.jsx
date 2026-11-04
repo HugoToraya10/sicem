@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { Alert } from 'react-native'
+import { Alert } from '../utils/alert'
 import * as SecureStore from 'expo-secure-store'
 import { router } from 'expo-router'
 

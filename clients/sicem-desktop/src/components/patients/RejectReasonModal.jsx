@@ -1,37 +1,51 @@
 import { useState } from 'react'
+import { Modal } from '../ui/Overlay'
 import './RejectReasonModal.css'
 
-// Reemplaza a window.prompt() — Electron no soporta ese diálogo nativo de
-// forma confiable (se cierra devolviendo null de inmediato sin mostrar nada
-// en algunos empaquetados), lo que hacía que rechazar pareciera no hacer
-// nada. Este es un modal propio, mismo patrón visual que el resto de la app.
+// Reemplaza a window.prompt(): Electron no lo soporta de forma confiable. Es un diálogo propio, con los
+// motivos más comunes a un clic para que rechazar sea rápido, y el texto libre para el caso que no esté.
+const QUICK_REASONS = ['Sin camas disponibles', 'No tenemos la especialidad', 'Sin personal suficiente', 'Fuera de nuestra capacidad']
+
 const RejectReasonModal = ({
     onConfirm,
     onCancel,
     title = 'Motivo de rechazo',
-    message = '¿Por qué rechazas a este paciente? (sin camas, sin la especialidad, etc.) El despachador tendrá que reasignarlo a otro hospital.',
+    message = 'El despachador tendrá que reasignar al paciente a otro hospital. Dile por qué no puedes recibirlo.',
 }) => {
     const [reason, setReason] = useState('')
 
     return (
-        <div className="modal-overlay" onClick={onCancel}>
-            <div className="reject-reason-box" onClick={(e) => e.stopPropagation()}>
-                <h3>{title}</h3>
-                <p>{message}</p>
-                <textarea
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    maxLength={300}
-                    rows={3}
-                    autoFocus
-                    placeholder="Motivo (opcional)"
-                />
-                <div className="reject-reason-actions">
-                    <button className="btn-reject" onClick={() => onConfirm(reason)}>Confirmar rechazo</button>
-                    <button className="btn-cancel-reject" onClick={onCancel}>Cancelar</button>
-                </div>
+        <Modal
+            open
+            onClose={onCancel}
+            title={title}
+            subtitle={message}
+            size="sm"
+            tone="danger"
+            footer={(
+                <>
+                    <button type="button" className="btn" onClick={onCancel}>Cancelar</button>
+                    <button type="button" className="btn btn-danger" onClick={() => onConfirm(reason.trim())}>Confirmar rechazo</button>
+                </>
+            )}
+        >
+            <div className="reject-quick" role="group" aria-label="Motivos frecuentes">
+                {QUICK_REASONS.map((r) => (
+                    <button key={r} type="button" className={`reject-chip${reason === r ? ' on' : ''}`} aria-pressed={reason === r} onClick={() => setReason(r)}>{r}</button>
+                ))}
             </div>
-        </div>
+            <label htmlFor="reject-reason" className="reject-label">Motivo <span className="reject-optional">(opcional, lo verá el despachador)</span></label>
+            <textarea
+                id="reject-reason"
+                className="reject-text"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                maxLength={300}
+                rows={3}
+                data-autofocus
+            />
+            <p className="reject-count">{reason.length}/300</p>
+        </Modal>
     )
 }
 

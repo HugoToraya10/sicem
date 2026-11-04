@@ -226,18 +226,30 @@ const medicationBelongsToUser = (patientMedicationId, userProfileId, callback) =
         [patientMedicationId, userProfileId], callback);
 }
 
-const getAllergiesByRecord = (clinicalRecordId, callback) => {
-    const sql = `SELECT * FROM patient_allergies WHERE clinical_record_id = ? AND is_active = 1`;
+// includeInactive (opcional): el propio paciente ve también lo que desactivó, para poder reactivarlo.
+// El personal médico sigue viendo solo lo activo.
+const getAllergiesByRecord = (clinicalRecordId, includeInactiveOrCallback, maybeCallback) => {
+    const callback = typeof includeInactiveOrCallback === 'function' ? includeInactiveOrCallback : maybeCallback;
+    const includeInactive = includeInactiveOrCallback === true;
+    const sql = `SELECT * FROM patient_allergies WHERE clinical_record_id = ?${includeInactive ? '' : ' AND is_active = 1'}`;
     db.query(sql, [clinicalRecordId], callback);
 }
 
-const getConditionsByRecord = (clinicalRecordId, callback) => {
-    const sql = `SELECT * FROM patient_conditions WHERE clinical_record_id = ? AND is_active = 1`;
+// includeInactive (opcional): el propio paciente ve también lo que desactivó, para poder reactivarlo.
+// El personal médico sigue viendo solo lo activo.
+const getConditionsByRecord = (clinicalRecordId, includeInactiveOrCallback, maybeCallback) => {
+    const callback = typeof includeInactiveOrCallback === 'function' ? includeInactiveOrCallback : maybeCallback;
+    const includeInactive = includeInactiveOrCallback === true;
+    const sql = `SELECT * FROM patient_conditions WHERE clinical_record_id = ?${includeInactive ? '' : ' AND is_active = 1'}`;
     db.query(sql, [clinicalRecordId], callback);
 }
 
-const getMedicationsByRecord = (clinicalRecordId, callback) => {
-    const sql = `SELECT * FROM patient_medications WHERE clinical_record_id = ? AND is_active = 1`;
+// includeInactive (opcional): el propio paciente ve también lo que desactivó, para poder reactivarlo.
+// El personal médico sigue viendo solo lo activo.
+const getMedicationsByRecord = (clinicalRecordId, includeInactiveOrCallback, maybeCallback) => {
+    const callback = typeof includeInactiveOrCallback === 'function' ? includeInactiveOrCallback : maybeCallback;
+    const includeInactive = includeInactiveOrCallback === true;
+    const sql = `SELECT * FROM patient_medications WHERE clinical_record_id = ?${includeInactive ? '' : ' AND is_active = 1'}`;
     db.query(sql, [clinicalRecordId], callback);
 }
 

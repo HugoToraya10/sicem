@@ -1,152 +1,64 @@
-.hospital-admin-layout { padding: 24px 32px 48px; max-width: 1200px; margin: 0 auto; }
+/* Administración del hospital. Botones y chips base en styles/ui.css */
+.hospital-admin-tabs { display: flex; gap: 4px; margin-bottom: 22px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.hospital-admin-tab { padding: 10px 16px; background: none; border: none; border-bottom: 3px solid transparent; font: 600 14.5px var(--font-body); color: var(--text-2); cursor: pointer; white-space: nowrap; }
+.hospital-admin-tab:hover { color: var(--text); }
+.hospital-admin-tab.active { color: var(--text); border-bottom-color: var(--brand); }
 
-.hospital-admin-title {
-    font-size: 20px; font-weight: 700; color: #1a1a2e; margin-bottom: 18px; letter-spacing: -0.2px;
-}
+.hospital-admin-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.hospital-admin-section-title { margin: 0; font: 600 20px var(--font-display); }
 
-.hospital-admin-tabs {
-    display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid #e4e4ec;
+.hospital-admin-add-btn, .hospital-admin-form-submit, .hospital-admin-edit-btn, .hospital-admin-form-cancel, .hospital-admin-toggle-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px;
+    border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text);
+    font: 600 14px var(--font-body); cursor: pointer; white-space: nowrap;
 }
-.hospital-admin-tab {
-    background: none; border: none; padding: 11px 18px; font-size: 13px; font-weight: 600;
-    color: #8888a0; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
-    transition: color 0.15s ease;
-}
-.hospital-admin-tab:hover { color: #1a1a2e; }
-.hospital-admin-tab.active { color: #1565C0; border-bottom-color: #1565C0; }
+.hospital-admin-add-btn, .hospital-admin-form-submit { background: var(--text); border-color: var(--text); color: var(--surface); }
+.hospital-admin-add-btn:hover, .hospital-admin-form-submit:hover { opacity: 0.88; }
+.hospital-admin-edit-btn:hover, .hospital-admin-form-cancel:hover, .hospital-admin-toggle-btn:hover:not(:disabled) { background: var(--surface-2); }
+.hospital-admin-toggle-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.hospital-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.hospital-admin-general-beds { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.hospital-admin-general-beds-info { display: grid; gap: 2px; }
+.hospital-admin-general-beds-label { font: 600 17px var(--font-display); }
+.hospital-admin-general-beds-numbers { font-size: 14px; color: var(--text-2); }
+.hospital-admin-general-beds-numbers strong { font: 600 22px var(--font-display); color: var(--text); }
 
-.empty-state {
-    grid-column: 1 / -1;
-    color: #999; font-size: 13px; text-align: center;
-    padding: 36px 20px; background: white; border: 1px dashed #dcdce4; border-radius: 10px;
-}
+.hospital-admin-form { display: grid; gap: 12px; max-width: 760px; padding: 18px 20px; margin-bottom: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.hospital-admin-form h2 { margin: 0; font: 600 20px var(--font-display); }
+.hospital-admin-form-hint { margin: 0; font-size: 13.5px; color: var(--text-2); line-height: 1.45; }
+.hospital-admin-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.hospital-admin-form-actions { display: flex; gap: 8px; }
 
-.hospital-admin-section-header {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px;
+.hospital-admin-field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.hospital-admin-field input, .hospital-admin-field select, .hospital-admin-inline-form input, .hospital-admin-inline-form select {
+    height: 40px; padding: 0 12px; background: var(--surface); color: var(--text); border: 1px solid var(--line-strong);
+    border-radius: var(--r-md); font: 500 14px var(--font-body);
 }
-.hospital-admin-section-title { font-size: 13px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 0.5px; }
+.hospital-admin-field input:focus-visible, .hospital-admin-field select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.hospital-admin-field select:disabled { background: var(--surface-2); color: var(--text-3); }
 
-.hospital-admin-add-btn {
-    background: #1565C0; color: white; border: none; border-radius: 6px;
-    padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
-    transition: background 0.15s ease;
-}
-.hospital-admin-add-btn:hover { background: #104e96; }
+.hospital-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 
-.hospital-admin-edit-btn {
-    background: white; color: #1565C0; border: 1px solid #1565C0; border-radius: 6px;
-    padding: 8px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-}
-.hospital-admin-edit-btn:hover { background: #1565C0; color: white; }
-
-.hospital-admin-general-beds {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    background: white; border: 1px solid #e4e4ec; border-radius: 10px;
-    padding: 18px 22px; margin-bottom: 24px;
-    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
-}
-.hospital-admin-general-beds-info { display: flex; flex-direction: column; gap: 4px; }
-.hospital-admin-general-beds-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-.hospital-admin-general-beds-numbers { font-size: 22px; color: #1a1a2e; }
-.hospital-admin-general-beds-numbers strong { color: #1565C0; font-size: 26px; }
-
-.hospital-admin-form {
-    background: white; border: 1px solid #e4e4ec; border-radius: 10px; padding: 22px;
-    margin-bottom: 22px; display: flex; flex-direction: column; gap: 14px;
-    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
-}
-.hospital-admin-form h3 { font-size: 14.5px; color: #1a1a2e; font-weight: 700; }
-.hospital-admin-form-hint { font-size: 11.5px; color: #888; margin: -6px 0 0; line-height: 1.4; }
-.hospital-admin-shift-hint { font-size: 10.5px; color: #999; font-style: italic; margin-top: 2px; }
-
-.hospital-admin-employee-type { font-size: 12px; font-weight: 700; color: #1a1a2e; }
-.hospital-admin-ambulance-pill {
-    display: inline-block; margin-top: 4px;
-    background: #E3F2FD; color: #104e96; border: 1px solid #b9d9f5;
-    border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 600;
-    white-space: nowrap;
-}
-.hospital-admin-shift-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.hospital-admin-shift-pill {
-    background: #f1f1f6; color: #555; border: 1px solid #e0e0e8;
-    border-radius: 10px; padding: 2px 7px; font-size: 10px;
-    font-family: 'JetBrains Mono', monospace; white-space: nowrap;
-}
-
-.hospital-admin-shift-windows { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-.hospital-admin-shift-window-row {
-    display: flex; align-items: center; gap: 10px; padding: 6px 10px;
-    border-radius: 6px; border: 1px solid #e0e0e0; background: #fafafa;
-}
-.hospital-admin-shift-window-row.active { border-color: #2563eb; background: #eff4ff; }
-.hospital-admin-shift-window-daytoggle {
-    display: flex; align-items: center; gap: 6px; width: 48px;
-    font-size: 12.5px; font-weight: 600; color: #555; cursor: pointer;
-}
-.hospital-admin-shift-window-row input[type="time"] { flex: 1; }
-.hospital-admin-shift-window-row input[type="time"]:disabled { background: #f0f0f0; color: #bbb; }
-
-.hospital-admin-inline-form {
-    display: flex; flex-direction: column; gap: 12px; padding: 14px 4px;
-}
-
-.hospital-admin-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-.hospital-admin-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.hospital-admin-field label {
-    font-size: 10.5px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
-}
-.hospital-admin-field input, .hospital-admin-field select {
-    border: 1px solid #dcdce4; border-radius: 6px; padding: 9px 10px; font-size: 13px; width: 100%; box-sizing: border-box;
-    transition: border-color 0.15s ease;
-}
-.hospital-admin-field input:focus, .hospital-admin-field select:focus { outline: none; border-color: #1565C0; }
-.hospital-admin-field select:disabled { background: #f5f5f7; color: #aaa; cursor: not-allowed; }
-
-.hospital-admin-form-actions { display: flex; gap: 10px; }
-.hospital-admin-form-submit {
-    background: #1565C0; color: white; border: none; border-radius: 6px;
-    padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
-    transition: background 0.15s ease;
-}
-.hospital-admin-form-submit:hover { background: #104e96; }
-.hospital-admin-form-cancel {
-    background: white; color: #666; border: 1px solid #dcdce4; border-radius: 6px;
-    padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
-}
-.hospital-admin-form-cancel:hover { border-color: #999; color: #333; }
-
-.hospital-admin-table-wrapper {
-    background: white; border: 1px solid #e4e4ec; border-radius: 10px; overflow: hidden;
-    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
-}
+.hospital-admin-table-wrapper { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
 .hospital-admin-table { width: 100%; border-collapse: collapse; }
-.hospital-admin-table thead { background: #12121f; }
-.hospital-admin-table th {
-    color: white; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.5px; text-align: left; padding: 13px 16px;
-}
-.hospital-admin-table td { padding: 12px 16px; font-size: 13px; color: #333; border-bottom: 1px solid #eee; vertical-align: middle; }
+.hospital-admin-table th { text-align: left; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text-2); background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.hospital-admin-table td { padding: 10px 14px; font-size: 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .hospital-admin-table tbody tr:last-child td { border-bottom: none; }
-.hospital-admin-table tbody tr:hover { background: #fafafb; }
+.hospital-admin-table tbody tr:hover { background: var(--surface-2); }
+.hospital-admin-detail-row td { background: var(--surface-2); }
+.hospital-admin-row-actions button { margin: 0 6px 6px 0; }
 
-.hospital-admin-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-
-.hospital-admin-detail-row td { background: #fafafb; padding: 4px 16px 16px; }
-
-.hospital-admin-status {
-    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 4px 10px;
-    border-radius: 10px; text-transform: uppercase;
+.hospital-admin-status, .hospital-admin-employee-type, .hospital-admin-ambulance-pill, .hospital-admin-shift-pill {
+    display: inline-block; padding: 1px 9px; border-radius: 11px; font-size: 12.5px; font-weight: 600; background: var(--surface-2); color: var(--text-2);
 }
-.hospital-admin-status.status-active { background: #e2efda; color: #276221; }
-.hospital-admin-status.status-inactive { background: #f0f2f5; color: #8888a0; }
-
-.hospital-admin-toggle-btn {
-    background: white; border: 1px solid #dcdce4; border-radius: 5px; padding: 5px 10px;
-    font-size: 11px; font-weight: 600; color: #333; cursor: pointer; white-space: nowrap;
-    transition: border-color 0.15s ease, color 0.15s ease;
-}
-.hospital-admin-toggle-btn:hover:not(:disabled) { border-color: #1565C0; color: #1565C0; }
-.hospital-admin-toggle-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.hospital-admin-status.status-active { background: var(--ok-soft); color: var(--ok); }
+.hospital-admin-status.status-inactive { background: var(--brand-soft); color: var(--brand); }
+.hospital-admin-shift-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.hospital-admin-shift-hint { margin: 0; font-size: 13px; color: var(--text-2); }
+.hospital-admin-shift-windows { display: grid; gap: 6px; }
+.hospital-admin-shift-window-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--r-sm); opacity: 0.75; }
+.hospital-admin-shift-window-row.active { opacity: 1; background: var(--surface-2); }
+.hospital-admin-shift-window-daytoggle { display: flex; align-items: center; gap: 6px; min-width: 70px; font-weight: 600; }
+.hospital-admin-shift-window-row input[type="time"] { height: 34px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: 500 14px var(--font-id); }
+.hospital-admin-shift-window-row input[type="time"]:disabled { opacity: 0.5; }
+.hospital-admin-inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

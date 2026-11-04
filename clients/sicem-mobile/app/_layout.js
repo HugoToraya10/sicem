@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { AuthProvider, useAuth } from '../context/AuthContext'
+import AlertHost from '../components/AlertHost'
 
 // Decide entre (auth) y (app) según haya sesión o no. Vive separado de
 // RootLayout porque useAuth() necesita estar DENTRO de <AuthProvider> para
@@ -31,6 +32,7 @@ const RootLayout = () => {
     return (
         <AuthProvider>
             <InitialLayout />
+            <AlertHost />
         </AuthProvider>
     )
 }

@@ -1,0 +1,93 @@
+/* Skin "Triage suave": parte de la base Triage y suaviza forma, borde y sombra. */
+:root[data-skin="suave"]:not(#_) {
+    --ink: #1d1d1d;
+    --line-strong: #1d1d1d;
+    --bw: 1.5px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --hard: 0 14px 28px rgba(12, 12, 12, .15);
+    --hard-sm: 0 8px 18px rgba(12, 12, 12, .13);
+    --shadow-soft: 0 8px 22px rgba(12, 12, 12, .07);
+    --shadow-panel: 0 18px 44px rgba(12, 12, 12, .22);
+    --shadow-lift: var(--hard);
+    --shadow-card: var(--hard-sm);
+
+    &[data-theme="dark"] { --ink: #ecece8; --line-strong: #8a8a86; }
+
+    h1 { font-size: 36px; }
+
+    .app-header::after, .topbar::after { height: 6px; }
+    .navbar { height: 56px; }
+    .navbar-brand-mark, .brand-mark { border-radius: 8px; }
+    .navbar-search, .navbar-bell, .navbar-logout-btn { border-radius: 10px; border-width: 1.5px; }
+    .navbar-avatar { border-radius: 50%; }
+    .navbar-dropdown-menu { border-radius: 12px; border-width: 1.5px; box-shadow: 0 16px 36px rgba(0, 0, 0, .35); }
+    .navbar-bell-panel { border-radius: 14px; border-width: 1.5px; }
+    .navbar-bell-badge { border-radius: 99px; }
+
+    /* Tarjetas */
+    .entity { border-width: 1.5px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-soft); }
+    .entity:hover { transform: translateY(-3px); box-shadow: var(--hard); }
+    .entity:active { transform: translateY(0); }
+    .entity-head { padding: 14px 14px 0; gap: 12px; align-items: flex-start; }
+    .entity-avatar { width: 46px; min-height: 46px; height: 46px; align-self: flex-start; border-radius: 13px; font-size: 22px; }
+    .entity-titles { padding: 0; }
+    .entity-head > .pill, .entity-head > .entity-id { margin: 2px 0 0 auto; }
+    .entity-actions { border-top: 1px solid var(--line); margin-top: 12px; }
+    .entity-panel { border-width: 1.5px; border-radius: 12px; }
+    .entity-empty { border-width: 2px; border-radius: 16px; }
+    .entity-row { border-width: 1.5px; border-radius: 14px; box-shadow: var(--shadow-soft); }
+    .entity-row:hover { transform: translateY(-2px); box-shadow: var(--hard); }
+    .tri-badge, .ec-tri, .lv { border-radius: 8px; }
+
+    /* Etiquetas y cifras */
+    .pill { border-width: 1.5px; border-radius: 99px; padding: 1px 11px; }
+    .chip, .ec-chip, .ec-unit { border-radius: 99px; }
+    .stat-strip { border-width: 1.5px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-soft); }
+    .stat-strip li { border-right-width: 1px; border-right-color: var(--line); }
+    .stat-strip b { font-size: 40px; }
+    .situation { border-bottom-width: 1.5px; }
+    .stat { border-right-width: 1px; border-right-color: var(--line); }
+    .stat-value { font-size: 48px; }
+    .triage-bar { border: 0; border-radius: 99px; height: 12px; overflow: hidden; gap: 2px; }
+    .triage-bar i { border-radius: 99px; }
+    .ec { border-width: 1.5px; border-radius: 14px; overflow: hidden; }
+    .ec:hover { transform: translateY(-2px); box-shadow: var(--hard-sm); }
+    .ec.ec-is-selected { box-shadow: 0 0 0 3px var(--brand); }
+
+    /* Botones */
+    .institutions-edit-btn, .institutions-toggle-btn, .institutions-secondary-btn, .institutions-form-cancel, .more-btn,
+    .btn, .institutions-add-btn, .institutions-form-submit, .btn-brand, .btn-danger, .btn-ok, .btn-primary, .btn-outline-danger, .btn-ghost { border-radius: 10px; border-width: 1.5px; }
+    .btn-brand, .btn-danger, .institutions-add-btn, .institutions-form-submit { box-shadow: 0 6px 14px color-mix(in srgb, var(--brand) 32%, transparent); }
+    button:not(:disabled):active, .btn:not(:disabled):active { transform: translateY(1px); }
+
+    /* Campos */
+    input:not([type="checkbox"]):not([type="radio"]), select, textarea { border-width: 1.5px; border-radius: 10px; }
+    input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { box-shadow: 0 0 0 4px color-mix(in srgb, var(--steel) 22%, transparent); }
+
+    /* Pestañas en píldora */
+    .institutions-tabs, .hospital-admin-tabs {
+        display: inline-flex; padding: 4px; gap: 4px; border: 1.5px solid var(--ink); border-radius: 99px; background: var(--surface); max-width: 100%;
+    }
+    .institutions-tab, .hospital-admin-tab { border: 0; border-radius: 99px; margin: 0; padding: 7px 20px; }
+    .institutions-tab.active, .hospital-admin-tab.active { border-radius: 99px; }
+
+    /* Paneles, diálogos y menús */
+    .institutions-form, .profile-card, .panel, .ne-card, .hospital-card, .institution-admin-card, .patient-card, .patient-id-card,
+    .ambulance-admin-card, .ambulance-card, .capacity-card, .card, .general-beds-card, .speciality-admin-card, .medcard, .skeleton-card, .item {
+        border-width: 1.5px; border-radius: 16px; box-shadow: var(--shadow-soft);
+    }
+    .hospital-card:hover, .institution-admin-card:hover, .patient-card:hover, .ambulance-admin-card:hover, .capacity-card:hover, .card:hover, .speciality-admin-card:hover {
+        transform: translateY(-3px); box-shadow: var(--hard);
+    }
+    .dlg, .modal-dialog, [role="dialog"] { border-width: 1.5px; border-radius: 20px; box-shadow: 0 28px 64px rgba(12, 12, 12, .35); }
+    .more-list { border-width: 1.5px; border-radius: 12px; }
+    .more-list button { border-radius: 8px; }
+    .notice, .profile-saved-msg { border-radius: 12px; border-width: 1.5px; }
+    .beds-bar, .occupancy-bar, .cap-bar { border: 0; border-radius: 99px; height: 10px; overflow: hidden; }
+    .beds-bar span { border-radius: 99px; }
+    .skeleton, .skeleton-card, .skeleton-avatar { border-radius: 14px; }
+    .skeleton-avatar { border-radius: 50%; }
+    .route-bar::after { background: var(--brand); }
+}

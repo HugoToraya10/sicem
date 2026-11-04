@@ -3,31 +3,37 @@
     height: 100%;
     width: 100%;
     min-height: 220px;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     overflow: hidden;
 }
 
 .leaflet-container-full {
     height: 100%;
     width: 100%;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     z-index: 1;
+    background: var(--bg);
+}
+
+/* Mapa oscuro: se invierte el mosaico de OpenStreetMap (sin servicio de pago) */
+:root[data-theme="dark"] .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.86) contrast(0.88) saturate(0.7);
 }
 
 .ambulance-marker-dot {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .emergency-marker-pin {
     width: 22px;
     height: 22px;
     border-radius: 50% 50% 50% 0;
-    background: #C0272D;
-    border: 2px solid white;
+    background: var(--brand);
+    border: 2px solid var(--surface);
     transform: rotate(-45deg);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }

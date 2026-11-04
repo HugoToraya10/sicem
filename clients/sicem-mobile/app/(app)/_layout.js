@@ -7,6 +7,7 @@ import { SocketProvider } from '../../context/SocketContext'
 import { useAuth } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../constants/api'
 import { registerForPushNotificationsAsync } from '../../utils/pushNotifications'
+import { colors } from '../../constants/theme'
 
 // Registra (o renueva) el token de notificaciones push apenas hay sesión —
 // una vez que el backend lo tiene guardado, puede avisarle a este celular de
@@ -121,7 +122,15 @@ const AppLayout = () => {
                 pestañas visibles. Ionicons ya se usaba en mapa.js (el botón de
                 centrar mapa), aquí es el mismo paquete, solo que antes nadie
                 lo había conectado al propio tab bar. */}
-                <Tabs screenOptions={{ headerShown: true, tabBarActiveTintColor: '#2E7D32' }}>
+                <Tabs screenOptions={{
+                    headerShown: true,
+                    tabBarActiveTintColor: colors.brand,
+                    tabBarInactiveTintColor: colors.text2,
+                    tabBarLabelStyle: { fontSize: 13, fontWeight: '600' },
+                    tabBarStyle: { minHeight: 60, paddingTop: 4, backgroundColor: colors.surface, borderTopColor: colors.line },
+                    headerTitleStyle: { fontWeight: '700', color: colors.text },
+                    headerStyle: { backgroundColor: colors.surface },
+                }}>
                     <Tabs.Screen
                         name="index"
                         options={{

@@ -1,482 +1,306 @@
-.institutions-page {
-    min-height: 100vh;
-    background: #f0f2f5;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-}
+/* Sistema compartido de las pantallas de administración y listados:
+   página, tablas, formularios, pestañas y estados. Lo usan Instituciones,
+   Catálogos, Pacientes, Perfil, Historial, y (con alias) Usuarios y Ambulancias. */
+.institutions-page,
+.users-page,
+.ambulances-page { min-height: 100vh; background: var(--bg); color: var(--text); }
+.institutions-body,
+.users-body,
+.ambulances-body { max-width: 1500px; margin: 0 auto; padding: 24px 28px 40px; }
 
-.institutions-body {
-    max-width: 1300px;
-    margin: 0 auto;
-    padding: 24px 32px;
-}
+.institutions-header,
+.users-header,
+.ambulances-header { flex-wrap: wrap; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.institutions-title,
+.users-title,
+.ambulances-title { margin: 0 0 4px; font: 600 30px/1.15 var(--font-display); letter-spacing: -0.01em; color: var(--text); }
+.page-sub { margin: 0 0 20px; color: var(--text-2); font-size: 14.5px; max-width: 70ch; }
+.institutions-header-actions,
+.users-header-actions,
+.ambulances-header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-.institutions-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-
-.institutions-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1a1a2e;
-}
-
-.institutions-header-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.institutions-add-btn {
-    background: #C0272D;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 9px 18px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.institutions-add-btn:hover {
-    background: #a3181e;
-}
-
-.institutions-secondary-btn {
-    background: white;
-    color: #1a1a2e;
-    border: 1px solid #dcdce4;
-    border-radius: 6px;
-    padding: 9px 18px;
-    font-size: 13px;
+/* ── Botones ──────────────────────────────────────────────────── */
+.institutions-add-btn,
+.institutions-form-submit,
+.users-add-btn,
+.ambulances-add-btn,
+.users-form-submit,
+.ambulances-form-submit {
+    height: 40px;
+    padding: 0 18px;
+    background: var(--brand);
+    border: 1px solid var(--brand);
+    border-radius: var(--r-md);
+    color: var(--on-brand);
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease;
 }
+.institutions-add-btn:hover,
+.institutions-form-submit:hover,
+.users-add-btn:hover,
+.ambulances-add-btn:hover,
+.users-form-submit:hover,
+.ambulances-form-submit:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
 
-.institutions-secondary-btn:hover {
-    border-color: #1a1a2e;
+.institutions-secondary-btn,
+.institutions-form-cancel,
+.users-secondary-btn,
+.ambulances-secondary-btn,
+.users-form-cancel,
+.ambulances-form-cancel,
+.ambulances-clear-btn {
+    height: 40px;
+    padding: 0 18px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
 }
+.institutions-secondary-btn:hover,
+.institutions-form-cancel:hover,
+.users-secondary-btn:hover,
+.ambulances-secondary-btn:hover,
+.users-form-cancel:hover,
+.ambulances-form-cancel:hover,
+.ambulances-clear-btn:hover { background: var(--surface-2); border-color: var(--text-3); }
 
-.institutions-form {
-    background: white;
-    border: 1px solid #e4e4ec;
-    border-radius: 8px;
-    padding: 20px;
+.institutions-edit-btn,
+.institutions-toggle-btn,
+.users-edit-btn,
+.users-view-btn,
+.users-cred-btn,
+.users-toggle-btn,
+.ambulances-toggle-btn {
+    height: 32px;
+    padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    flex: 1;
+    white-space: nowrap;
+}
+.institutions-edit-btn:hover,
+.users-edit-btn:hover,
+.users-view-btn:hover,
+.users-cred-btn:hover { background: var(--steel-soft); border-color: var(--steel); color: var(--steel); }
+.institutions-toggle-btn:hover,
+.users-toggle-btn:hover,
+.ambulances-toggle-btn:hover { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+.institutions-edit-btn:disabled,
+.users-edit-btn:disabled,
+.users-view-btn:disabled,
+.users-cred-btn:disabled { opacity: 0.55; cursor: progress; }
+
+/* ── Formularios ──────────────────────────────────────────────── */
+.institutions-form,
+.users-form,
+.ambulances-form {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 20px 22px;
     margin-bottom: 20px;
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
-
-.institutions-form h3 {
-    font-size: 14px;
-    color: #1a1a2e;
-}
-
-.institutions-form-hint {
-    font-size: 11px;
-    color: #888;
-    margin: -6px 0 0;
-    line-height: 1.4;
-}
-
-.beds-edit-hint {
-    grid-column: span 2;
-    font-size: 9.5px;
-    color: #999;
-    margin: 0;
-    line-height: 1.3;
-}
-
-.institutions-form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-}
-
-.institutions-field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-}
-
-.institutions-field label {
-    font-size: 10.5px;
-    font-weight: 700;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+.institutions-form h3,
+.users-form h3,
+.ambulances-form h3 { margin: 0; font: 600 19px var(--font-display); }
+.institutions-form-hint,
+.users-form-hint { font-size: 12.5px; color: var(--text-2); margin: -6px 0 0; line-height: 1.45; }
+.beds-edit-hint { grid-column: span 2; font-size: 12px; color: var(--text-3); margin: 0; line-height: 1.35; }
+.institutions-form-row,
+.users-form-row,
+.ambulances-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.institutions-field,
+.users-field,
+.ambulances-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.institutions-field label,
+.users-field label,
+.ambulances-field label { font-size: 13.5px; font-weight: 600; color: var(--text); }
 
 .institutions-field input,
-.institutions-field select {
-    border: 1px solid #dcdce4;
-    border-radius: 5px;
-    padding: 8px 10px;
-    font-size: 13px;
-    width: 100%;
+.institutions-field select,
+.institutions-field textarea,
+.institutions-address-search input,
+.beds-edit-form input,
+.status-filter-select,
+.users-field input,
+.ambulances-field input,
+.users-field select,
+.ambulances-field select,
+.users-field textarea,
+.ambulances-field textarea {
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
     box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-
+.institutions-field input,
+.institutions-field select,
+.users-field input,
+.ambulances-field input,
+.users-field select,
+.ambulances-field select { width: 100%; }
+.institutions-field input:hover,
+.institutions-field select:hover,
+.status-filter-select:hover,
+.users-field input:hover,
+.ambulances-field input:hover,
+.users-field select:hover,
+.ambulances-field select:hover { border-color: var(--text-3); }
 .institutions-field input:focus,
-.institutions-field select:focus {
-    outline: none;
-    border-color: #C0272D;
-}
+.institutions-field select:focus,
+.institutions-field textarea:focus,
+.institutions-address-search input:focus,
+.status-filter-select:focus,
+.beds-edit-form input:focus,
+.users-field input:focus,
+.ambulances-field input:focus,
+.users-field select:focus,
+.ambulances-field select:focus,
+.users-field textarea:focus,
+.ambulances-field textarea:focus { outline: none; border-color: var(--steel); box-shadow: var(--ring); }
+.institutions-field input[readonly],
+.institutions-field input:disabled,
+.users-field input[readonly],
+.ambulances-field input[readonly],
+.users-field input:disabled,
+.ambulances-field input:disabled { background: var(--surface-2); color: var(--text-2); }
 
-.institutions-form-actions {
-    display: flex;
-    gap: 10px;
-}
+.institutions-form-actions,
+.users-form-actions,
+.ambulances-form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.institutions-address-search { display: flex; gap: 8px; }
+.institutions-address-search input { flex: 1; }
+.institutions-address-search button { height: 42px; padding: 0 16px; background: var(--text); border: 1px solid var(--text); border-radius: var(--r-md); color: var(--surface); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.institutions-address-search button:disabled { opacity: 0.6; cursor: progress; }
+.institutions-map-wrapper { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); height: 340px; }
+.institutions-coords { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-.institutions-address-search {
-    display: flex;
-    gap: 8px;
-}
+/* ── Tarjetas de institución ──────────────────────────────────── */
+.institutions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 16px; }
+.institution-admin-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px 20px; }
+.institution-admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px; flex-wrap: wrap; }
+.institution-admin-header h2 { margin: 0; font: 600 18px var(--font-display); flex: 1; min-width: 0; }
 
-.institutions-address-search input {
-    flex: 1;
-    border: 1px solid #dcdce4;
-    border-radius: 5px;
-    padding: 9px 11px;
-    font-size: 13px;
-    font-family: 'Inter', sans-serif;
-}
+/* Estados como chips */
+.institutions-status,
+.users-status,
+.ambulances-status { padding: 2px 10px; border-radius: 11px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.status-active { background: var(--ok-soft); color: var(--ok); }
+.status-inactive { background: var(--brand-soft); color: var(--brand); }
+.status-crum { background: var(--steel-soft); color: var(--steel); }
+.status-not-crum { background: var(--surface-2); color: var(--text-3); border: 1px solid var(--line); }
 
-.institutions-address-search input:focus {
-    outline: none;
-    border-color: #C0272D;
-}
-
-.institutions-address-search button {
-    background: #1a1a2e;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 9px 14px;
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.institutions-address-search button:hover:not(:disabled) {
-    background: #2a2a45;
-}
-
-.institutions-address-search button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.institutions-map-wrapper {
-    border-radius: 6px;
-    overflow: hidden;
-    border: 1px solid #e4e4ec;
-    height: 340px;
-}
-
-.institutions-coords {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.institutions-form-submit {
-    background: #C0272D;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 20px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.institutions-form-cancel {
-    background: white;
-    color: #666;
-    border: 1px solid #dcdce4;
-    border-radius: 6px;
-    padding: 10px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.institutions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 16px;
-}
-
-.institution-admin-card {
-    background: white;
-    border: 1px solid #e4e4ec;
-    border-radius: 8px;
-    padding: 16px;
-}
-
-.institution-admin-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    gap: 8px;
-}
-
-.institution-admin-header h4 {
-    font-size: 13px;
-    color: #1a1a2e;
-    flex: 1;
-}
-
-.institutions-status {
-    font-size: 9.5px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 10px;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.status-active { background: #e2efda; color: #276221; }
-.status-inactive { background: #ffc7ce; color: #9c0006; }
-.status-crum { background: #e3f2fd; color: #1565C0; }
-.status-not-crum { background: #f0f2f5; color: #8888a0; }
-
-.institution-admin-beds {
-    display: flex;
-    align-items: baseline;
-    gap: 5px;
-    margin-bottom: 10px;
-}
-
-.beds-current {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    color: #1a1a2e;
-}
-
-.beds-total {
-    font-size: 11px;
-    color: #999;
-}
-
-.institution-admin-specialities {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-    min-height: 22px;
-}
-
-.speciality-chip-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.speciality-chip {
-    background: #f0f2f5;
-    color: #333;
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 5px 10px;
-    border-radius: 6px;
-    flex: 1;
-    min-width: 0;
-}
-
-.speciality-chip-inactive {
-    opacity: 0.55;
-    text-decoration: line-through;
-}
-
-.speciality-chip-edit-btn {
-    background: white;
-    border: 1px solid #dcdce4;
-    border-radius: 6px;
-    width: 26px;
-    height: 26px;
-    flex-shrink: 0;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.speciality-chip-edit-btn:hover {
-    border-color: #1a1a2e;
-}
-
-.no-specialities {
-    font-size: 10.5px;
-    color: #bbb;
-    font-style: italic;
-}
-
+.institution-admin-beds { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; }
+.beds-current { font: 600 26px var(--font-display); color: var(--text); }
+.beds-total { font-size: 13px; color: var(--text-2); }
+.institution-admin-specialities { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; min-height: 24px; }
+.speciality-chip-row { display: flex; align-items: center; gap: 6px; }
+.speciality-chip { background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: var(--r-sm); flex: 1; min-width: 0; }
+.speciality-chip-inactive { opacity: 0.55; text-decoration: line-through; }
+.speciality-chip-edit-btn { background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-sm); width: 30px; height: 30px; flex-shrink: 0; font-size: 13px; cursor: pointer; color: var(--text); }
+.speciality-chip-edit-btn:hover { border-color: var(--steel); background: var(--steel-soft); }
+.no-specialities { font-size: 13px; color: var(--text-3); }
 .institution-admin-actions {
-    display: flex;
-    gap: 6px;
+    flex-wrap: wrap; display: flex; gap: 6px; }
+.speciality-chip.clickable { cursor: pointer; transition: background 0.15s ease; }
+.speciality-chip.clickable:hover { background: var(--steel-soft); }
+
+.beds-edit-form { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.beds-edit-form input { min-height: 36px; }
+.beds-edit-form button { height: 34px; border: 1px solid transparent; border-radius: var(--r-sm); font-size: 13px; font-weight: 600; cursor: pointer; }
+.beds-edit-form button[type="submit"] { background: var(--brand); color: var(--on-brand); }
+.beds-edit-form button[type="button"] { background: var(--surface); border-color: var(--line-strong); color: var(--text); }
+
+.institutions-empty,
+.users-empty,
+.ambulances-empty { padding: 36px 24px; text-align: center; font-size: 14px; color: var(--text-2); }
+
+/* ── Pestañas ─────────────────────────────────────────────────── */
+.institutions-tabs,
+.ambulances-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.institutions-tab,
+.ambulances-tab { background: none; border: none; padding: 11px 16px; font-size: 14px; font-weight: 600; color: var(--text-2); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.institutions-tab:hover,
+.ambulances-tab:hover { color: var(--text); }
+.institutions-tab.active,
+.ambulances-tab.active { color: var(--text); border-bottom-color: var(--brand); }
+.institutions-tab-header,
+.ambulances-tab-header { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.status-filter-select { margin-right: auto; }
+
+/* ── Tablas ───────────────────────────────────────────────────── */
+.catalog-table-wrapper,
+.users-table-wrapper,
+.ambulances-table-wrapper { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow-x: auto; }
+.catalog-table,
+.users-table,
+.ambulances-table { width: 100%; border-collapse: collapse; }
+.catalog-table thead,
+.users-table thead,
+.ambulances-table thead { background: var(--surface-2); }
+.catalog-table th,
+.users-table th,
+.ambulances-table th { color: var(--text-2); font-size: 13px; font-weight: 600; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.catalog-table td,
+.users-table td,
+.ambulances-table td { padding: 12px 16px; font-size: 14px; color: var(--text); border-bottom: 1px solid var(--line); vertical-align: middle; }
+.catalog-table tbody tr:last-child td,
+.users-table tbody tr:last-child td,
+.ambulances-table tbody tr:last-child td { border-bottom: none; }
+.catalog-table tbody tr,
+.users-table tbody tr,
+.ambulances-table tbody tr { transition: background 0.12s ease; }
+.catalog-table tbody tr:hover,
+.users-table tbody tr:hover,
+.ambulances-table tbody tr:hover { background: var(--surface-2); }
+.catalog-table td .institutions-edit-btn,
+.catalog-table td .institutions-toggle-btn,
+.catalog-table td .users-edit-btn,
+.catalog-table td .users-view-btn,
+.catalog-table td .users-cred-btn,
+.users-table td .institutions-edit-btn,
+.ambulances-table td .institutions-edit-btn,
+.catalog-table td .users-toggle-btn,
+.catalog-table td .ambulances-toggle-btn,
+.users-table td .institutions-toggle-btn,
+.ambulances-table td .institutions-toggle-btn { flex: none; margin-right: 6px; }
+.catalog-table td .institutions-edit-btn:last-child,
+.catalog-table td .institutions-toggle-btn:last-child,
+.catalog-table td .users-edit-btn:last-child,
+.catalog-table td .users-view-btn:last-child,
+.catalog-table td .users-cred-btn:last-child,
+.users-table td .institutions-edit-btn:last-child,
+.ambulances-table td .institutions-edit-btn:last-child,
+.catalog-table td .users-toggle-btn:last-child,
+.catalog-table td .ambulances-toggle-btn:last-child,
+.users-table td .institutions-toggle-btn:last-child,
+.ambulances-table td .institutions-toggle-btn:last-child { margin-right: 0; }
+
+@media (max-width: 760px) {
+    .institutions-body { padding: 16px; }
+    .institutions-grid { grid-template-columns: 1fr; }
 }
 
-.institutions-edit-btn,
-.institutions-toggle-btn {
-    background: white;
-    border: 1px solid #dcdce4;
-    border-radius: 5px;
-    padding: 6px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #333;
-    cursor: pointer;
-    flex: 1;
-}
-
-.institutions-edit-btn:hover {
-    border-color: #1a1a2e;
-    color: #1a1a2e;
-}
-
-.institutions-toggle-btn:hover {
-    border-color: #C0272D;
-    color: #C0272D;
-}
-
-.beds-edit-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-}
-
-.beds-edit-form input {
-    border: 1px solid #dcdce4;
-    border-radius: 5px;
-    padding: 6px 8px;
-    font-size: 12px;
-    grid-column: span 1;
-}
-
-.beds-edit-form button {
-    grid-column: span 1;
-    border: none;
-    border-radius: 5px;
-    padding: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.beds-edit-form button[type="submit"] {
-    background: #C0272D;
-    color: white;
-}
-
-.beds-edit-form button[type="button"] {
-    background: white;
-    border: 1px solid #dcdce4;
-    color: #666;
-}
-
-.institutions-empty {
-    padding: 32px;
-    text-align: center;
-    font-size: 13px;
-    color: #999;
-}
-
-.institutions-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e4e4ec;
-}
-
-.institutions-tab {
-    background: none;
-    border: none;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #8888a0;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-}
-
-.institutions-tab:hover {
-    color: #1a1a2e;
-}
-
-.institutions-tab.active {
-    color: #C0272D;
-    border-bottom-color: #C0272D;
-}
-
-.institutions-tab-header {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
-.status-filter-select {
-    border: 1px solid #dcdce4;
-    border-radius: 6px;
-    padding: 9px 10px;
-    font-size: 13px;
-    background: white;
-    margin-right: auto;
-}
-
-.speciality-chip.clickable {
-    cursor: pointer;
-    transition: opacity 0.15s ease;
-}
-
-.speciality-chip.clickable:hover {
-    opacity: 0.7;
-}
-
-.catalog-table-wrapper {
-    background: white;
-    border: 1px solid #e4e4ec;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.catalog-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.catalog-table thead {
-    background: #12121f;
-}
-
-.catalog-table th {
-    color: white;
-    font-size: 10.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-align: left;
-    padding: 12px 14px;
-}
-
-.catalog-table td {
-    padding: 11px 14px;
-    font-size: 13px;
-    color: #333;
-    border-bottom: 1px solid #eee;
-}
-
-.catalog-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.catalog-table tbody tr:hover {
-    background: #fafafb;
-}
+.institution-admin-sub { margin: -6px 0 12px; font-size: 13px; color: var(--text-2); }
+.beds-bar { height: 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; margin-bottom: 14px; }
+.beds-bar span { display: block; height: 100%; background: var(--ok); }

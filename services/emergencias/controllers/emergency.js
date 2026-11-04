@@ -446,17 +446,19 @@ const unassignAmbulance = (req, res) => {
                 // "Registrada" para que el despachador la vuelva a ver como
                 // pendiente de asignar — antes se quedaba en "Asignada" para
                 // siempre aunque ya no tuviera ninguna ambulancia en camino.
+                // La respuesta se manda DESPUÉS de actualizar el estado: si se mandaba antes, el
+                // frontend recargaba la lista (Dashboard) mientras el UPDATE seguía en curso y la
+                // emergencia se quedaba como "Asignada" fuera de "Por aceptar".
                 emergencyModel.countActiveAssignments(emergencyId, (e3, r3) => {
-                    if (e3) { console.error('Error contando asignaciones activas:', e3); return; }
-                    if (r3[0].total > 0) return;
+                    if (e3) { console.error('Error contando asignaciones activas:', e3); return res.status(200).json({message: "Ambulancia desasignada."}); }
+                    if (r3[0].total > 0) return res.status(200).json({message: "Ambulancia desasignada."});
                     emergencyModel.updateEmergencyStatus(emergencyId, 1, (e4, r4) => {
-                        if (e4) { console.error('Error regresando emergencia a Registrada:', e4); return; }
+                        if (e4) { console.error('Error regresando emergencia a Registrada:', e4); return res.status(200).json({message: "Ambulancia desasignada."}); }
                         io.to('admin').to('dispatcher').to('hospital').to('paramedic')
                             .emit('eventEmergencyStatusUpdated', { emergencyId, emergencyStatusId: 1, statusName: 'Registrada' });
+                        res.status(200).json({message: "Ambulancia desasignada."});
                     });
                 });
-
-                res.status(200).json({message: "Ambulancia desasignada."});
             }
         });
     }

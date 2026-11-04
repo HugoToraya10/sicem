@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { Alert, Vibration } from 'react-native'
+import { Vibration } from 'react-native'
+import { Alert } from '../utils/alert'
 import { io } from 'socket.io-client'
 import { useAuth } from './AuthContext'
 import { SOCKET_URL, UNITS_SOCKET_URL, API_BASE_URL } from '../constants/api'
@@ -73,7 +74,10 @@ const SocketProvider = ({ children }) => {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then((res) => res.json())
-                .then(({ data }) => {
+                .then(({ data: rawData }) => {
+                    // El API devuelve las columnas en MAYÚSCULAS (EMERGENCY_ID...): se normaliza antes de usarlas, si no
+                    // emergencyId quedaba undefined y fallaban la lista de pacientes, las notas y el cierre automático.
+                    const data = rawData ? toLowerCaseKeys(rawData) : null
                     if (!data) {
                         // El backend ya no reporta NINGUNA emergencia activa para mi
                         // turno — si el celular seguía mostrando una, hay que

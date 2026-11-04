@@ -5,7 +5,14 @@ import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
 import UnitRequestDetailModal from '../components/requests/UnitRequestDetailModal'
 import RejectReasonModal from '../components/patients/RejectReasonModal'
+import { useDialogs } from '../context/useDialogs'
+import { readableTextOn } from '../utils/color'
+import { formatElapsed } from '../utils/time'
+import { triageRoman } from '../utils/triage'
+import Icon from '../components/ui/Icon'
+import '../components/patients/IncomingPatientCard.css'
 import './IncomingUnitRequests.css'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
 
 // request_status_id del catálogo real (confirmado contra la BD, mismo patrón
 // de hardcodear ids estables que ya usa Requests.jsx en sicem-web):
@@ -30,6 +37,7 @@ const sortByPriority = (list) => [...list].sort((a, b) => {
 // porque no había forma de aceptarlas/rechazarlas desde sicem-desktop.
 const IncomingUnitRequests = () => {
     const { user, token } = useAuth()
+    const { notify } = useDialogs()
     const [requests, setRequests] = useState([])
     const [selectedRequest, setSelectedRequest] = useState(null)
     const [rejectingRequestId, setRejectingRequestId] = useState(null)
@@ -76,10 +84,11 @@ const IncomingUnitRequests = () => {
                 setRequests((current) => current.filter((r) => r.inter_institutional_request_id !== interInstitutionalRequestId))
                 setSelectedRequest(null)
                 setRejectingRequestId(null)
+                notify(requestStatusId === ACCEPTED_STATUS_ID ? 'Préstamo confirmado. La unidad ya figura como asignada.' : 'Solicitud rechazada.', 'ok')
             })
             .catch((error) => {
                 console.error('Error respondiendo solicitud de unidad. ', error)
-                alert(error.message || 'No se pudo responder la solicitud. Intenta de nuevo.')
+                notify(error.message || 'No se pudo responder la solicitud. Intenta de nuevo.', 'error')
             })
     }
 
@@ -90,33 +99,43 @@ const IncomingUnitRequests = () => {
     const visibleRequests = sortByPriority(requests)
 
     return (
-        <div className="iur-layout">
-            <div className="section-title">Solicitudes de Unidad ({visibleRequests.length})</div>
+        <div className="page">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Solicitudes de unidad</h1>
+                    <p className="page-sub">Otras instituciones piden prestada una de tus ambulancias. Confirma solo si puedes prescindir de ella.</p>
+                </div>
+                <ul className="stat-row" aria-label="Resumen">
+                    <li><b><AnimatedNumber value={visibleRequests.length} /></b><span>pendientes</span></li>
+                </ul>
+            </div>
 
             <div className="iur-list">
-                {visibleRequests.map((r) => (
-                    <div key={r.inter_institutional_request_id} className="iur-card" style={{ borderLeftColor: r.triage_hex_color || '#1565C0' }}>
-                        <div className="iur-info">
-                            <div className="iur-name-row">
-                                <span className="iur-unit">Unidad {r.unit_number || 'sin identificar'}</span>
-                                {r.triage_level && (
-                                    <span className="iur-triage-badge" style={{ background: r.triage_hex_color || '#888' }}>
-                                        {r.triage_level} · {r.triage_color_name}
-                                    </span>
-                                )}
+                {visibleRequests.map((r) => {
+                    const level = triageRoman(r.triage_level)
+                    const color = r.triage_hex_color || 'var(--text-3)'
+                    return (
+                        <article key={r.inter_institutional_request_id} className="ipc" style={{ '--c': color }} aria-label={`Unidad ${r.unit_number || 'sin identificar'}`}>
+                            <span className="ipc-rail" />
+                            <div className="ipc-main">
+                                <div className="ipc-top">
+                                    {level && <span className="tri" style={{ '--c': color, color: readableTextOn(r.triage_hex_color) }} title={r.triage_color_name ? `Triage nivel ${level} (${r.triage_color_name})` : `Triage nivel ${level}`}>{level}</span>}
+                                    <h2 className="ipc-name">Unidad {r.unit_number || 'sin identificar'}</h2>
+                                    {r.requested_at && <span className="chip"><Icon name="clock" />{formatElapsed(r.requested_at)}</span>}
+                                </div>
+                                <p className="ipc-desc">Pide: {r.requesting_institution || 'Institución desconocida'}</p>
+                                <p className="ipc-meta">{r.emergency_type_name || 'Emergencia'} · {r.emergency_description || 'Sin descripción'}</p>
                             </div>
-                            <div className="iur-detail">Pide: {r.requesting_institution || 'Institución desconocida'}</div>
-                            <div className="iur-detail">{r.emergency_type_name || 'Emergencia'} · {r.emergency_description || 'Sin descripción'}</div>
-                        </div>
-                        <div className="iur-actions">
-                            <button className="iur-accept-btn" onClick={() => handleAccept(r.inter_institutional_request_id)}>Confirmar</button>
-                            <button className="iur-reject-btn" onClick={() => handleReject(r.inter_institutional_request_id)}>Rechazar</button>
-                            <button className="iur-detail-btn" onClick={() => setSelectedRequest(r)}>Ver detalle</button>
-                        </div>
-                    </div>
-                ))}
+                            <div className="ipc-actions">
+                                <button type="button" className="btn btn-ok" onClick={() => handleAccept(r.inter_institutional_request_id)}><Icon name="check" size={16} />Confirmar</button>
+                                <button type="button" className="btn btn-outline-danger" onClick={() => handleReject(r.inter_institutional_request_id)}>Rechazar</button>
+                                <button type="button" className="btn btn-ghost" onClick={() => setSelectedRequest(r)}>Ver detalle</button>
+                            </div>
+                        </article>
+                    )
+                })}
                 {visibleRequests.length === 0 && (
-                    <p className="empty-state">Sin solicitudes de préstamo de unidad por ahora.</p>
+                    <p className="empty">Sin solicitudes de préstamo por ahora. Cuando otra institución pida una unidad, suena una alerta y aparece aquí.</p>
                 )}
             </div>
 

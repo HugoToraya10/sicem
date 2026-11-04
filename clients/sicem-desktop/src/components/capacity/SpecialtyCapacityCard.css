@@ -1,29 +1,13 @@
-.capacity-card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; background: white; }
-.capacity-card h5 {
-    font-size: 12px; font-weight: 700; color: #555;
-    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
-}
-.capacity-numbers { display: flex; gap: 16px; margin-bottom: 10px; }
-.cn-item { text-align: center; }
-.cn-num { font-size: 24px; font-weight: 700; color: #222; }
-.cn-label { font-size: 10px; color: #888; }
-.cn-num.available { color: #2E7D32; }
-.cn-num.occupied { color: #C0272D; }
-
-.progress-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 4px; transition: width 0.2s ease; }
-.progress-fill.high { background: #C0272D; }
-.progress-fill.mid { background: #E65100; }
-.progress-fill.low { background: #2E7D32; }
-
-.update-btn {
-    display: block; width: 100%; margin-top: 10px; background: white;
-    border: 1px solid #1565C0; color: #1565C0; border-radius: 4px;
-    padding: 6px; font-size: 11px; cursor: pointer;
-}
-.capacity-edit-row { display: flex; gap: 6px; margin-top: 10px; }
-.capacity-edit-row input {
-    width: 60px; border: 1px solid #ccc; border-radius: 4px; padding: 6px; font-size: 12px;
-}
-.update-btn.save { background: #1565C0; color: white; margin-top: 0; }
-.update-btn.cancel { background: white; color: #666; border-color: #ccc; margin-top: 0; }
+/* Tarjeta de capacidad por especialidad */
+.capacity-card { display: grid; gap: 12px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.capacity-card h3 { margin: 0; font: 600 18px var(--font-display); }
+.capacity-numbers { display: flex; gap: 20px; }
+.cn-num { font: 600 28px/1.1 var(--font-display); }
+.cn-num.available { color: var(--ok); }
+.cn-num.occupied { color: var(--brand); }
+.cn-label { font-size: 13px; color: var(--text-2); }
+.progress-bar { height: 8px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.progress-fill { height: 100%; transition: width 0.3s ease; }
+.progress-fill.low { background: var(--ok); }
+.progress-fill.mid { background: var(--warn); }
+.progress-fill.high { background: var(--brand); }

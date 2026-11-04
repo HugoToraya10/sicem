@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { Alert } from 'react-native'
+import { Alert } from '../utils/alert'
 import { useAuth } from './AuthContext'
 import { API_BASE_URL } from '../constants/api'
 

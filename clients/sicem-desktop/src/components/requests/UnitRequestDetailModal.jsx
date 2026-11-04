@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import MapArea from '../map/MapArea'
+import { Modal } from '../ui/Overlay'
 import { API_BASE_URL } from '../../config/api'
 import { toLowerCaseKeys } from '../../utils/formatData'
+import { readableTextOn } from '../../utils/color'
+import { triageRoman } from '../../utils/triage'
+import { formatDateTime } from '../../utils/time'
 import '../patients/PatientDetailModal.css'
 
-// Mismo patrón que PatientDetailModal: overlay + recuadro grande con mapa fijo
-// a la derecha — reutiliza las mismas clases CSS, solo cambia el contenido.
+// Detalle de una solicitud de préstamo de unidad: qué piden, quién lo pide, para qué emergencia y dónde está la unidad.
 const UnitRequestDetailModal = ({ request, token, onClose, onAccept, onReject }) => {
     const [ambulanceLocation, setAmbulanceLocation] = useState(null)
 
@@ -22,70 +25,63 @@ const UnitRequestDetailModal = ({ request, token, onClose, onAccept, onReject })
     const hasMapData = Boolean(ambulanceLocation || request.emergency_latitude)
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-box modal-box-large" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                    <div className="modal-header-info">
-                        <h3>Unidad {request.unit_number || 'sin identificar'}</h3>
-                        {request.triage_level && (
-                            <span className="triage-badge" style={{ background: request.triage_hex_color || '#888' }}>
-                                Triage {request.triage_level} · {request.triage_color_name}
-                            </span>
-                        )}
-                    </div>
-                    <button className="modal-close" onClick={onClose}>×</button>
+        <Modal
+            open
+            onClose={onClose}
+            size="xl"
+            eyebrow={`Solicitud de ${request.requesting_institution || 'otra institución'}`}
+            title={`Unidad ${request.unit_number || 'sin identificar'}`}
+            footer={(
+                <>
+                    <button type="button" className="btn btn-outline-danger" onClick={() => { onReject(request.inter_institutional_request_id); onClose() }}>Rechazar</button>
+                    <button type="button" className="btn btn-ok" onClick={() => { onAccept(request.inter_institutional_request_id); onClose() }}>Confirmar préstamo</button>
+                </>
+            )}
+        >
+            {request.triage_level && (
+                <div className="pd-chips">
+                    <span className="chip" style={{ background: request.triage_hex_color || 'var(--text-3)', color: readableTextOn(request.triage_hex_color), borderColor: 'transparent' }}>
+                        Triage {triageRoman(request.triage_level)}{request.triage_color_name ? ` · ${request.triage_color_name}` : ''}
+                    </span>
                 </div>
-
-                <div className="modal-body-columns">
-                    <div className="modal-column-main">
-                        <div className="modal-section">
-                            <h5>Institución solicitante</h5>
-                            <p>{request.requesting_institution || 'Institución desconocida'}</p>
-                        </div>
-
-                        <div className="modal-section">
-                            <h5>Unidad solicitada</h5>
-                            <p>Unidad {request.unit_number || '—'} · {request.ambulance_type_name || 'Tipo desconocido'}</p>
-                            <p>Placas: {request.license_plate || 'Sin registrar'}</p>
-                        </div>
-
-                        <div className="modal-section">
-                            <h5>Emergencia</h5>
-                            <p>{request.emergency_type_name || 'Sin tipo'} — {request.emergency_description || 'Sin descripción'}</p>
-                            {request.reporter_name && (
-                                <p>Reportó: {request.reporter_name}{request.reporter_phone ? ` · ${request.reporter_phone}` : ''}</p>
-                            )}
-                            <p>Pacientes involucrados: {request.num_patients || 1}</p>
-                        </div>
-
-                        <div className="modal-section">
-                            <h5>Solicitud</h5>
-                            <p>Enviada: {request.requested_at ? new Date(request.requested_at).toLocaleString('es-MX') : '—'}</p>
-                        </div>
-                    </div>
-
-                    <div className="modal-column-map">
-                        {hasMapData ? (
-                            <MapArea
-                                ambulanceLocation={ambulanceLocation ? { ...ambulanceLocation, unitNumber: request.unit_number, color: request.triage_hex_color } : null}
-                                emergencyLocation={request.emergency_latitude ? { latitude: request.emergency_latitude, longitude: request.emergency_longitude } : null}
-                            />
-                        ) : (
-                            <p className="modal-empty map-empty">Sin ubicación disponible todavía.</p>
-                        )}
-                    </div>
+            )}
+            <div className="pd-grid">
+                <div className="pd-main" tabIndex={0} role="region" aria-label="Datos de la solicitud">
+                    <section className="pd-card">
+                        <h3>Unidad solicitada</h3>
+                        <dl className="pd-facts">
+                            <div><dt>Unidad</dt><dd>{request.unit_number || '—'}</dd></div>
+                            <div><dt>Tipo</dt><dd>{request.ambulance_type_name || 'Desconocido'}</dd></div>
+                            <div><dt>Placas</dt><dd className="mono">{request.license_plate || 'Sin registrar'}</dd></div>
+                        </dl>
+                    </section>
+                    <section className="pd-card">
+                        <h3>Emergencia</h3>
+                        <p className="pd-lead">{request.emergency_type_name || 'Sin tipo'}: {request.emergency_description || 'Sin descripción'}</p>
+                        {request.reporter_name && <p className="pd-muted">Reportó {request.reporter_name}{request.reporter_phone ? ` · ${request.reporter_phone}` : ''}</p>}
+                        <p className="pd-muted">Pacientes involucrados: {request.num_patients || 1}</p>
+                    </section>
+                    <section className="pd-card">
+                        <h3>Solicitud</h3>
+                        <dl className="pd-facts">
+                            <div><dt>Quién la pide</dt><dd>{request.requesting_institution || 'Institución desconocida'}</dd></div>
+                            <div><dt>Enviada</dt><dd>{request.requested_at ? formatDateTime(request.requested_at) : '—'}</dd></div>
+                        </dl>
+                        <p className="pd-muted">Confirma solo si tu institución puede prescindir de esta unidad mientras dure el préstamo.</p>
+                    </section>
                 </div>
-
-                <div className="modal-actions">
-                    <button className="btn-accept" onClick={() => { onAccept(request.inter_institutional_request_id); onClose() }}>
-                        Confirmar préstamo
-                    </button>
-                    <button className="btn-reject" onClick={() => { onReject(request.inter_institutional_request_id); onClose() }}>
-                        Rechazar
-                    </button>
+                <div className="pd-map">
+                    {hasMapData ? (
+                        <MapArea
+                            ambulanceLocation={ambulanceLocation ? { ...ambulanceLocation, unitNumber: request.unit_number, color: request.triage_hex_color } : null}
+                            emergencyLocation={request.emergency_latitude ? { latitude: request.emergency_latitude, longitude: request.emergency_longitude } : null}
+                        />
+                    ) : (
+                        <p className="pd-muted pd-map-empty">Sin ubicación disponible todavía.</p>
+                    )}
                 </div>
             </div>
-        </div>
+        </Modal>
     )
 }
 

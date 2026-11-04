@@ -1,54 +1,5 @@
-.history-layout { padding: 24px 32px 48px; max-width: 1200px; margin: 0 auto; }
-.section-title {
-    font-size: 18px; font-weight: 700; color: #1a1a2e; margin-bottom: 18px;
-    padding-bottom: 12px; border-bottom: 2px solid #1565C0; letter-spacing: -0.2px;
-}
 
-.history-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 
-.history-search-input {
-    flex: 1; min-width: 220px; box-sizing: border-box; border: 1px solid #dcdce4; border-radius: 6px;
-    padding: 10px 12px; font-size: 13px;
-}
-.history-search-input:focus { outline: none; border-color: #1565C0; }
-
-.history-filter-select {
-    border: 1px solid #dcdce4; border-radius: 6px; padding: 9px 10px; font-size: 13px; background: white;
-}
-
-.history-table-wrapper {
-    background: white; border: 1px solid #e4e4ec; border-radius: 10px; overflow: hidden;
-    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04);
-}
-.history-table { width: 100%; border-collapse: collapse; }
-.history-table thead { background: #12121f; }
-.history-table th {
-    color: white; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.5px; text-align: left; padding: 13px 16px;
-}
-.history-table td { padding: 12px 16px; font-size: 13px; color: #333; border-bottom: 1px solid #eee; }
-.history-table tbody tr:last-child td { border-bottom: none; }
-.history-row { cursor: pointer; }
-.history-row:hover { background: #fafafb; }
-
-.history-status-pill {
-    display: inline-block; font-size: 10.5px; font-weight: 700; padding: 4px 10px;
-    border-radius: 10px; text-transform: uppercase;
-}
-.history-status-pill.discharged { background: #8E44AD; color: white; }
-.history-status-pill.delivered { background: #1565C0; color: white; }
-.history-status-pill.accepted { background: #e2efda; color: #276221; }
-.history-status-pill.rejected { background: #ffc7ce; color: #9c0006; }
-.history-status-pill.pending { background: #fff3e0; color: #E65100; }
-.history-status-pill.closedUnresolved { background: #f0f2f5; color: #8888a0; }
-
-.btn-detail {
-    background: #1565C0; color: white; border: none; border-radius: 4px;
-    padding: 7px 14px; font-size: 12px; cursor: pointer; white-space: nowrap;
-}
-.btn-detail:disabled { opacity: 0.55; cursor: not-allowed; }
-
-.empty-state {
-    color: #999; font-size: 13px; text-align: center;
-    padding: 36px 20px;
-}
+.history-actions { display: flex; gap: 6px; justify-content: flex-end; white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.nowrap { white-space: nowrap; }

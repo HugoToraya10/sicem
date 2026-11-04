@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
+import { roleLabel } from '../../config/roles'
+import Icon from '../../components/ui/Icon'
+import { NOMINATIM_SEARCH_URL } from '../../config/services'
 import { useAuth } from '../../context/AuthContext';
 import { toLowerCaseKeys } from '../../utils/formatData';
 import Navbar from '../../components/layout/Navbar';
@@ -6,10 +9,15 @@ import MapArea from '../../components/map/MapArea';
 import { getNavLinks } from '../../utils/Navlinks';
 import { blockIfDuplicate } from '../../utils/duplicateCheck';
 import { parseResponse } from '../../utils/apiRequest';
+import MoreMenu from '../../components/ui/MoreMenu'
+import '../../styles/entities.css'
 import './Institutions.css';
 import {API_BASE_URL} from '../../config/api'
+import { useDialogs } from '../../context/useDialogs'
+import AnimatedNumber from '../../components/ui/AnimatedNumber'
+import SkeletonCards from '../../components/ui/SkeletonCards'
+import { Drawer, Modal } from '../../components/ui/Overlay'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 const emptyForm = {
     name: '', institutionTypeId: '', cityId: '', bedCapacity: '', availableBeds: '',
@@ -29,11 +37,13 @@ const emptyEditInstitutionForm = {
 const TABS = ['Instituciones', 'Especialidades', 'Tipos', 'Notificaciones']
 
 const Institutions = () => {
+    const { notify, confirm } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
     const [activeTab, setActiveTab] = useState('Instituciones')
 
     const [institutions, setInstitutions] = useState([]);
+    const [loaded, setLoaded] = useState(false);
     const [institutionTypes, setInstitutionTypes] = useState([]);
     const [specialities, setSpecialities] = useState([]);
     const [institutionSpecialities, setInstitutionSpecialities] = useState([]);
@@ -97,7 +107,7 @@ const Institutions = () => {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(res => res.json())
-            .then(({ data }) => setInstitutions(data.map(i => toLowerCaseKeys(i))))
+            .then(({ data }) => { setInstitutions(data.map(i => toLowerCaseKeys(i))); setLoaded(true) })
             .catch(error => console.error('Error consultando instituciones. ', error))
     }
     useEffect(() => { fetchInstitutions() }, []);
@@ -180,7 +190,7 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setNotificationForm({ institutionId: '', emergencyId: '', estimatedArrival: '', notes: '' }); setShowNotificationForm(false); fetchNotifications(); })
-            .catch(error => { console.error('Error creando notificación. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando notificación. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------instituciones: registrar / actualizar--------------------------------------------------
@@ -218,12 +228,14 @@ const Institutions = () => {
     const handleAddressSearch = () => {
         if (!addressSearch.trim()) return
         setSearchingAddress(true)
-        const query = `${addressSearch}, Tabasco, México`
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`)
+        // El estado sale del que se eligió en el formulario (si ya hay uno); nunca de uno fijo.
+        const chosenState = states.find((s) => String(s.state_id) === String(selectedStateId))
+        const query = [addressSearch, chosenState?.name, 'México'].filter(Boolean).join(', ')
+        fetch(`${NOMINATIM_SEARCH_URL}?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1&countrycodes=mx&accept-language=es`)
             .then(res => res.json())
             .then((results) => {
                 if (results.length === 0) {
-                    alert('No se encontró esa dirección. Intenta ser más específico o marca directamente en el mapa.')
+                    notify('No se encontró esa dirección. Intenta ser más específico o marca directamente en el mapa.', 'error')
                     return
                 }
                 applyPlaceDetails(results[0])
@@ -243,7 +255,7 @@ const Institutions = () => {
     // Bloquea el guardado si las camas disponibles superan las camas totales
     const validateBeds = (availableBeds, totalBeds) => {
         if (Number(availableBeds) > Number(totalBeds)) {
-            alert('Las camas disponibles no pueden ser más que las camas totales.')
+            notify('Las camas disponibles no pueden ser más que las camas totales.', 'error')
             return false
         }
         return true
@@ -254,7 +266,7 @@ const Institutions = () => {
     // cuando la suma ya supera claramente lo explicable por traslape normal.
     const BED_OVERLAP_MULTIPLIER = 2
 
-    const confirmSpecialityBedsOverlap = (institutionId, totalBeds, excludeInstitutionSpecialityId) => {
+    const confirmSpecialityBedsOverlap = async (institutionId, totalBeds, excludeInstitutionSpecialityId) => {
         const institution = institutions.find(i => String(i.institution_id) === String(institutionId))
         if (!institution) return true
 
@@ -270,9 +282,11 @@ const Institutions = () => {
         const threshold = Number(institution.bed_capacity) * BED_OVERLAP_MULTIPLIER
 
         if (newSum > threshold) {
-            return window.confirm(
-                `Esta especialidad hace que la suma de camas por especialidad (${newSum}) supere significativamente las camas totales de la institución (${institution.bed_capacity}). ¿Es esto correcto?`
-            )
+            return confirm({
+                title: 'Revisa las camas',
+                message: `Esta especialidad hace que la suma de camas por especialidad (${newSum}) supere significativamente las camas totales de la institución (${institution.bed_capacity}). ¿Es esto correcto?`,
+                confirmLabel: 'Sí, es correcto',
+            })
         }
         return true
     }
@@ -293,12 +307,12 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setForm(emptyForm); setSelectedStateId(''); setShowForm(false); fetchInstitutions(); })
-            .catch(error => { console.error('Error registrando institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando institución. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleActive = (inst) => {
+    const handleToggleActive = async (inst) => {
         const action = inst.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} la institución "${inst.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} la institución "${inst.name}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/hospitales/alternar-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -306,12 +320,12 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => fetchInstitutions())
-            .catch(error => { console.error('Error cambiando estado de la institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de la institución. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleCrum = (inst) => {
+    const handleToggleCrum = async (inst) => {
         const action = inst.is_crum_institution ? 'quitar de la red CRUM' : 'marcar como institución CRUM'
-        if (!window.confirm(`¿Seguro que quieres ${action} a "${inst.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} a "${inst.name}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/hospitales/alternar-crum-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -319,7 +333,7 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => fetchInstitutions())
-            .catch(error => { console.error('Error cambiando estado CRUM de la institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado CRUM de la institución. ', error); notify(error.message, 'error') })
     }
 
     const openBedsForm = (inst) => {
@@ -344,7 +358,7 @@ const Institutions = () => {
             }).then(parseResponse),
         ])
             .then(() => { setShowBedsForm(null); fetchInstitutions(); })
-            .catch(error => { console.error('Error actualizando camas. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando camas. ', error); notify(error.message, 'error') })
     }
 
     const openEditInstitution = (inst) => {
@@ -370,7 +384,7 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingInstitution(null); fetchInstitutions(); })
-            .catch(error => { console.error('Error actualizando institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando institución. ', error); notify(error.message, 'error') })
     }
 
     const openSpecialityBedsForm = (s) => {
@@ -379,11 +393,11 @@ const Institutions = () => {
         setSpecialityCapacityValue(s.total_beds ?? '')
     }
 
-    const handleUpdateSpecialityBeds = (e, institutionSpecialityId) => {
+    const handleUpdateSpecialityBeds = async (e, institutionSpecialityId) => {
         e.preventDefault();
         if (!validateBeds(specialityBedsValue, specialityCapacityValue)) return
         const currentRow = institutionSpecialities.find(s => s.institution_speciality_id === institutionSpecialityId)
-        if (currentRow && !confirmSpecialityBedsOverlap(currentRow.institution_id, specialityCapacityValue, institutionSpecialityId)) return
+        if (currentRow && !(await confirmSpecialityBedsOverlap(currentRow.institution_id, specialityCapacityValue, institutionSpecialityId))) return
         Promise.all([
             fetch(`${API_BASE_URL}/hospitales/actualizar-camas-especialidad`, {
                 method: "PATCH",
@@ -397,7 +411,7 @@ const Institutions = () => {
             }).then(parseResponse),
         ])
             .then(() => { setEditingSpecialityBeds(null); fetchInstitutionSpecialities(); })
-            .catch(error => { console.error('Error actualizando camas de especialidad. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando camas de especialidad. ', error); notify(error.message, 'error') })
     }
 
     const specialitiesForInstitution = (institutionId) =>
@@ -418,7 +432,7 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setNewSpecialityForm(emptyNewSpecialityForm); setShowNewSpeciality(false); fetchSpecialities(); })
-            .catch(error => { console.error('Error creando especialidad. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando especialidad. ', error); notify(error.message, 'error') })
     }
 
     const openEditSpeciality = (sp) => {
@@ -435,12 +449,12 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingSpeciality(null); fetchSpecialities(); })
-            .catch(error => { console.error('Error actualizando especialidad. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando especialidad. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleSpeciality = (sp) => {
+    const handleToggleSpeciality = async (sp) => {
         const action = sp.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} la especialidad "${sp.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} la especialidad "${sp.name}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/hospitales/alternar-especialidad`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -448,21 +462,21 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => fetchSpecialities())
-            .catch(error => { console.error('Error cambiando estado de especialidad. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de especialidad. ', error); notify(error.message, 'error') })
     }
 
-    const handleAssignSpeciality = (e) => {
+    const handleAssignSpeciality = async (e) => {
         e.preventDefault();
         const alreadyAssigned = institutionSpecialities.some(s =>
             String(s.institution_id) === String(specialityForm.institutionId) &&
             String(s.speciality_id) === String(specialityForm.specialityId)
         )
         if (alreadyAssigned) {
-            alert('Esta especialidad ya está asignada a esta institución.')
+            notify('Esta especialidad ya está asignada a esta institución.', 'error')
             return
         }
         if (!validateBeds(specialityForm.availableBeds, specialityForm.totalBeds)) return
-        if (!confirmSpecialityBedsOverlap(specialityForm.institutionId, specialityForm.totalBeds, null)) return
+        if (!(await confirmSpecialityBedsOverlap(specialityForm.institutionId, specialityForm.totalBeds, null))) return
         fetch(`${API_BASE_URL}/hospitales/asignar-especialidad`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -475,11 +489,11 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setSpecialityForm(emptySpecialityForm); setShowSpecialityAssign(false); fetchInstitutionSpecialities(); })
-            .catch(error => { console.error('Error asignando especialidad. ', error); alert(error.message) })
+            .catch(error => { console.error('Error asignando especialidad. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleInstitutionSpeciality = (institutionSpecialityId) => {
-        if (!window.confirm('¿Seguro que quieres cambiar el estado de esta especialidad asignada?')) return
+    const handleToggleInstitutionSpeciality = async (institutionSpecialityId) => {
+        if (!(await confirm({ title: 'Confirmar', message: '¿Seguro que quieres cambiar el estado de esta especialidad asignada?', confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/hospitales/alternar-especialidad-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -487,7 +501,7 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => fetchInstitutionSpecialities())
-            .catch(error => { console.error('Error cambiando estado. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------tipos de institución: crear / desactivar--------------------------------------------------
@@ -502,7 +516,7 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setNewTypeForm(emptyNewTypeForm); setShowNewType(false); fetchInstitutionTypes(); })
-            .catch(error => { console.error('Error creando tipo de institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando tipo de institución. ', error); notify(error.message, 'error') })
     }
 
     const openEditType = (t) => {
@@ -519,12 +533,12 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingType(null); fetchInstitutionTypes(); })
-            .catch(error => { console.error('Error actualizando tipo de institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando tipo de institución. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleType = (t) => {
+    const handleToggleType = async (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el tipo "${t.institution_type}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el tipo "${t.institution_type}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/hospitales/alternar-tipo-institucion`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -532,15 +546,15 @@ const Institutions = () => {
         })
             .then(parseResponse)
             .then(() => fetchInstitutionTypes())
-            .catch(error => { console.error('Error cambiando estado de tipo. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de tipo. ', error); notify(error.message, 'error') })
     }
 
     return (
         <div className="institutions-page">
-            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabels[user?.roleId] || ''} links={navLinks} />
+            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabel(user?.roleId)} links={navLinks} />
 
-            <div className="institutions-body">
-                <h2 className="institutions-title">Gestión de Instituciones</h2>
+            <div role="main" id="contenido" className="institutions-body">
+                <h1 className="institutions-title">Gestión de instituciones</h1>
 
                 <div className="institutions-tabs">
                     {TABS.map((tab) => (
@@ -558,26 +572,25 @@ const Institutions = () => {
                 {activeTab === 'Instituciones' && (
                     <>
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={institutionsFilter} onChange={(e) => setInstitutionsFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={institutionsFilter} onChange={(e) => setInstitutionsFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
                             <button className="institutions-secondary-btn" onClick={() => setShowSpecialityAssign(!showSpecialityAssign)}>
-                                Asignar Especialidad
+                                Asignar especialidad
                             </button>
                             <button className="institutions-add-btn" onClick={() => setShowForm(!showForm)}>
-                                + Nueva Institución
+                                + Nueva institución
                             </button>
                         </div>
 
-                        {showSpecialityAssign && (
+                        <Drawer open={Boolean(showSpecialityAssign)} onClose={() => setShowSpecialityAssign(false)} title="Asignar Especialidad a Institución" size="md">
                             <form className="institutions-form" onSubmit={handleAssignSpeciality}>
-                                <h3>Asignar Especialidad a Institución</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Institución</label>
-                                        <select value={specialityForm.institutionId} onChange={(e) => setSpecialityForm(p => ({ ...p, institutionId: e.target.value }))} required>
+                                        <select aria-label="Institución" value={specialityForm.institutionId} onChange={(e) => setSpecialityForm(p => ({ ...p, institutionId: e.target.value }))} required>
                                             <option value="">Selecciona una institución</option>
                                             {institutions.map((inst) => (
                                                 <option key={inst.institution_id} value={inst.institution_id}>{inst.name}</option>
@@ -586,7 +599,7 @@ const Institutions = () => {
                                     </div>
                                     <div className="institutions-field">
                                         <label>Especialidad</label>
-                                        <select value={specialityForm.specialityId} onChange={(e) => setSpecialityForm(p => ({ ...p, specialityId: e.target.value }))} required>
+                                        <select aria-label="Especialidad" value={specialityForm.specialityId} onChange={(e) => setSpecialityForm(p => ({ ...p, specialityId: e.target.value }))} required>
                                             <option value="">Selecciona una especialidad</option>
                                             {specialities.map((sp) => (
                                                 <option key={sp.speciality_id} value={sp.speciality_id}>{sp.name}</option>
@@ -612,11 +625,10 @@ const Institutions = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowSpecialityAssign(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {showForm && (
+                        <Drawer open={Boolean(showForm)} onClose={() => setShowForm(false)} title="Registrar nueva institución" size="lg">
                             <form className="institutions-form" onSubmit={handleSubmit}>
-                                <h3>Registrar Nueva Institución</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -624,7 +636,7 @@ const Institutions = () => {
                                     </div>
                                     <div className="institutions-field">
                                         <label>Tipo de institución</label>
-                                        <select value={form.institutionTypeId} onChange={(e) => handleFieldChange('institutionTypeId', e.target.value)} required>
+                                        <select aria-label="Tipo de institución" value={form.institutionTypeId} onChange={(e) => handleFieldChange('institutionTypeId', e.target.value)} required>
                                             <option value="">Selecciona un tipo</option>
                                             {institutionTypes.map((t) => (
                                                 <option key={t.institution_type_id} value={t.institution_type_id}>{t.institution_type}</option>
@@ -658,7 +670,7 @@ const Institutions = () => {
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Estado</label>
-                                        <select value={selectedStateId} onChange={(e) => { setSelectedStateId(e.target.value); handleFieldChange('cityId', '') }} required>
+                                        <select aria-label="Estado" value={selectedStateId} onChange={(e) => { setSelectedStateId(e.target.value); handleFieldChange('cityId', '') }} required>
                                             <option value="">Selecciona un estado</option>
                                             {states.map((s) => (
                                                 <option key={s.state_id} value={s.state_id}>{s.name}</option>
@@ -667,7 +679,7 @@ const Institutions = () => {
                                     </div>
                                     <div className="institutions-field">
                                         <label>Ciudad</label>
-                                        <select value={form.cityId} onChange={(e) => handleFieldChange('cityId', e.target.value)} disabled={!selectedStateId} required>
+                                        <select aria-label="Ciudad" value={form.cityId} onChange={(e) => handleFieldChange('cityId', e.target.value)} disabled={!selectedStateId} required>
                                             <option value="">{selectedStateId ? 'Selecciona una ciudad' : 'Elige un estado primero'}</option>
                                             {cities.map((c) => (
                                                 <option key={c.city_id} value={c.city_id}>{c.name}</option>
@@ -709,13 +721,14 @@ const Institutions = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="institutions-grid">
+                        {!loaded && <SkeletonCards count={3} />}
+                        <div className="institutions-grid" hidden={!loaded}>
                             {filterByStatus(institutions, institutionsFilter).map((inst) => (
                                 <div key={inst.institution_id} className="institution-admin-card">
                                     <div className="institution-admin-header">
-                                        <h4>{inst.name}</h4>
+                                        <h2>{inst.name}</h2>
                                         <span className={`institutions-status ${inst.is_active ? 'status-active' : 'status-inactive'}`}>
                                             {inst.is_active ? 'Activa' : 'Inactiva'}
                                         </span>
@@ -724,9 +737,16 @@ const Institutions = () => {
                                         </span>
                                     </div>
 
+                                    <p className="institution-admin-sub">
+                                        {[institutionTypes.find(t => t.institution_type_id === inst.institution_type_id)?.institution_type, inst.street_address].filter(Boolean).join(' · ')}
+                                    </p>
+
                                     <div className="institution-admin-beds">
-                                        <span className="beds-current">{inst.available_beds}</span>
-                                        <span className="beds-total">/ {inst.bed_capacity} camas totales</span>
+                                        <span className="beds-current"><AnimatedNumber value={inst.available_beds} /></span>
+                                        <span className="beds-total">/ {inst.bed_capacity} camas libres</span>
+                                    </div>
+                                    <div className="beds-bar" role="img" aria-label={`${inst.available_beds} de ${inst.bed_capacity} camas libres`}>
+                                        <span style={{ width: `${Math.min(100, Math.max(0, (Number(inst.available_beds) / (Number(inst.bed_capacity) || 1)) * 100))}%` }} />
                                     </div>
 
                                     <div className="institution-admin-specialities">
@@ -734,22 +754,8 @@ const Institutions = () => {
                                             <span className="no-specialities">Sin especialidades asignadas</span>
                                         ) : (
                                             specialitiesForInstitution(inst.institution_id).map((s) => (
-                                                editingSpecialityBeds === s.institution_speciality_id ? (
-                                                    <form
-                                                        key={s.institution_speciality_id}
-                                                        className="beds-edit-form"
-                                                        onSubmit={(e) => handleUpdateSpecialityBeds(e, s.institution_speciality_id)}
-                                                    >
-                                                        <p className="beds-edit-hint">
-                                                            Capacidad reportada por esta especialidad — puede traslaparse con las de otras.
-                                                        </p>
-                                                        <input type="number" min="0" placeholder="Capacidad" title="Capacidad máxima reportada para esta especialidad" value={specialityCapacityValue} onChange={(e) => setSpecialityCapacityValue(e.target.value)} required />
-                                                        <input type="number" min="0" placeholder="Disponibles" title="Camas libres ahora mismo para esta especialidad" value={specialityBedsValue} onChange={(e) => setSpecialityBedsValue(e.target.value)} required />
-                                                        <button type="submit">Guardar</button>
-                                                        <button type="button" onClick={() => setEditingSpecialityBeds(null)}>Cancelar</button>
-                                                    </form>
-                                                ) : (
-                                                    <div key={s.institution_speciality_id} className="speciality-chip-row">
+                                                <Fragment key={s.institution_speciality_id}>
+                                                    <div className="speciality-chip-row">
                                                         <span
                                                             className={`speciality-chip clickable ${s.is_active ? '' : 'speciality-chip-inactive'}`}
                                                             onClick={() => handleToggleInstitutionSpeciality(s.institution_speciality_id)}
@@ -763,18 +769,37 @@ const Institutions = () => {
                                                             className="speciality-chip-edit-btn"
                                                             onClick={() => openSpecialityBedsForm(s)}
                                                             title="Editar camas de esta especialidad"
+                                                            aria-label="Editar camas de esta especialidad"
                                                         >
-                                                            ✎
+                                                            <Icon name="edit" size={14} />
                                                         </button>
                                                     </div>
-                                                )
+                                                    <Modal open={editingSpecialityBeds === s.institution_speciality_id} onClose={() => setEditingSpecialityBeds(null)} title="Camas de la especialidad" subtitle={`${specialityNameById(s.speciality_id)} · ${inst.name}`} size="sm">
+                                                        <form className="institutions-form" onSubmit={(e) => handleUpdateSpecialityBeds(e, s.institution_speciality_id)}>
+                                                            <p className="institutions-form-hint">La capacidad es la que reporta este servicio y puede traslaparse con la de otras especialidades.</p>
+                                                            <div className="institutions-form-row">
+                                                                <div className="institutions-field">
+                                                                    <label htmlFor={`scap-${s.institution_speciality_id}`}>Capacidad total</label>
+                                                                    <input id={`scap-${s.institution_speciality_id}`} type="number" min="0" value={specialityCapacityValue} onChange={(e) => setSpecialityCapacityValue(e.target.value)} required />
+                                                                </div>
+                                                                <div className="institutions-field">
+                                                                    <label htmlFor={`sfree-${s.institution_speciality_id}`}>Libres ahora</label>
+                                                                    <input id={`sfree-${s.institution_speciality_id}`} type="number" min="0" value={specialityBedsValue} onChange={(e) => setSpecialityBedsValue(e.target.value)} required />
+                                                                </div>
+                                                            </div>
+                                                            <div className="institutions-form-actions">
+                                                                <button type="submit" className="institutions-form-submit">Guardar camas</button>
+                                                                <button type="button" className="institutions-form-cancel" onClick={() => setEditingSpecialityBeds(null)}>Cancelar</button>
+                                                            </div>
+                                                        </form>
+                                                    </Modal>
+                                                </Fragment>
                                             ))
                                         )}
                                     </div>
 
-                                    {editingInstitution === inst.institution_id && (
+                                    <Drawer open={Boolean(editingInstitution === inst.institution_id)} onClose={() => setEditingInstitution(null)} title="Editar institución" size="md">
                                         <form className="institutions-form" onSubmit={handleUpdateInstitution}>
-                                            <h3>Editar Institución</h3>
                                             <div className="institutions-form-row">
                                                 <div className="institutions-field">
                                                     <label>Nombre</label>
@@ -782,7 +807,7 @@ const Institutions = () => {
                                                 </div>
                                                 <div className="institutions-field">
                                                     <label>Tipo de institución</label>
-                                                    <select value={editInstitutionForm.institutionTypeId} onChange={(e) => setEditInstitutionForm(p => ({ ...p, institutionTypeId: e.target.value }))} required>
+                                                    <select aria-label="Tipo de institución" value={editInstitutionForm.institutionTypeId} onChange={(e) => setEditInstitutionForm(p => ({ ...p, institutionTypeId: e.target.value }))} required>
                                                         <option value="">Selecciona un tipo</option>
                                                         {institutionTypes.map((t) => (
                                                             <option key={t.institution_type_id} value={t.institution_type_id}>{t.institution_type}</option>
@@ -819,35 +844,42 @@ const Institutions = () => {
                                                 <button type="button" className="institutions-form-cancel" onClick={() => setEditingInstitution(null)}>Cancelar</button>
                                             </div>
                                         </form>
-                                    )}
+                                        </Drawer>
 
-                                    {showBedsForm === inst.institution_id ? (
-                                        <form className="beds-edit-form" onSubmit={(e) => handleUpdateBeds(e, inst.institution_id)}>
-                                            <p className="beds-edit-hint">
-                                                Capacidad = capacidad física total del hospital. Disponibles = libres ahora mismo.
-                                            </p>
-                                            <input type="number" min="0" placeholder="Capacidad" title="Capacidad física total del hospital" value={capacityValue} onChange={(e) => setCapacityValue(e.target.value)} required />
-                                            <input type="number" min="0" placeholder="Disponibles" title="Camas libres ahora mismo" value={bedsValue} onChange={(e) => setBedsValue(e.target.value)} required />
-                                            <button type="submit">Guardar</button>
-                                            <button type="button" onClick={() => setShowBedsForm(null)}>Cancelar</button>
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openBedsForm(inst)}>Editar camas</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[
+                                            { label: 'Editar institución', onClick: () => openEditInstitution(inst) },
+                                            { label: inst.is_crum_institution ? 'Quitar de CRUM' : 'Marcar como CRUM', onClick: () => handleToggleCrum(inst) },
+                                            { label: inst.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleActive(inst), danger: Boolean(inst.is_active) },
+                                        ]} />
+                                    </div>
+                                    <Modal open={showBedsForm === inst.institution_id} onClose={() => setShowBedsForm(null)} title="Camas de la institución" subtitle={inst.name} size="sm">
+                                        <form className="institutions-form" onSubmit={(e) => handleUpdateBeds(e, inst.institution_id)}>
+                                            <div className="institutions-form-row">
+                                                <div className="institutions-field">
+                                                    <label htmlFor={`cap-${inst.institution_id}`}>Capacidad total</label>
+                                                    <input id={`cap-${inst.institution_id}`} type="number" min="0" value={capacityValue} onChange={(e) => setCapacityValue(e.target.value)} required />
+                                                    <p className="field-hint">Camas físicas del hospital.</p>
+                                                </div>
+                                                <div className="institutions-field">
+                                                    <label htmlFor={`free-${inst.institution_id}`}>Libres ahora</label>
+                                                    <input id={`free-${inst.institution_id}`} type="number" min="0" value={bedsValue} onChange={(e) => setBedsValue(e.target.value)} required />
+                                                    <p className="field-hint">Disponibles en este momento.</p>
+                                                </div>
+                                            </div>
+                                            <div className="institutions-form-actions">
+                                                <button type="submit" className="institutions-form-submit">Guardar camas</button>
+                                                <button type="button" className="institutions-form-cancel" onClick={() => setShowBedsForm(null)}>Cancelar</button>
+                                            </div>
                                         </form>
-                                    ) : (
-                                        <div className="institution-admin-actions">
-                                            <button className="institutions-edit-btn" onClick={() => openBedsForm(inst)}>Editar camas</button>
-                                            <button className="institutions-edit-btn" onClick={() => openEditInstitution(inst)}>Editar institución</button>
-                                            <button className="institutions-toggle-btn" onClick={() => handleToggleCrum(inst)}>
-                                                {inst.is_crum_institution ? 'Quitar de CRUM' : 'Marcar como CRUM'}
-                                            </button>
-                                            <button className="institutions-toggle-btn" onClick={() => handleToggleActive(inst)}>
-                                                {inst.is_active ? 'Desactivar' : 'Activar'}
-                                            </button>
-                                        </div>
-                                    )}
+                                    </Modal>
                                 </div>
                             ))}
                         </div>
 
-                        {filterByStatus(institutions, institutionsFilter).length === 0 && <p className="institutions-empty">No hay instituciones que coincidan con el filtro.</p>}
+                        {loaded && filterByStatus(institutions, institutionsFilter).length === 0 && <p className="institutions-empty">No hay instituciones que coincidan con el filtro.</p>}
                     </>
                 )}
 
@@ -855,19 +887,18 @@ const Institutions = () => {
                 {activeTab === 'Especialidades' && (
                     <>
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={specialitiesFilter} onChange={(e) => setSpecialitiesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={specialitiesFilter} onChange={(e) => setSpecialitiesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
                             <button className="institutions-add-btn" onClick={() => setShowNewSpeciality(!showNewSpeciality)}>
-                                + Nueva Especialidad
+                                + Nueva especialidad
                             </button>
                         </div>
 
-                        {showNewSpeciality && (
+                        <Drawer open={Boolean(showNewSpeciality)} onClose={() => setShowNewSpeciality(false)} title="Crear nueva especialidad" size="md">
                             <form className="institutions-form" onSubmit={handleCreateSpeciality}>
-                                <h3>Crear Nueva Especialidad</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -883,11 +914,10 @@ const Institutions = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowNewSpeciality(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingSpeciality !== null && (
+                        <Drawer open={Boolean(editingSpeciality !== null)} onClose={() => setEditingSpeciality(null)} title="Editar especialidad" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateSpeciality}>
-                                <h3>Editar Especialidad</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -903,34 +933,32 @@ const Institutions = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingSpeciality(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead>
-                                    <tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr>
-                                </thead>
-                                <tbody>
-                                    {filterByStatus(specialities, specialitiesFilter).map((sp) => (
-                                        <tr key={sp.speciality_id}>
-                                            <td>{sp.name}</td>
-                                            <td>{sp.description}</td>
-                                            <td>
-                                                <span className={`institutions-status ${sp.is_active ? 'status-active' : 'status-inactive'}`}>
-                                                    {sp.is_active ? 'Activa' : 'Inactiva'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditSpeciality(sp)}>Editar</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleSpeciality(sp)}>
-                                                    {sp.is_active ? 'Desactivar' : 'Activar'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(specialities, specialitiesFilter).length === 0 && <p className="institutions-empty">No hay especialidades que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(specialities, specialitiesFilter).map((sp) => {
+                                const hospitals = institutionSpecialities.filter(r => r.speciality_id === sp.speciality_id && r.is_active).length
+                                return (
+                                    <article key={sp.speciality_id} className={`entity acc-route${sp.is_active ? '' : ' is-off'}`}>
+                                        <div className="entity-head">
+                                            <div className="entity-titles">
+                                                <h2 className="entity-title">{sp.name}</h2>
+                                                <p className="entity-sub">{sp.description || 'Sin descripción'}</p>
+                                            </div>
+                                            <span className={`pill ${sp.is_active ? 'pill-ok' : 'pill-warn'}`}>{sp.is_active ? 'Activa' : 'Inactiva'}</span>
+                                        </div>
+                                        <dl className="entity-facts">
+                                            <div><dt>Instituciones que la ofrecen</dt><dd>{hospitals}</dd></div>
+                                        </dl>
+                                        <div className="entity-actions">
+                                            <button type="button" className="institutions-edit-btn" onClick={() => openEditSpeciality(sp)}>Editar</button>
+                                            <span className="spacer" />
+                                            <MoreMenu items={[{ label: sp.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleSpeciality(sp), danger: Boolean(sp.is_active) }]} />
+                                        </div>
+                                    </article>
+                                )
+                            })}
+                            {filterByStatus(specialities, specialitiesFilter).length === 0 && <p className="entity-empty">No hay especialidades que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}
@@ -939,19 +967,18 @@ const Institutions = () => {
                 {activeTab === 'Tipos' && (
                     <>
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={typesFilter} onChange={(e) => setTypesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={typesFilter} onChange={(e) => setTypesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
                             <button className="institutions-add-btn" onClick={() => setShowNewType(!showNewType)}>
-                                + Nuevo Tipo
+                                + Nuevo tipo
                             </button>
                         </div>
 
-                        {showNewType && (
+                        <Drawer open={Boolean(showNewType)} onClose={() => setShowNewType(false)} title="Crear Nuevo Tipo de Institución" size="md">
                             <form className="institutions-form" onSubmit={handleCreateType}>
-                                <h3>Crear Nuevo Tipo de Institución</h3>
                                 <div className="institutions-field">
                                     <label>Nombre del tipo</label>
                                     <input type="text" value={newTypeForm.institutionType} onChange={(e) => setNewTypeForm({ institutionType: e.target.value })} maxLength={100} required />
@@ -961,11 +988,10 @@ const Institutions = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowNewType(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingType !== null && (
+                        <Drawer open={Boolean(editingType !== null)} onClose={() => setEditingType(null)} title="Editar Tipo de Institución" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateType}>
-                                <h3>Editar Tipo de Institución</h3>
                                 <div className="institutions-field">
                                     <label>Nombre del tipo</label>
                                     <input type="text" value={editTypeForm.institutionType} onChange={(e) => setEditTypeForm(p => ({ ...p, institutionType: e.target.value }))} maxLength={100} required />
@@ -975,33 +1001,29 @@ const Institutions = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingType(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead>
-                                    <tr><th>Tipo</th><th>Estado</th><th>Acciones</th></tr>
-                                </thead>
-                                <tbody>
-                                    {filterByStatus(institutionTypes, typesFilter).map((t) => (
-                                        <tr key={t.institution_type_id}>
-                                            <td>{t.institution_type}</td>
-                                            <td>
-                                                <span className={`institutions-status ${t.is_active ? 'status-active' : 'status-inactive'}`}>
-                                                    {t.is_active ? 'Activo' : 'Inactivo'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditType(t)}>Editar</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleType(t)}>
-                                                    {t.is_active ? 'Desactivar' : 'Activar'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(institutionTypes, typesFilter).length === 0 && <p className="institutions-empty">No hay tipos que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(institutionTypes, typesFilter).map((t) => {
+                                const count = institutions.filter(i => i.institution_type_id === t.institution_type_id).length
+                                return (
+                                    <article key={t.institution_type_id} className={`entity acc-route${t.is_active ? '' : ' is-off'}`}>
+                                        <div className="entity-head">
+                                            <div className="entity-titles">
+                                                <h2 className="entity-title">{t.institution_type}</h2>
+                                                <p className="entity-sub">{count} {count === 1 ? 'institución' : 'instituciones'}</p>
+                                            </div>
+                                            <span className={`pill ${t.is_active ? 'pill-ok' : 'pill-warn'}`}>{t.is_active ? 'Activo' : 'Inactivo'}</span>
+                                        </div>
+                                        <div className="entity-actions">
+                                            <button type="button" className="institutions-edit-btn" onClick={() => openEditType(t)}>Editar</button>
+                                            <span className="spacer" />
+                                            <MoreMenu items={[{ label: t.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleType(t), danger: Boolean(t.is_active) }]} />
+                                        </div>
+                                    </article>
+                                )
+                            })}
+                            {filterByStatus(institutionTypes, typesFilter).length === 0 && <p className="entity-empty">No hay tipos que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}
@@ -1011,17 +1033,16 @@ const Institutions = () => {
                     <>
                         <div className="institutions-tab-header">
                             <button className="institutions-add-btn" onClick={() => setShowNotificationForm(!showNotificationForm)}>
-                                + Nueva Notificación
+                                + Nueva notificación
                             </button>
                         </div>
 
-                        {showNotificationForm && (
+                        <Drawer open={Boolean(showNotificationForm)} onClose={() => setShowNotificationForm(false)} title="Nueva Notificación de Institución" size="md">
                             <form className="institutions-form" onSubmit={handleCreateNotification}>
-                                <h3>Nueva Notificación de Institución</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Institución</label>
-                                        <select value={notificationForm.institutionId} onChange={(e) => setNotificationForm(p => ({ ...p, institutionId: e.target.value }))} required>
+                                        <select aria-label="Institución" value={notificationForm.institutionId} onChange={(e) => setNotificationForm(p => ({ ...p, institutionId: e.target.value }))} required>
                                             <option value="">Selecciona una institución</option>
                                             {institutions.map((inst) => (
                                                 <option key={inst.institution_id} value={inst.institution_id}>{inst.name}</option>
@@ -1030,7 +1051,7 @@ const Institutions = () => {
                                     </div>
                                     <div className="institutions-field">
                                         <label>Emergencia relacionada</label>
-                                        <select value={notificationForm.emergencyId} onChange={(e) => setNotificationForm(p => ({ ...p, emergencyId: e.target.value }))} required>
+                                        <select aria-label="Emergencia relacionada" value={notificationForm.emergencyId} onChange={(e) => setNotificationForm(p => ({ ...p, emergencyId: e.target.value }))} required>
                                             <option value="">Selecciona una emergencia activa</option>
                                             {activeEmergencies.map((em) => (
                                                 <option key={em.emergency_id} value={em.emergency_id}>#{em.emergency_id} — {em.type_name} — {em.description}</option>
@@ -1051,25 +1072,24 @@ const Institutions = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowNotificationForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead>
-                                    <tr><th>Institución</th><th>Emergencia</th><th>Llegada estimada</th><th>Notas</th></tr>
-                                </thead>
-                                <tbody>
-                                    {notifications.map((n) => (
-                                        <tr key={n.institution_notification_id}>
-                                            <td>{n.institution_name}</td>
-                                            <td>{n.emergency_type_name ? `${n.emergency_type_name} — ${n.emergency_description}` : `#${n.emergency_id}`}</td>
-                                            <td>{n.estimated_arrival ? new Date(n.estimated_arrival).toLocaleString('es-MX') : '—'}</td>
-                                            <td>{n.notes || '—'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {notifications.length === 0 && <p className="institutions-empty">No hay notificaciones registradas.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {notifications.map((n) => (
+                                <article key={n.institution_notification_id} className="entity acc-route">
+                                    <div className="entity-head">
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{n.institution_name}</h2>
+                                            <p className="entity-sub">{n.emergency_type_name ? `${n.emergency_type_name} — ${n.emergency_description}` : `Emergencia #${n.emergency_id}`}</p>
+                                        </div>
+                                    </div>
+                                    <dl className="entity-facts">
+                                        <div><dt>Llegada estimada</dt><dd>{n.estimated_arrival ? new Date(n.estimated_arrival).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</dd></div>
+                                        <div><dt>Notas</dt><dd>{n.notes || '—'}</dd></div>
+                                    </dl>
+                                </article>
+                            ))}
+                            {notifications.length === 0 && <p className="entity-empty">No hay notificaciones registradas.</p>}
                         </div>
                     </>
                 )}

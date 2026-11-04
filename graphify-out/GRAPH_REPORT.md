@@ -1,21 +1,21 @@
-# Graph Report - SICEM  (2026-08-14)
+# Graph Report - sicem  (2026-10-10)
 
 ## Corpus Check
-- 162 files · ~502,539 words
+- 230 files · ~538,402 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1393 nodes · 2011 edges · 105 communities (73 shown, 32 thin omitted)
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 424 edges (avg confidence: 0.51)
+- 1748 nodes · 3102 edges · 113 communities (81 shown, 32 thin omitted)
+- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 445 edges (avg confidence: 0.51)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ffc73767`
+- Built from commit: `40fdd56d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- useAuth
+- sicem-desktop/src/App.jsx
 - models/emergency.js
 - controllers/emergency.js
 - devDependencies
@@ -35,25 +35,25 @@
 - controllers/user.js
 - models/user.js
 - usuarios/package.json
-- Institutions.jsx
+- admin/Patients.jsx
 - gateway/package.json
 - dependencies
 - 2. Mobile (.apk)
 - /graphify Command Pipeline
 - Gateway Service (port 3000)
-- toLowerCaseKeys
-- EmergencyDetail.jsx
-- Patients.jsx
+- useAuth
+- sicem-web/src/components/layout/Navbar.jsx
+- routes/unit.js
 - hospitales/index.js
 - pacientes/index.js
-- sicem-web/src/App.jsx
+- sicem-desktop/src/context/RegionContext.jsx
 - unidades/index.js
 - usuarios/index.js
-- Dashboard.jsx
-- Ambulances.jsx
-- hospitales/config/db.js
-- routes/unit.js
-- leaflet
+- sicem-web/src/App.jsx
+- Institutions.jsx
+- routes/hospital.js
+- unidades/config/db.js
+- routes/emergency.js
 - gateway/index.js
 - closeEmergencyRaw
 - Aprende SICEM: de lo más simple a lo más complejo
@@ -79,16 +79,16 @@
 - sicem-desktop/package.json
 - build
 - devDependencies
-- routes/hospital.js
+- QuickAssignCard.jsx
 - metro.config.js
 - Vite Logo (Boilerplate Asset)
 - hola.txt (trivial placeholder file)
-- useAuth
+- (app)/index.js
 - withNdkVersion.js
 - activateAcceptedExternalUnit
-- startShift
+- isWithinSchedule
 - README.md
-- getIo
+- react-is
 - postCreate.sh
 - Nivel 1 — JavaScript moderno
 - Nivel 7 — Tiempo real: Socket.IO
@@ -101,44 +101,49 @@
 - Nivel 9 — Herramientas de build (Vite, Metro)
 - Nivel 4 — Frontend: React desde cero
 - Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto)
-- Users.jsx
+- crear-cuentas-qa.mjs
 - unassignAmbulance
 - dependencies
-- generatePatientReport.js
+- Sistema de diseño — sicem-web
 - generateEmergencyReport.js
-- AmbulanceStatusCard.jsx
+- generatePatientReport.js
 - sicem-web/package.json
 - scripts
-- react-is
+- sicem-desktop/src/components/ui/SkinMenu.jsx
 - eslint-plugin-react-refresh
 - startDb.sh
 - sicem-pacientes/package.json
 - Plan — Paciente fuera de institución: afiliación + página pública
 - sicem-pacientes/src/App.jsx
+- NewEmergency.jsx
+- Dashboard.jsx
+- Errores corregidos
+- sicem-web/src/components/ui/SkinMenu.jsx
+- leaflet
 
 ## God Nodes (most connected - your core abstractions)
-1. `useAuth()` - 31 edges
-2. `useAuth()` - 31 edges
-3. `useAuth()` - 28 edges
-4. `getNavLinks()` - 27 edges
-5. `toLowerCaseKeys()` - 27 edges
-6. `toLowerCaseKeys()` - 21 edges
-7. `parseResponse()` - 19 edges
-8. `Navbar()` - 17 edges
-9. `Aprende SICEM: de lo más simple a lo más complejo` - 16 edges
-10. `toLowerCaseKeys()` - 15 edges
+1. `useAuth()` - 35 edges
+2. `useAuth()` - 33 edges
+3. `toLowerCaseKeys()` - 31 edges
+4. `useAuth()` - 28 edges
+5. `roleLabel()` - 27 edges
+6. `getNavLinks()` - 27 edges
+7. `useDialogs()` - 23 edges
+8. `toLowerCaseKeys()` - 21 edges
+9. `Navbar()` - 21 edges
+10. `API_BASE_URL` - 21 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Expo Version Warning (read versioned docs before coding)` --conceptually_related_to--> `sicem-mobile (Paramedico, React Native + Expo, planned)`  [EXTRACTED]
   clients/sicem-mobile/AGENTS.md → SICEM_HANDOFF.md
-- `EmergencyDetail()` --indirect_call--> `parseResponse()`  [INFERRED]
-  clients/sicem-web/src/pages/EmergencyDetail.jsx → clients/sicem-web/src/utils/apiRequest.js
-- `NewEmergency()` --indirect_call--> `parseResponse()`  [INFERRED]
-  clients/sicem-web/src/pages/NewEmergency.jsx → clients/sicem-web/src/utils/apiRequest.js
-- `Requests()` --indirect_call--> `parseResponse()`  [INFERRED]
-  clients/sicem-web/src/pages/Requests.jsx → clients/sicem-web/src/utils/apiRequest.js
-- `Ambulances()` --indirect_call--> `parseResponse()`  [INFERRED]
-  clients/sicem-web/src/pages/admin/Ambulances.jsx → clients/sicem-web/src/utils/apiRequest.js
+- `RequireRole()` --calls--> `useAuth()`  [EXTRACTED]
+  clients/sicem-web/src/App.jsx → clients/sicem-web/src/context/AuthContext.jsx
+- `QuickAssignCard()` --indirect_call--> `parseResponse()`  [INFERRED]
+  clients/sicem-web/src/components/emergencies/QuickAssignCard.jsx → clients/sicem-web/src/utils/apiRequest.js
+- `Login()` --calls--> `useAuth()`  [EXTRACTED]
+  clients/sicem-web/src/pages/Login.jsx → clients/sicem-web/src/context/AuthContext.jsx
+- `sicem-web index.html (Vite entry, mounts main.jsx)` --semantically_similar_to--> `sicem-desktop index.html (Electron/Vite entry, mounts main.jsx)`  [INFERRED] [semantically similar]
+  clients/sicem-web/index.html → clients/sicem-desktop/index.html
 
 ## Import Cycles
 - None detected.
@@ -148,11 +153,11 @@
 - **SICEM Client Applications (Dispatcher/Hospital/Paramedic)** — sicem_handoff_sicem_web_client, sicem_handoff_sicem_desktop_client, sicem_handoff_sicem_mobile_client [EXTRACTED 1.00]
 - **SICEM Backend Microservices (SOA)** — sicem_handoff_gateway_service, sicem_handoff_usuarios_service, sicem_handoff_hospitales_service, sicem_handoff_unidades_service, sicem_handoff_pacientes_service, sicem_handoff_emergencias_service [EXTRACTED 1.00]
 
-## Communities (105 total, 32 thin omitted)
+## Communities (113 total, 32 thin omitted)
 
-### Community 0 - "useAuth"
-Cohesion: 0.07
-Nodes (60): App(), RootRedirect(), BedMatrixModal(), getFillLevel(), SpecialtyCapacityCard(), AmbulanceAdminCard(), formatSchedule(), isOnScheduleNow() (+52 more)
+### Community 0 - "sicem-desktop/src/App.jsx"
+Cohesion: 0.05
+Nodes (98): App(), RootRedirect(), ThemeGate(), AmbulanceDetailPanel(), formatSchedule(), isOnScheduleNow(), WEEKDAY_LABELS, AmbulanceStatusCard() (+90 more)
 
 ### Community 2 - "controllers/emergency.js"
 Cohesion: 0.03
@@ -170,6 +175,10 @@ Nodes (10): db, logAllergyHistory(), logConditionHistory(), logMedicationHistory
 Cohesion: 0.12
 Nodes (17): dependencies, jspdf, react, react-dom, react-is, react-leaflet, react-router-dom, recharts (+9 more)
 
+### Community 7 - "controllers/hospital.js"
+Cohesion: 0.06
+Nodes (5): getIo(), { getIo }, hospitalModel, updateAvailableBedsI(), updateAvailableBedsIS()
+
 ### Community 8 - "dependencies"
 Cohesion: 0.04
 Nodes (46): dependencies, expo, expo-build-properties, expo-constants, expo-device, expo-linking, expo-location, expo-notifications (+38 more)
@@ -179,15 +188,15 @@ Cohesion: 0.07
 Nodes (28): firebase-admin, dependencies, bcrypt, cors, dotenv, express, firebase-admin, http-proxy-middleware (+20 more)
 
 ### Community 10 - "emergencias/index.js"
-Cohesion: 0.08
-Nodes (18): connection, mysql, app, configSocket, cors, { createServer }, db, emergencyRoutes (+10 more)
+Cohesion: 0.14
+Nodes (10): app, configSocket, cors, { createServer }, db, emergencyRoutes, express, io (+2 more)
 
 ### Community 12 - "controllers/patient.js"
 Cohesion: 0.10
 Nodes (10): getAllergiesByRecord(), getClinicalRecordByUser(), getConditionsByRecord(), getMedicationsByRecord(), getOwnClinicalRecordId(), patientModel, registerAllergy(), registerCondition() (+2 more)
 
 ### Community 13 - "controllers/unit.js"
-Cohesion: 0.07
+Cohesion: 0.06
 Nodes (4): AMBULANCE_TO_EMERGENCY_STATUS, { getIo }, PARAMEDIC_FORWARD_TRANSITIONS, unitModel
 
 ### Community 14 - "dependencies"
@@ -210,9 +219,9 @@ Nodes (18): bcrypt, checkShiftConflict(), claimAccountByCurp(), createUserWithCr
 Cohesion: 0.09
 Nodes (22): dependencies, bcrypt, cors, dotenv, express, jsonwebtoken, mysql2, devDependencies (+14 more)
 
-### Community 20 - "Institutions.jsx"
-Cohesion: 0.12
-Nodes (15): createAmbulanceIcon(), DEFAULT_CENTER, emergencyIcon, hospitalIcon, MapArea(), statusColors, emptyEditInstitutionForm, emptyEditSpecialityForm (+7 more)
+### Community 20 - "admin/Patients.jsx"
+Cohesion: 0.17
+Nodes (11): emptyAllergyForm, emptyConditionForm, emptyEditAllergyForm, emptyEditConditionForm, emptyEditMedicationForm, emptyEditRecordForm, emptyMedicationForm, emptyRecordForm (+3 more)
 
 ### Community 21 - "gateway/package.json"
 Cohesion: 0.11
@@ -234,17 +243,17 @@ Nodes (15): Graphify Integration (root CLAUDE.md), graphify add URL Ingestion + 
 Cohesion: 0.16
 Nodes (15): Expo Version Warning (read versioned docs before coding), sicem-mobile CLAUDE.md (includes AGENTS.md), Emergencias Service (port 3005 - core + socket.io), Expo Go for Dev, EAS Build APK for Demo, Expo Router as Likely Navigation Choice (open decision), Gateway Service (port 3000), Hospitales Service (port 3002), OSRM Real Street Routing (distance/time + polylines) (+7 more)
 
-### Community 26 - "toLowerCaseKeys"
-Cohesion: 0.16
-Nodes (17): BAR_COLORS, Charts(), monthLabel, PIE_COLORS, roleLabels, formatDateTime(), formatDuration(), History() (+9 more)
-
-### Community 27 - "EmergencyDetail.jsx"
+### Community 26 - "useAuth"
 Cohesion: 0.25
-Nodes (13): Navbar(), buildTimeline(), EmergencyDetail(), formatDateTime(), roleLabels, STATUS_SEQUENCE, fetchRouteDistance(), NewEmergency() (+5 more)
+Nodes (25): roleLabel(), useAuth(), useDialogs(), Ambulances(), EmergencyCatalogs(), Institutions(), Patients(), Users() (+17 more)
 
-### Community 28 - "Patients.jsx"
-Cohesion: 0.16
-Nodes (13): emptyAllergyForm, emptyConditionForm, emptyEditAllergyForm, emptyEditConditionForm, emptyEditMedicationForm, emptyEditRecordForm, emptyMedicationForm, emptyRecordForm (+5 more)
+### Community 27 - "sicem-web/src/components/layout/Navbar.jsx"
+Cohesion: 0.14
+Nodes (22): CommandPalette(), flattenLinks(), PaletteBody(), Navbar(), API_BASE_URL, SOCKET_URL, UNITS_SOCKET_URL, ROLE_IDS (+14 more)
+
+### Community 28 - "routes/unit.js"
+Cohesion: 0.40
+Nodes (4): express, middleware, router, unitController
 
 ### Community 29 - "hospitales/index.js"
 Cohesion: 0.17
@@ -254,9 +263,9 @@ Nodes (11): setIo(), app, cors, db, express, hospitalRoutes, http, io (+3 more)
 Cohesion: 0.12
 Nodes (13): connection, mysql, app, cors, db, express, patientRoutes, db (+5 more)
 
-### Community 31 - "sicem-web/src/App.jsx"
-Cohesion: 0.19
-Nodes (12): App(), AuthContext, AuthProvider(), useAuth(), EmergencyCatalogs(), emptyEditNameForm, emptyEditTriageForm, emptyNameForm (+4 more)
+### Community 31 - "sicem-desktop/src/context/RegionContext.jsx"
+Cohesion: 0.12
+Nodes (22): createAmbulanceIcon(), emergencyIcon, MapArea(), RegionNotice(), NOMINATIM_SEARCH_URL, OSRM_ROUTE_URL, TILE_ATTRIBUTION, TILE_URL (+14 more)
 
 ### Community 32 - "unidades/index.js"
 Cohesion: 0.12
@@ -266,21 +275,25 @@ Nodes (14): setIo(), app, cors, db, express, http, io, jwt (+6 more)
 Cohesion: 0.12
 Nodes (14): connection, mysql, app, cors, db, express, userRoutes, db (+6 more)
 
-### Community 34 - "Dashboard.jsx"
-Cohesion: 0.29
-Nodes (9): EmergencyCard(), severityColor, Dashboard(), formatElapsed(), formatResponseTime(), isStalled(), priorityScore(), roleLabels (+1 more)
+### Community 34 - "sicem-web/src/App.jsx"
+Cohesion: 0.07
+Nodes (41): ADMIN, Ambulances, App(), Charts, Dashboard, EmergencyCatalogs, EmergencyDetail, History (+33 more)
 
-### Community 35 - "Ambulances.jsx"
-Cohesion: 0.18
-Nodes (12): Ambulances(), emptyEditForm, emptyEditStatusForm, emptyEditTypeForm, emptyForm, emptyStatusForm, emptyTypeForm, roleLabels (+4 more)
+### Community 35 - "Institutions.jsx"
+Cohesion: 0.08
+Nodes (39): AnimatedNumber(), prefersReducedMotion(), MoreMenu(), Drawer(), linkLabels(), lockScroll(), Modal(), Overlay() (+31 more)
 
-### Community 36 - "hospitales/config/db.js"
+### Community 36 - "routes/hospital.js"
+Cohesion: 0.17
+Nodes (8): connection, mysql, db, jwt, express, hospitalController, middleware, router
+
+### Community 37 - "unidades/config/db.js"
 Cohesion: 0.29
 Nodes (4): connection, mysql, db, jwt
 
-### Community 37 - "routes/unit.js"
+### Community 38 - "routes/emergency.js"
 Cohesion: 0.17
-Nodes (8): connection, mysql, db, jwt, express, middleware, router, unitController
+Nodes (8): connection, mysql, db, jwt, emergencyController, express, middleware, router
 
 ### Community 39 - "gateway/index.js"
 Cohesion: 0.40
@@ -295,8 +308,8 @@ Cohesion: 0.25
 Nodes (7): Aprende SICEM: de lo más simple a lo más complejo, Cómo seguir después de esto, Nivel 0 — Cómo está organizado el proyecto, Nivel 12 — La arquitectura completa (para verlo todo junto), Prompt final para pedirle a una IA (repaso general), Prompt para pedirle a una IA, Índice
 
 ### Community 42 - "getIo"
-Cohesion: 0.27
-Nodes (10): getIo(), concludeTransfer(), endShift(), markAvailableAfterTransfer(), notifyForceLogout(), registerLocations(), reportAmbulanceFailure(), startShiftExpirySweep() (+2 more)
+Cohesion: 0.23
+Nodes (12): getIo(), computeScheduledEnd(), concludeTransfer(), endShift(), markAvailableAfterTransfer(), notifyForceLogout(), registerLocations(), reportAmbulanceFailure() (+4 more)
 
 ### Community 44 - "sicem-web index.html (Vite entry, mounts main.jsx)"
 Cohesion: 0.67
@@ -318,25 +331,17 @@ Nodes (11): build, appId, directories, files, icon, productName, win, output (+3
 Cohesion: 0.18
 Nodes (11): devDependencies, electron, electron-builder, vite, vite-plugin-electron, @vitejs/plugin-react, vite, @vitejs/plugin-react (+3 more)
 
-### Community 67 - "routes/hospital.js"
-Cohesion: 0.40
-Nodes (4): express, hospitalController, middleware, router
+### Community 67 - "QuickAssignCard.jsx"
+Cohesion: 0.13
+Nodes (19): EmergencyCard(), ROMAN, severityColor, fmtMin(), QuickAssignCard(), ROMAN, LAYER_LABELS, MapControls() (+11 more)
 
-### Community 72 - "useAuth"
-Cohesion: 0.07
-Nodes (44): ExpedienteScreenContent(), styles, AlertaScreen(), formatCountdown(), formatSchedule(), styles, WEEKDAY_LABELS, LocationReporter() (+36 more)
+### Community 72 - "(app)/index.js"
+Cohesion: 0.05
+Nodes (84): EMPTY_FORM, ExpedienteScreenContent(), fmtNum(), styles, AlertaScreen(), formatCountdown(), formatSchedule(), PatientsPanel() (+76 more)
 
 ### Community 74 - "activateAcceptedExternalUnit"
 Cohesion: 0.47
 Nodes (6): sendPushNotification(), activateAcceptedExternalUnit(), getEmergencyById(), registerAssignment(), registerEmergency(), respondInterInstitutionalRequest()
-
-### Community 75 - "startShift"
-Cohesion: 0.50
-Nodes (4): computeScheduledEnd(), isWithinSchedule(), parseTimeToMinutes(), startShift()
-
-### Community 77 - "getIo"
-Cohesion: 0.67
-Nodes (3): getIo(), updateAvailableBedsI(), updateAvailableBedsIS()
 
 ### Community 79 - "Nivel 1 — JavaScript moderno"
 Cohesion: 0.29
@@ -382,25 +387,25 @@ Nodes (5): Nivel 4 — Frontend: React desde cero, Prompts para pedirle a una IA
 Cohesion: 0.50
 Nodes (4): Desktop: `electron-builder` y el archivo `.asar`, Mobile: por qué compilar para Android es TAN distinto a "solo JavaScript", Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto), Prompts para pedirle a una IA
 
-### Community 90 - "Users.jsx"
+### Community 90 - "crear-cuentas-qa.mjs"
 Cohesion: 0.20
-Nodes (11): emptyCredentialsForm, emptyForm, emptyPatientForm, emptyShiftWindows(), roleLabels, Users(), WEEKDAYS, emptyForm (+3 more)
+Nodes (7): base, crum, employees, existing, hospital, qaAmb, week
 
 ### Community 92 - "dependencies"
 Cohesion: 0.12
 Nodes (17): dependencies, jspdf, leaflet, react-dom, react-leaflet, react-router-dom, recharts, socket.io-client (+9 more)
 
-### Community 93 - "generatePatientReport.js"
-Cohesion: 0.42
-Nodes (8): fetchJson(), fmtCoord(), fmtDateTime(), fmtDuration(), fmtSimple(), generatePatientReport(), toDataURL(), toLower()
+### Community 93 - "Sistema de diseño — sicem-web"
+Cohesion: 0.12
+Nodes (15): Accesibilidad: lo que ya cumple, Administración: sistema compartido, Antes de dar algo por terminado, Componentes compartidos, Dashboard: centro de control, Dónde se cambia la apariencia, Estado del rediseño, Paneles, diálogos, menús y temas (obligatorio para pantallas nuevas) (+7 more)
 
 ### Community 94 - "generateEmergencyReport.js"
 Cohesion: 0.42
 Nodes (8): fetchJson(), fmtCoord(), fmtDateTime(), fmtDuration(), fmtSimple(), generateEmergencyReport(), toDataURL(), toLower()
 
-### Community 95 - "AmbulanceStatusCard.jsx"
-Cohesion: 0.47
-Nodes (5): AmbulanceStatusCard(), formatSchedule(), isOnScheduleNow(), STATUS_COLOR_CLASS, WEEKDAY_LABELS
+### Community 95 - "generatePatientReport.js"
+Cohesion: 0.42
+Nodes (8): fetchJson(), fmtCoord(), fmtDateTime(), fmtDuration(), fmtSimple(), generatePatientReport(), toDataURL(), toLower()
 
 ### Community 96 - "sicem-web/package.json"
 Cohesion: 0.40
@@ -409,6 +414,10 @@ Nodes (4): name, private, type, version
 ### Community 97 - "scripts"
 Cohesion: 0.40
 Nodes (5): scripts, build, dev, lint, preview
+
+### Community 100 - "sicem-desktop/src/components/ui/SkinMenu.jsx"
+Cohesion: 0.33
+Nodes (11): SkinMenu(), SkinSwatch(), SkinPicker(), apply(), listeners, read(), setSkin(), SKINS (+3 more)
 
 ### Community 103 - "sicem-pacientes/package.json"
 Cohesion: 0.11
@@ -419,27 +428,43 @@ Cohesion: 0.18
 Nodes (10): Dependencias, Estado actual, Fase 1 — Base de datos ✅ (IMPLEMENTADA), Fase 2 — Página pública de captura + login ✅ (IMPLEMENTADA), Fase 3 — sicem-desktop: pantalla de pacientes + detección ✅ (IMPLEMENTADA), Fase 4 — sicem-mobile: reasignar destino ✅ (IMPLEMENTADA), Fase 5 — sicem-web: reasignación ✅ (IMPLEMENTADA), Flujo final (visión de las 5 fases) (+2 more)
 
 ### Community 105 - "sicem-pacientes/src/App.jsx"
-Cohesion: 0.23
-Nodes (8): App(), emptyAllergy, emptyCondition, emptyEce, emptyForm, emptyMedication, toDateInput(), toLowerCaseKeys()
+Cohesion: 0.09
+Nodes (38): api(), API_BASE_URL, App(), ICONS, NAV, readUser(), TITLES, MedicalCard() (+30 more)
+
+### Community 107 - "NewEmergency.jsx"
+Cohesion: 0.09
+Nodes (22): cached(), createAmbulanceIcon(), createEmergencyPinIcon(), emergencyIcon, hospitalIcon, iconCache, levelNumber(), MapArea() (+14 more)
+
+### Community 108 - "Dashboard.jsx"
+Cohesion: 0.19
+Nodes (17): LiveClock(), RegionNotice(), useRegion(), Dashboard(), formatElapsed(), formatResponseTime(), isStalled(), plural() (+9 more)
+
+### Community 109 - "Errores corregidos"
+Cohesion: 0.20
+Nodes (9): App del paramédico (celular), Auditoría del frontend de SICEM, Cambios en el backend (mínimos, pedidos por el frontend), Errores corregidos, Escritorio del hospital, Pendiente / límites, Portal de pacientes, Todo el sistema (+1 more)
+
+### Community 110 - "sicem-web/src/components/ui/SkinMenu.jsx"
+Cohesion: 0.33
+Nodes (11): SkinMenu(), SkinSwatch(), SkinPicker(), apply(), listeners, read(), setSkin(), SKINS (+3 more)
 
 ## Knowledge Gaps
-- **495 isolated node(s):** `postCreate.sh script`, `PORTS`, `startDb.sh script`, `__dirname`, `name` (+490 more)
+- **569 isolated node(s):** `postCreate.sh script`, `PORTS`, `startDb.sh script`, `__dirname`, `name` (+564 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **32 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Aprende SICEM: de lo más simple a lo más complejo` connect `Aprende SICEM: de lo más simple a lo más complejo` to `Nivel 1 — JavaScript moderno`, `Nivel 7 — Tiempo real: Socket.IO`, `Nivel 6 — Enrutamiento en React (React Router)`, `Nivel 11 — Infraestructura: variables de entorno, CORS, Codespaces`, `Nivel 5 — React: Hooks y Context API`, `Nivel 3 — Autenticación: JWT, middleware, roles`, `Nivel 8 — Las 3 plataformas y sus diferencias reales`, `Nivel 2 — Backend: Express, rutas, controladores, modelos`, `Nivel 9 — Herramientas de build (Vite, Metro)`, `Nivel 4 — Frontend: React desde cero`, `Nivel 10 — Empaquetado nativo (lo más avanzado del proyecto)`?**
+- **Why does `useAuth()` connect `useAuth` to `sicem-web/src/App.jsx`, `Institutions.jsx`, `QuickAssignCard.jsx`, `NewEmergency.jsx`, `Dashboard.jsx`, `admin/Patients.jsx`, `sicem-web/src/components/layout/Navbar.jsx`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **Why does `expo` connect `expo` to `useAuth`?**
+- **Why does `useAuth()` connect `sicem-desktop/src/App.jsx` to `sicem-desktop/src/context/RegionContext.jsx`?**
   _High betweenness centrality (0.002) - this node is a cross-community bridge._
-- **Why does `plugins` connect `useAuth` to `expo`?**
-  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **Why does `toLowerCaseKeys()` connect `useAuth` to `Institutions.jsx`, `QuickAssignCard.jsx`, `NewEmergency.jsx`, `Dashboard.jsx`, `admin/Patients.jsx`, `sicem-web/src/components/layout/Navbar.jsx`?**
+  _High betweenness centrality (0.001) - this node is a cross-community bridge._
 - **What connects `postCreate.sh script`, `PORTS`, `startDb.sh script` to the rest of the system?**
-  _495 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `useAuth` be split into smaller, more focused modules?**
-  _Cohesion score 0.06593406593406594 - nodes in this community are weakly interconnected._
+  _569 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `sicem-desktop/src/App.jsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.05126646403242148 - nodes in this community are weakly interconnected._
 - **Should `models/emergency.js` be split into smaller, more focused modules?**
   _Cohesion score 0.022988505747126436 - nodes in this community are weakly interconnected._
 - **Should `controllers/emergency.js` be split into smaller, more focused modules?**

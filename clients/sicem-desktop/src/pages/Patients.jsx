@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
-import './Patients.css'
+import { useDialogs } from '../context/useDialogs'
 
 // Pacientes afiliados (rol 5) del sistema, con búsqueda por texto (nombre,
 // apellidos, CURP, identificación de afiliación) y filtro por institución.
-// Sirve para que el hospital consulte a qué institución pertenece cada
-// paciente (Fase 3 — detección de "paciente de otra institución").
+// Sirve para que el hospital consulte a qué institución pertenece cada paciente.
 const Patients = () => {
-    const { user, token } = useAuth()
+    const { token } = useAuth()
+    const { notify } = useDialogs()
     const [query, setQuery] = useState('')
     const [institutionFilter, setInstitutionFilter] = useState('')
     const [institutions, setInstitutions] = useState([])
@@ -16,14 +16,12 @@ const Patients = () => {
     const [loading, setLoading] = useState(false)
     const [searched, setSearched] = useState(false)
 
-    const fetchInstitutions = useCallback(() => {
+    useEffect(() => {
         fetch(`${API_BASE_URL}/usuarios/obtener-instituciones`)
             .then(res => res.json())
             .then(({ institutions }) => setInstitutions(institutions || []))
             .catch(error => console.error('Error recuperando instituciones. ', error))
     }, [])
-
-    useEffect(() => { fetchInstitutions() }, [fetchInstitutions])
 
     const search = useCallback(() => {
         setLoading(true)
@@ -36,70 +34,66 @@ const Patients = () => {
         })
             .then(res => res.json())
             .then(({ data }) => setPatients(data || []))
-            .catch(error => console.error('Error buscando pacientes. ', error))
+            .catch(error => { console.error('Error buscando pacientes. ', error); notify('No se pudo buscar. Revisa tu conexión e inténtalo de nuevo.', 'error') })
             .finally(() => setLoading(false))
-    }, [query, institutionFilter, token])
+    }, [query, institutionFilter, token, notify])
 
     const handleSubmit = (e) => { e.preventDefault(); search() }
 
     return (
-        <div className="patients-page">
-            <h2>Pacientes afiliados</h2>
+        <div className="page">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Pacientes afiliados</h1>
+                    <p className="page-sub">Consulta a qué institución pertenece cada paciente antes de recibirlo.</p>
+                </div>
+            </div>
 
-            <form className="patients-filters" onSubmit={handleSubmit}>
+            <form className="filters" onSubmit={handleSubmit} role="search">
                 <input
-                    className="patients-search"
-                    placeholder="Buscar por nombre, CURP o identificación…"
+                    className="input grow"
+                    aria-label="Buscar paciente"
+                    placeholder="Nombre, CURP o número de afiliación"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                 />
-                <select
-                    className="patients-institution"
-                    value={institutionFilter}
-                    onChange={(e) => setInstitutionFilter(e.target.value)}
-                >
+                <select className="select" aria-label="Filtrar por institución" value={institutionFilter} onChange={(e) => setInstitutionFilter(e.target.value)}>
                     <option value="">Todas las instituciones</option>
                     {institutions.map((i) => (
                         <option key={i.institution_id} value={String(i.institution_id)}>{i.name}</option>
                     ))}
                 </select>
-                <button className="patients-submit" type="submit" disabled={loading}>
-                    {loading ? 'Buscando…' : 'Buscar'}
-                </button>
+                <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Buscando…' : 'Buscar'}</button>
             </form>
 
-            {!searched && <p className="patients-empty">Busca un paciente para ver su institución de afiliación.</p>}
-            {searched && !loading && patients.length === 0 && (
-                <p className="patients-empty">Sin resultados.</p>
-            )}
+            {!searched && <p className="empty">Escribe un nombre, CURP o número de afiliación para ver la institución de un paciente.</p>}
+            {searched && !loading && patients.length === 0 && <p className="empty">Sin resultados. Prueba con otro nombre o quita el filtro de institución.</p>}
 
             {patients.length > 0 && (
-                <table className="patients-table">
-                    <thead>
-                        <tr>
-                            <th>Paciente</th>
-                            <th>CURP</th>
-                            <th>Identificación</th>
-                            <th>Institución de afiliación</th>
-                            <th>Teléfono</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {patients.map((p) => {
-                            const name = [p.first_name, p.first_surname, p.second_surname]
-                                .filter(Boolean).join(' ') || 'Paciente no identificado'
-                            return (
-                                <tr key={p.user_profile_id}>
-                                    <td>{name}</td>
-                                    <td>{p.curp || '—'}</td>
-                                    <td>{p.identification_number || '—'}</td>
-                                    <td>{p.institution_name || 'Sin afiliación'}</td>
-                                    <td>{p.phone_number || '—'}</td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
+                <div className="entity-grid">
+                    {patients.map((p) => {
+                        const name = [p.first_name, p.first_surname, p.second_surname].filter(Boolean).join(' ') || 'Paciente no identificado'
+                        const initials = [p.first_name, p.first_surname].filter(Boolean).map((n) => n[0]).join('').toUpperCase() || '?'
+                        return (
+                            <article key={p.user_profile_id} className={`entity ${p.institution_name ? 'acc-hospital' : 'acc-off'}`} aria-label={name}>
+                                <div className="entity-head">
+                                    <span className="entity-avatar" aria-hidden="true">{initials}</span>
+                                    <div className="entity-titles">
+                                        <h2 className="entity-title">{name}</h2>
+                                        <p className="entity-sub mono">{p.curp || 'Sin CURP'}</p>
+                                    </div>
+                                </div>
+                                <div className="entity-chips">
+                                    <span className={`pill ${p.institution_name ? 'pill-hosp' : 'pill-warn'}`}>{p.institution_name || 'Sin afiliación'}</span>
+                                </div>
+                                <dl className="entity-facts">
+                                    <div><dt>N.º de afiliación</dt><dd className="mono">{p.identification_number || '—'}</dd></div>
+                                    <div><dt>Teléfono</dt><dd>{p.phone_number || '—'}</dd></div>
+                                </dl>
+                            </article>
+                        )
+                    })}
+                </div>
             )}
         </div>
     )

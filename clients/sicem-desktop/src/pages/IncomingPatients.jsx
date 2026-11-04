@@ -8,7 +8,11 @@ import { connectUnitsSocket } from '../sockets/unitsSocket'
 import PatientDetailModal from '../components/patients/PatientDetailModal'
 import RejectReasonModal from '../components/patients/RejectReasonModal'
 import { ensureNotificationPermission, alertNewPatient } from '../utils/notify'
+import { useDialogs } from '../context/useDialogs'
+import { triageNumber } from '../utils/triage'
+import Icon from '../components/ui/Icon'
 import './IncomingPatients.css'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
 
 const UNASSIGNED_SPECIALITY_LABEL = 'Sin especialidad asignada'
 
@@ -32,6 +36,7 @@ const sortByPriority = (list) => [...list].sort((a, b) => {
 // aquí: los aceptados viven en Seguimiento, los rechazados en Historial.
 const IncomingPatients = () => {
     const { user, token } = useAuth()
+    const { notify } = useDialogs()
     const [patients, setPatients] = useState([])
     const [selectedPatient, setSelectedPatient] = useState(null)
     const [specialityCapacity, setSpecialityCapacity] = useState([])
@@ -149,10 +154,11 @@ const IncomingPatients = () => {
                         ? { ...p, reception_status_id: 2, reception_status_name: 'Aceptada' }
                         : p
                 ))
+                notify('Paciente aceptado. Ya aparece en Seguimiento.', 'ok')
             })
             .catch(error => {
                 console.error('Error aceptando paciente. ', error)
-                alert(error.message || 'No se pudo confirmar la recepción. Intenta de nuevo.')
+                notify(error.message || 'No se pudo confirmar la recepción. Intenta de nuevo.', 'error')
             })
     }
 
@@ -178,10 +184,11 @@ const IncomingPatients = () => {
                 // así que simplemente lo quitamos de la lista local.
                 setPatients((current) => current.filter((p) => p.emergency_patient_id !== emergencyPatientId))
                 setRejectingPatientId(null)
+                notify('Paciente rechazado. El despachador ya puede reasignarlo.', 'ok')
             })
             .catch(error => {
                 console.error('Error rechazando paciente. ', error)
-                alert('No se pudo rechazar al paciente. Intenta de nuevo.')
+                notify('No se pudo rechazar al paciente. Intenta de nuevo.', 'error')
             })
     }
 
@@ -207,10 +214,25 @@ const IncomingPatients = () => {
         return aMin - bMin
     })
 
+    const urgentCount = pendingPatients.filter((p) => { const n = triageNumber(p.triage_level); return n !== null && n <= 2 }).length
+    const totalFreeBeds = specialityCapacity.reduce((sum, row) => sum + (Number(row.available_beds) || 0), 0)
+
     return (
-        <div className="incoming-layout">
+        <div className="page incoming-layout">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Pacientes en camino</h1>
+                    <p className="page-sub">Decide si tu hospital puede recibir a cada paciente. Los más urgentes aparecen primero.</p>
+                </div>
+                <ul className="stat-row" aria-label="Resumen">
+                    <li><b><AnimatedNumber value={pendingPatients.length} /></b><span>por decidir</span></li>
+                    <li className={urgentCount > 0 ? 'stat-alert' : ''}><b><AnimatedNumber value={urgentCount} /></b><span>nivel I o II</span></li>
+                    <li><b><AnimatedNumber value={totalFreeBeds} /></b><span>camas libres</span></li>
+                </ul>
+            </div>
+
             {pendingPatients.length === 0 && (
-                <p className="empty-state">Sin solicitudes pendientes por ahora.</p>
+                <p className="empty">No hay pacientes por decidir. Cuando llegue uno, suena una alerta y aparece aquí al instante.</p>
             )}
 
             {specialityNames.map((specialityName) => {
@@ -218,38 +240,44 @@ const IncomingPatients = () => {
                 const groupPatients = sortByPriority(groupedBySpeciality[specialityName])
                 const capacityRow = !isUnassigned ? specialityCapacity.find((s) => s.name === specialityName) : null
                 const isOverCapacity = capacityRow && groupPatients.length > capacityRow.available_beds
+                const headingId = `grp-${specialityName.replace(/\W+/g, '-')}`
                 return (
-                    <div key={specialityName} className="speciality-group">
-                        <div className={`section-title ${isUnassigned ? 'unassigned' : ''} ${isOverCapacity ? 'over-capacity' : ''}`}>
-                            <span>{specialityName} ({groupPatients.length})</span>
+                    <section key={specialityName} className="speciality-group" aria-labelledby={headingId}>
+                        <header className="group-head">
+                            <h2 id={headingId}>{specialityName} <span className="count">{groupPatients.length}</span></h2>
                             {capacityRow && (
-                                <span className="capacity-hint" title="Camas disponibles ahora mismo para esta especialidad">
-                                    {isOverCapacity && '⚠ '}
-                                    {capacityRow.available_beds} cama{capacityRow.available_beds === 1 ? '' : 's'} disponible{capacityRow.available_beds === 1 ? '' : 's'}
+                                <span
+                                    className={`chip ${isOverCapacity ? 'chip-brand' : 'chip-ok'}`}
+                                    title="Camas disponibles ahora mismo para esta especialidad"
+                                >
+                                    <Icon name="bed" />
+                                    {capacityRow.available_beds} cama{capacityRow.available_beds === 1 ? '' : 's'} libre{capacityRow.available_beds === 1 ? '' : 's'}
                                 </span>
                             )}
-                        </div>
+                        </header>
                         {isOverCapacity && (
-                            <p className="over-capacity-hint">
-                                Ojo: llegan más solicitudes de {specialityName} ({groupPatients.length}) que camas disponibles hay ({capacityRow.available_beds}) — prioriza con cuidado cuáles aceptar.
+                            <p className="callout callout-danger" role="status">
+                                Llegan más solicitudes de {specialityName} ({groupPatients.length}) que camas libres hay ({capacityRow.available_beds}). Prioriza con cuidado a quién aceptar.
                             </p>
                         )}
                         {isUnassigned && (
-                            <p className="unassigned-hint">
-                                Estos pacientes no tienen especialidad asignada por el despachador todavía.
+                            <p className="callout">
+                                El despachador todavía no les asignó una especialidad. Puedes aceptarlos y se acomodan después.
                             </p>
                         )}
-                        {groupPatients.map((p) => (
-                            <IncomingPatientCard
-                                key={p.emergency_patient_id}
-                                patient={p}
-                                hospitalInstitutionId={user.institutionId}
-                                onViewDetail={handleViewDetail}
-                                onAccept={handleAccept}
-                                onReject={handleReject}
-                            />
-                        ))}
-                    </div>
+                        <div className="cards">
+                            {groupPatients.map((p) => (
+                                <IncomingPatientCard
+                                    key={p.emergency_patient_id}
+                                    patient={p}
+                                    hospitalInstitutionId={user.institutionId}
+                                    onViewDetail={handleViewDetail}
+                                    onAccept={handleAccept}
+                                    onReject={handleReject}
+                                />
+                            ))}
+                        </div>
+                    </section>
                 )
             })}
 
@@ -274,7 +302,6 @@ const IncomingPatients = () => {
                     onCancel={() => setRejectingPatientId(null)}
                 />
             )}
-
         </div>
     )
 }

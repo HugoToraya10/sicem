@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { roleLabel } from '../../config/roles'
 import { useAuth } from '../../context/AuthContext';
 import { toLowerCaseKeys } from '../../utils/formatData';
 import Navbar from '../../components/layout/Navbar';
@@ -8,8 +9,12 @@ import { parseResponse } from '../../utils/apiRequest';
 import './Institutions.css';
 import './EmergencyCatalogs.css';
 import {API_BASE_URL} from '../../config/api'
+import { useDialogs } from '../../context/useDialogs'
+import MoreMenu from '../../components/ui/MoreMenu'
+import { readableTextOn } from '../../utils/color'
+import '../../styles/entities.css'
+import { Drawer } from '../../components/ui/Overlay'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 const emptyNameForm = { name: '', description: '' }
 const emptyEditNameForm = { id: '', name: '', description: '' }
@@ -19,6 +24,7 @@ const emptyEditTriageForm = { triageLevelId: '', level: '', color: '', hexColor:
 const TABS = ['Tipos de Emergencia', 'Estados de Emergencia', 'Estados de Solicitud', 'Niveles de Triage']
 
 const EmergencyCatalogs = () => {
+    const { notify, confirm } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
     const [activeTab, setActiveTab] = useState('Tipos de Emergencia')
@@ -117,7 +123,7 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setTypeForm(emptyNameForm); setShowTypeForm(false); fetchTypes(); })
-            .catch(error => { console.error('Error creando tipo de emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando tipo de emergencia. ', error); notify(error.message, 'error') })
     }
 
     const openEditType = (t) => {
@@ -134,12 +140,12 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingType(null); fetchTypes(); })
-            .catch(error => { console.error('Error actualizando tipo de emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando tipo de emergencia. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleType = (t) => {
+    const handleToggleType = async (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el tipo "${t.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el tipo "${t.name}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/emergencias/alternar-tipo-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -147,7 +153,7 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => fetchTypes())
-            .catch(error => { console.error('Error cambiando estado de tipo de emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de tipo de emergencia. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------estados de emergencia: crear / editar / alternar--------------------------------------------------
@@ -162,7 +168,7 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setStatusForm(emptyNameForm); setShowStatusForm(false); fetchStatuses(); })
-            .catch(error => { console.error('Error creando estado de emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando estado de emergencia. ', error); notify(error.message, 'error') })
     }
 
     const openEditStatus = (s) => {
@@ -179,12 +185,12 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingStatus(null); fetchStatuses(); })
-            .catch(error => { console.error('Error actualizando estado de emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando estado de emergencia. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleStatus = (s) => {
+    const handleToggleStatus = async (s) => {
         const action = s.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el estado "${s.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el estado "${s.name}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/emergencias/alternar-estado-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -192,7 +198,7 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => fetchStatuses())
-            .catch(error => { console.error('Error cambiando estado de emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de emergencia. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------estados de solicitud: crear / editar / alternar--------------------------------------------------
@@ -207,7 +213,7 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setRequestStatusForm(emptyNameForm); setShowRequestStatusForm(false); fetchRequestStatuses(); })
-            .catch(error => { console.error('Error creando estado de solicitud. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando estado de solicitud. ', error); notify(error.message, 'error') })
     }
 
     const openEditRequestStatus = (s) => {
@@ -224,12 +230,12 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingRequestStatus(null); fetchRequestStatuses(); })
-            .catch(error => { console.error('Error actualizando estado de solicitud. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando estado de solicitud. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleRequestStatus = (s) => {
+    const handleToggleRequestStatus = async (s) => {
         const action = s.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el estado "${s.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el estado "${s.name}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/emergencias/alternar-estado-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -237,7 +243,7 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => fetchRequestStatuses())
-            .catch(error => { console.error('Error cambiando estado de solicitud. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de solicitud. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------niveles de triage: crear / editar / alternar--------------------------------------------------
@@ -255,7 +261,7 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setTriageForm(emptyTriageForm); setShowTriageForm(false); fetchTriageLevels(); })
-            .catch(error => { console.error('Error creando nivel de triage. ', error); alert(error.message) })
+            .catch(error => { console.error('Error creando nivel de triage. ', error); notify(error.message, 'error') })
     }
 
     const openEditTriage = (t) => {
@@ -280,12 +286,12 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => { setEditingTriage(null); fetchTriageLevels(); })
-            .catch(error => { console.error('Error actualizando nivel de triage. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando nivel de triage. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleTriage = (t) => {
+    const handleToggleTriage = async (t) => {
         const action = t.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el nivel "${t.level}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el nivel "${t.level}"?`, confirmLabel: 'Sí, continuar', danger: false }))) return
         fetch(`${API_BASE_URL}/emergencias/alternar-nivel-triage`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -293,15 +299,15 @@ const EmergencyCatalogs = () => {
         })
             .then(parseResponse)
             .then(() => fetchTriageLevels())
-            .catch(error => { console.error('Error cambiando estado de nivel de triage. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado de nivel de triage. ', error); notify(error.message, 'error') })
     }
 
     return (
         <div className="institutions-page">
-            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabels[user?.roleId] || ''} links={navLinks} />
+            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabel(user?.roleId)} links={navLinks} />
 
-            <div className="institutions-body">
-                <h2 className="institutions-title">Catálogos de Emergencias</h2>
+            <div role="main" id="contenido" className="institutions-body">
+                <h1 className="institutions-title">Catálogos de emergencias</h1>
 
                 <div className="institutions-tabs">
                     {TABS.map((tab) => (
@@ -315,17 +321,16 @@ const EmergencyCatalogs = () => {
                 {activeTab === 'Tipos de Emergencia' && (
                     <>
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={typesFilter} onChange={(e) => setTypesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={typesFilter} onChange={(e) => setTypesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <button className="institutions-add-btn" onClick={() => setShowTypeForm(!showTypeForm)}>+ Nuevo Tipo</button>
+                            <button className="institutions-add-btn" onClick={() => setShowTypeForm(!showTypeForm)}>+ Nuevo tipo</button>
                         </div>
 
-                        {showTypeForm && (
+                        <Drawer open={Boolean(showTypeForm)} onClose={() => setShowTypeForm(false)} title="Nuevo Tipo de Emergencia" size="md">
                             <form className="institutions-form" onSubmit={handleCreateType}>
-                                <h3>Nuevo Tipo de Emergencia</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -341,11 +346,10 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowTypeForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingType !== null && (
+                        <Drawer open={Boolean(editingType !== null)} onClose={() => setEditingType(null)} title="Editar Tipo de Emergencia" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateType}>
-                                <h3>Editar Tipo de Emergencia</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -361,28 +365,26 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingType(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(types, typesFilter).map((t) => (
-                                        <tr key={t.emergency_type_id}>
-                                            <td>{t.name}</td>
-                                            <td>{t.description}</td>
-                                            <td>
-                                                <span className={`institutions-status ${t.is_active ? 'status-active' : 'status-inactive'}`}>{t.is_active ? 'Activo' : 'Inactivo'}</span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditType(t)}>Editar</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleType(t)}>{t.is_active ? 'Desactivar' : 'Activar'}</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(types, typesFilter).length === 0 && <p className="institutions-empty">No hay tipos que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(types, typesFilter).map((x) => (
+                                <article key={x.emergency_type_id} className={`entity acc-route${x.is_active ? '' : ' is-off'}`}>
+                                    <div className="entity-head">
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{x.name}</h2>
+                                            <p className="entity-sub">{x.description || 'Sin descripción'}</p>
+                                        </div>
+                                        <span className={`pill ${x.is_active ? 'pill-ok' : 'pill-warn'}`}>{x.is_active ? 'Activo' : 'Inactivo'}</span>
+                                    </div>
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openEditType(x)}>Editar</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[{ label: x.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleType(x), danger: Boolean(x.is_active) }]} />
+                                    </div>
+                                </article>
+                            ))}
+                            {filterByStatus(types, typesFilter).length === 0 && <p className="entity-empty">No hay tipos que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}
@@ -391,17 +393,16 @@ const EmergencyCatalogs = () => {
                 {activeTab === 'Estados de Emergencia' && (
                     <>
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={statusesFilter} onChange={(e) => setStatusesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={statusesFilter} onChange={(e) => setStatusesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <button className="institutions-add-btn" onClick={() => setShowStatusForm(!showStatusForm)}>+ Nuevo Estado</button>
+                            <button className="institutions-add-btn" onClick={() => setShowStatusForm(!showStatusForm)}>+ Nuevo estado</button>
                         </div>
 
-                        {showStatusForm && (
+                        <Drawer open={Boolean(showStatusForm)} onClose={() => setShowStatusForm(false)} title="Nuevo Estado de Emergencia" size="md">
                             <form className="institutions-form" onSubmit={handleCreateStatus}>
-                                <h3>Nuevo Estado de Emergencia</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -417,11 +418,10 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowStatusForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingStatus !== null && (
+                        <Drawer open={Boolean(editingStatus !== null)} onClose={() => setEditingStatus(null)} title="Editar Estado de Emergencia" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateStatus}>
-                                <h3>Editar Estado de Emergencia</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -437,28 +437,26 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingStatus(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(statuses, statusesFilter).map((s) => (
-                                        <tr key={s.emergency_status_id}>
-                                            <td>{s.name}</td>
-                                            <td>{s.description}</td>
-                                            <td>
-                                                <span className={`institutions-status ${s.is_active ? 'status-active' : 'status-inactive'}`}>{s.is_active ? 'Activo' : 'Inactivo'}</span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditStatus(s)}>Editar</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleStatus(s)}>{s.is_active ? 'Desactivar' : 'Activar'}</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(statuses, statusesFilter).length === 0 && <p className="institutions-empty">No hay estados que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(statuses, statusesFilter).map((x) => (
+                                <article key={x.emergency_status_id} className={`entity acc-route${x.is_active ? '' : ' is-off'}`}>
+                                    <div className="entity-head">
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{x.name}</h2>
+                                            <p className="entity-sub">{x.description || 'Sin descripción'}</p>
+                                        </div>
+                                        <span className={`pill ${x.is_active ? 'pill-ok' : 'pill-warn'}`}>{x.is_active ? 'Activo' : 'Inactivo'}</span>
+                                    </div>
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openEditStatus(x)}>Editar</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[{ label: x.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleStatus(x), danger: Boolean(x.is_active) }]} />
+                                    </div>
+                                </article>
+                            ))}
+                            {filterByStatus(statuses, statusesFilter).length === 0 && <p className="entity-empty">No hay estados que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}
@@ -467,17 +465,16 @@ const EmergencyCatalogs = () => {
                 {activeTab === 'Estados de Solicitud' && (
                     <>
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={requestStatusesFilter} onChange={(e) => setRequestStatusesFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={requestStatusesFilter} onChange={(e) => setRequestStatusesFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <button className="institutions-add-btn" onClick={() => setShowRequestStatusForm(!showRequestStatusForm)}>+ Nuevo Estado</button>
+                            <button className="institutions-add-btn" onClick={() => setShowRequestStatusForm(!showRequestStatusForm)}>+ Nuevo estado</button>
                         </div>
 
-                        {showRequestStatusForm && (
+                        <Drawer open={Boolean(showRequestStatusForm)} onClose={() => setShowRequestStatusForm(false)} title="Nuevo Estado de Solicitud" size="md">
                             <form className="institutions-form" onSubmit={handleCreateRequestStatus}>
-                                <h3>Nuevo Estado de Solicitud</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -493,11 +490,10 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowRequestStatusForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingRequestStatus !== null && (
+                        <Drawer open={Boolean(editingRequestStatus !== null)} onClose={() => setEditingRequestStatus(null)} title="Editar Estado de Solicitud" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateRequestStatus}>
-                                <h3>Editar Estado de Solicitud</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nombre</label>
@@ -513,28 +509,26 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingRequestStatus(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(requestStatuses, requestStatusesFilter).map((s) => (
-                                        <tr key={s.request_status_id}>
-                                            <td>{s.name}</td>
-                                            <td>{s.description}</td>
-                                            <td>
-                                                <span className={`institutions-status ${s.is_active ? 'status-active' : 'status-inactive'}`}>{s.is_active ? 'Activo' : 'Inactivo'}</span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditRequestStatus(s)}>Editar</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleRequestStatus(s)}>{s.is_active ? 'Desactivar' : 'Activar'}</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(requestStatuses, requestStatusesFilter).length === 0 && <p className="institutions-empty">No hay estados que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(requestStatuses, requestStatusesFilter).map((x) => (
+                                <article key={x.request_status_id} className={`entity acc-route${x.is_active ? '' : ' is-off'}`}>
+                                    <div className="entity-head">
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{x.name}</h2>
+                                            <p className="entity-sub">{x.description || 'Sin descripción'}</p>
+                                        </div>
+                                        <span className={`pill ${x.is_active ? 'pill-ok' : 'pill-warn'}`}>{x.is_active ? 'Activo' : 'Inactivo'}</span>
+                                    </div>
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openEditRequestStatus(x)}>Editar</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[{ label: x.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleRequestStatus(x), danger: Boolean(x.is_active) }]} />
+                                    </div>
+                                </article>
+                            ))}
+                            {filterByStatus(requestStatuses, requestStatusesFilter).length === 0 && <p className="entity-empty">No hay estados que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}
@@ -543,17 +537,16 @@ const EmergencyCatalogs = () => {
                 {activeTab === 'Niveles de Triage' && (
                     <>
                         <div className="institutions-tab-header">
-                            <select className="status-filter-select" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
+                            <select aria-label="Filtrar por estado" className="status-filter-select" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
                                 <option value="all">Todos</option>
                                 <option value="active">Activos</option>
                                 <option value="inactive">Inactivos</option>
                             </select>
-                            <button className="institutions-add-btn" onClick={() => setShowTriageForm(!showTriageForm)}>+ Nuevo Nivel</button>
+                            <button className="institutions-add-btn" onClick={() => setShowTriageForm(!showTriageForm)}>+ Nuevo nivel</button>
                         </div>
 
-                        {showTriageForm && (
+                        <Drawer open={Boolean(showTriageForm)} onClose={() => setShowTriageForm(false)} title="Nuevo Nivel de Triage" size="md">
                             <form className="institutions-form" onSubmit={handleCreateTriage}>
-                                <h3>Nuevo Nivel de Triage</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nivel</label>
@@ -581,11 +574,10 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setShowTriageForm(false)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        {editingTriage !== null && (
+                        <Drawer open={Boolean(editingTriage !== null)} onClose={() => setEditingTriage(null)} title="Editar Nivel de Triage" size="md">
                             <form className="institutions-form" onSubmit={handleUpdateTriage}>
-                                <h3>Editar Nivel de Triage</h3>
                                 <div className="institutions-form-row">
                                     <div className="institutions-field">
                                         <label>Nivel</label>
@@ -613,30 +605,31 @@ const EmergencyCatalogs = () => {
                                     <button type="button" className="institutions-form-cancel" onClick={() => setEditingTriage(null)}>Cancelar</button>
                                 </div>
                             </form>
-                        )}
+                            </Drawer>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead><tr><th>Nivel</th><th>Color</th><th>Descripción</th><th>Espera máx.</th><th>Estado</th><th>Acciones</th></tr></thead>
-                                <tbody>
-                                    {filterByStatus(triageLevels, triageFilter).map((t) => (
-                                        <tr key={t.triage_level_id}>
-                                            <td>{t.level}</td>
-                                            <td><span className="triage-color-dot" style={{ background: t.hex_color }} />{t.color}</td>
-                                            <td>{t.description}</td>
-                                            <td>{t.max_wait_minutes ?? '—'}</td>
-                                            <td>
-                                                <span className={`institutions-status ${t.is_active ? 'status-active' : 'status-inactive'}`}>{t.is_active ? 'Activo' : 'Inactivo'}</span>
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => openEditTriage(t)}>Editar</button>
-                                                <button className="institutions-toggle-btn" onClick={() => handleToggleTriage(t)}>{t.is_active ? 'Desactivar' : 'Activar'}</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filterByStatus(triageLevels, triageFilter).length === 0 && <p className="institutions-empty">No hay niveles que coincidan con el filtro.</p>}
+                        <div className="entity-grid entity-grid-sm">
+                            {filterByStatus(triageLevels, triageFilter).map((t) => (
+                                <article key={t.triage_level_id} className={`entity${t.is_active ? '' : ' is-off'}`} style={{ '--accent': t.hex_color || 'var(--text-3)' }}>
+                                    <div className="entity-head">
+                                        <span className="entity-avatar" aria-hidden="true" style={{ background: t.hex_color || 'var(--text-3)', color: readableTextOn(t.hex_color) }}>{t.level}</span>
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">Nivel {t.level} · {t.color}</h2>
+                                            <p className="entity-sub">{t.description}</p>
+                                        </div>
+                                        <span className={`pill ${t.is_active ? 'pill-ok' : 'pill-warn'}`}>{t.is_active ? 'Activo' : 'Inactivo'}</span>
+                                    </div>
+                                    <dl className="entity-facts">
+                                        <div><dt>Espera máxima</dt><dd>{t.max_wait_minutes === null || t.max_wait_minutes === undefined ? 'Sin límite' : (Number(t.max_wait_minutes) === 0 ? 'Inmediata' : `${t.max_wait_minutes} min`)}</dd></div>
+                                        <div><dt>Color</dt><dd className="mono">{t.hex_color || '—'}</dd></div>
+                                    </dl>
+                                    <div className="entity-actions">
+                                        <button type="button" className="institutions-edit-btn" onClick={() => openEditTriage(t)}>Editar</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[{ label: t.is_active ? 'Desactivar' : 'Activar', onClick: () => handleToggleTriage(t), danger: Boolean(t.is_active) }]} />
+                                    </div>
+                                </article>
+                            ))}
+                            {filterByStatus(triageLevels, triageFilter).length === 0 && <p className="entity-empty">No hay niveles que coincidan con el filtro.</p>}
                         </div>
                     </>
                 )}

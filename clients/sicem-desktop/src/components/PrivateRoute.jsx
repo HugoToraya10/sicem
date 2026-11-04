@@ -6,6 +6,7 @@ import { getNavLinks } from '../utils/Navlinks'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
 import { connectUnitsSocket } from '../sockets/unitsSocket'
 import { ensureNotificationPermission, alertNewPatient } from '../utils/notify'
+import { roleLabel } from '../config/roles'
 
 // Esta app es exclusiva para admin (1) y hospital (4) — mismo criterio que Login.jsx
 // usa antes de guardar la sesión. Si por lo que sea llega aquí un token/usuario que
@@ -74,10 +75,12 @@ const PrivateRoute = () => {
         <>
             <Navbar
                 userName={user.firstName || 'Usuario'}
-                roleLabel={parseInt(user.roleId) === 1 ? 'Administrador' : 'Hospital'}
+                roleLabel={roleLabel(user.roleId)}
                 links={getNavLinks(user.roleId, user.isInstitutionAdmin)}
             />
-            <Outlet />
+            <main id="contenido" className="app-main">
+                <Outlet />
+            </main>
         </>
     )
 }

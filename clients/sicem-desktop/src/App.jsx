@@ -1,4 +1,8 @@
+import { useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useTheme } from './utils/theme'
+import { RegionProvider } from './context/RegionContext'
+import { DialogsProvider } from './context/DialogsContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import InstitutionAdminRoute from './components/InstitutionAdminRoute'
@@ -22,10 +26,20 @@ const RootRedirect = () => {
     return <Navigate to={isAuthorized ? '/pacientes-en-camino' : '/login'} replace />
 }
 
+// Aplica el tema claro/oscuro guardado al <html>.
+function ThemeGate() {
+    const theme = useTheme()
+    useEffect(() => { document.documentElement.dataset.theme = theme }, [theme])
+    return null
+}
+
 function App() {
     return (
         <AuthProvider>
+            <RegionProvider>
+            <DialogsProvider>
             <HashRouter>
+                <ThemeGate />
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={<RootRedirect />} />
@@ -46,6 +60,8 @@ function App() {
                     </Route>
                 </Routes>
             </HashRouter>
+            </DialogsProvider>
+            </RegionProvider>
         </AuthProvider>
     )
 }

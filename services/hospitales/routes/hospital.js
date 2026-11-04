@@ -29,6 +29,7 @@ router.patch('/actualizar-institucion', middleware.verifyToken, hospitalControll
 router.get('/instituciones', hospitalController.getAllInstitutions); // TODO
 router.get('/instituciones-destino', hospitalController.getInstitutionsForDestination); // ✅ NewEmergency.jsx
 router.get('/institucion/:name', hospitalController.getInstitutionByName); // TODO
+router.get('/contexto-regional/:institutionId', middleware.verifyToken, hospitalController.getRegionContext); // ✅ centro del mapa y búsqueda de direcciones (web/desktop/mobile)
 router.get('/notificaciones', middleware.verifyToken, hospitalController.getInstitutionNotifications); // TODO
 router.get('/notificaciones/:name', middleware.verifyToken, hospitalController.getInstitutionNotificationByName); // TODO
 router.get('/especialidades-instituciones', hospitalController.getAllInstitutionSpecialities); // TODO

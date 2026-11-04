@@ -9,52 +9,103 @@
     width: 100%;
     border-radius: 0;
     z-index: 1;
+    background: var(--bg);
 }
 
+/* Mapa oscuro: se invierte el mosaico de OpenStreetMap (sin servicio de pago) */
+:root[data-theme="dark"] .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.86) contrast(0.88) saturate(0.7);
+}
+
+/* Unidades */
 .ambulance-marker-dot {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
+/* Emergencia con ubicación fija (detalle y nueva emergencia) */
 .emergency-marker-pin {
     width: 22px;
     height: 22px;
     border-radius: 50% 50% 50% 0;
-    background: #C0272D;
-    border: 2px solid white;
+    background: var(--brand);
+    border: 2px solid var(--surface);
     transform: rotate(-45deg);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Emergencias activas del dashboard: círculo con nivel de triage */
+.em-marker-wrap { position: relative; width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer; }
+
+.em-marker-dot {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--c);
+    border: 3px solid var(--surface);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    display: grid;
+    place-items: center;
+    font: 700 11px var(--font-body);
+    color: #fff;
+}
+
+.em-marker-wrap.selected .em-marker-dot { box-shadow: 0 0 0 3px var(--steel), 0 1px 5px rgba(0, 0, 0, 0.45); }
+
+.em-marker-pulse {
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: var(--c);
+    animation: em-pulse 2.2s ease-out infinite;
+}
+
+@keyframes em-pulse {
+    0% { transform: scale(0.8); opacity: 0.6; }
+    100% { transform: scale(2.2); opacity: 0; }
 }
 
 .hospital-marker-badge {
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
-    background: #8E44AD;
-    border: 2px solid white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    width: 24px;
+    height: 24px;
+    border-radius: var(--r-sm);
+    background: var(--hosp);
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #fff;
     font-size: 12px;
     font-weight: 700;
 }
 
+/* Leyenda */
 .map-legend {
     position: absolute;
     bottom: 14px;
     left: 14px;
-    background: white;
-    border: 1px solid #e4e4ec;
-    border-radius: 6px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
     padding: 10px 14px;
-    font-size: 11px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    font-size: 12.5px;
+    box-shadow: var(--shadow-panel);
     z-index: 1000;
+}
+
+.map-legend-centered {
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 16px;
+    padding: 8px 14px;
+    border-radius: 22px;
 }
 
 .legend-item {
@@ -62,21 +113,29 @@
     align-items: center;
     gap: 6px;
     margin-bottom: 4px;
-    color: #444;
+    color: var(--text-2);
+    white-space: nowrap;
 }
 
+.map-legend-centered .legend-item { margin-bottom: 0; }
+
 .legend-dot {
-    width: 8px;
-    height: 8px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     display: inline-block;
 }
 
 .legend-hint {
-    font-size: 10px;
-    color: #999;
-    font-style: italic;
+    font-size: 11.5px;
+    color: var(--text-3);
     margin-top: 4px;
     padding-top: 4px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--line);
+}
+
+/* Popups de Leaflet con el tema */
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: var(--surface);
+    color: var(--text);
 }

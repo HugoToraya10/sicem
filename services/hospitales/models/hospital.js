@@ -180,6 +180,18 @@ const getInstitutionsForDestination = (callback) => {
     db.query(sql, callback);
 }
 
+// Dónde opera una institución: coordenadas, ciudad y estado. El frontend centra el mapa y
+// acota la búsqueda de direcciones con esto — NUNCA con la IP, que se equivoca de estado.
+const getRegionContext = (institutionId, callback) => {
+    const sql = `SELECT i.institution_id, i.name, i.latitude, i.longitude,
+                c.city_id, c.name AS city_name, s.state_id, s.name AS state_name
+                FROM institutions i
+                LEFT JOIN cities c ON i.city_id = c.city_id
+                LEFT JOIN states s ON c.state_id = s.state_id
+                WHERE i.institution_id = ?`;
+    db.query(sql, [institutionId], callback);
+}
+
 const getInstitutionByName = (name, callback) => {
     const sql = `SELECT * FROM institutions WHERE name LIKE ?`;
     db.query(sql, [`%${name}%`], callback);
@@ -261,7 +273,7 @@ module.exports = {
     getUserInstitutionInfo, getInstitutionIdByInstitutionSpecialityId, getInstitutionCrumFlag,
     registerInstitution, createSpeciality, createInstitutionNotification, createInstitutionsSpecialities, createInstitutionType,
     toggleInstitution, toggleCrumInstitution, toggleInstitutionsSpecialities, toggleSpecialities, toggleInstitutionType, identifyPatient,
-    updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS, getInstitutionsForDestination,
+    updateAvailableBedsI, updateBedCapacityI, updateAvailableBedsIS, updateBedCapacityIS, getInstitutionsForDestination, getRegionContext,
     updateInstitutionType, updateSpeciality, updateInstitution,
     getAllInstitutionsAdmin, getAllInstitutionTypesAdmin, getAllSpecialitiesAdmin,
     getAllInstitutions, getInstitutionByName, getInstitutionById, getInstitutionNotifications, getInstitutionNotificationByName,

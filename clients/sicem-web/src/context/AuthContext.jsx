@@ -1,4 +1,5 @@
 import { useState, createContext, useContext, useEffect } from "react";
+import { API_BASE_URL } from "../config/api";
 
 const AuthContext = createContext(null);
 
@@ -14,8 +15,18 @@ const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || 'nul
     useEffect(() => {
         const originalFetch = window.fetch
         let redirecting = false
+        // Avisos de red y de servidor (una vez cada 10 s por tipo) para que ninguna pantalla falle en silencio.
+        const lastShown = {}
+        const warn = (key, message) => {
+            const now = Date.now()
+            if (lastShown[key] && now - lastShown[key] < 10000) return
+            lastShown[key] = now
+            window.dispatchEvent(new CustomEvent('sicem:notify', { detail: { message, tone: 'error' } }))
+        }
+        const isApi = (input) => String(input?.url || input || '').startsWith(API_BASE_URL)
         window.fetch = (...args) => {
             return originalFetch(...args).then((response) => {
+                if (isApi(args[0]) && response.status >= 500) warn('server', 'El servidor tuvo un problema. Intenta de nuevo en unos segundos.')
                 const headers = args[1]?.headers || {}
                 const hadAuthHeader = Boolean(headers.Authorization || headers.authorization)
                 if (response.status === 401 && hadAuthHeader && !redirecting) {
@@ -25,6 +36,9 @@ const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || 'nul
                     window.location.href = '/login'
                 }
                 return response
+            }).catch((error) => {
+                if (isApi(args[0]) && error?.name !== 'AbortError') warn('network', 'No hay conexión con el servidor. Revisa tu red; vuelve a intentarlo en un momento.')
+                throw error
             })
         }
         return () => { window.fetch = originalFetch }

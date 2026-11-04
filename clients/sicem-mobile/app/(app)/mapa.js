@@ -1,13 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Alert } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native'
+import { Alert } from '../../utils/alert'
 import { WebView } from 'react-native-webview'
 import { Ionicons } from '@expo/vector-icons'
 import * as Location from 'expo-location'
+import { useRouter } from 'expo-router'
 import { useAuth } from '../../context/AuthContext'
 import { useAmbulance } from '../../context/AmbulanceContext'
 import { useSocketAlerts } from '../../context/SocketContext'
 import { API_BASE_URL } from '../../constants/api'
 import { toLowerCaseKeys } from '../../utils/formatData'
+import { colors } from '../../constants/theme'
+import { Button, Chip, StepTracker, TriageBadge } from '../../components/ui'
+
+// Duración y distancia legibles: "47 min", "2 h 5 min", "850 m", "12.4 km".
+const formatDuration = (minutes) => {
+    const m = Math.max(0, Math.round(minutes))
+    if (m < 60) return `${m} min`
+    const h = Math.floor(m / 60)
+    return `${h} h${m % 60 ? ` ${m % 60} min` : ''}`
+}
+const formatMeters = (meters) => {
+    const m = Math.round(meters)
+    return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`
+}
+
 
 // Nada de Google Maps (cobra y necesita API key) — el resto del proyecto
 // (sicem-web, MapArea.jsx) usa Leaflet + tiles de OpenStreetMap, así que el
@@ -19,7 +36,7 @@ import { toLowerCaseKeys } from '../../utils/formatData'
 // hospitalLocation (opcional) es el hospital destino del paciente que va en
 // MI ambulancia — se dibuja siempre que ya se conozca (aunque todavía no sea
 // la etapa de "Trasladando"), así el paramédico ya sabe hacia dónde va a
-// terminar yendo. Morado (#8E44AD) porque es el mismo color que sicem-web usa
+// terminar yendo. Morado (#6A4C9C) porque es el mismo color que sicem-web usa
 // para el estado "Trasladando" (MapArea.jsx, statusColors) — mismo lenguaje
 // visual en todo el proyecto.
 //
@@ -40,10 +57,10 @@ const buildMapHtml = ({ initialCenter, emergencyLocation, hospitalLocation }) =>
     // limpia la emergencia aceptada), y sin esta guarda tronaba.
     if (!initialCenter) return '<!DOCTYPE html><html><body></body></html>'
     const emergencyMarkerJs = emergencyLocation
-        ? `L.marker([${emergencyLocation.latitude}, ${emergencyLocation.longitude}], { icon: L.divIcon({ className: '', html: '<div style="width:20px;height:20px;border-radius:50% 50% 50% 0;background:#C0272D;transform:rotate(-45deg);border:2px solid #fff"></div>', iconSize:[20,20], iconAnchor:[10,20] }) }).addTo(map).bindPopup('Emergencia');`
+        ? `L.marker([${emergencyLocation.latitude}, ${emergencyLocation.longitude}], { icon: L.divIcon({ className: '', html: '<div style="width:20px;height:20px;border-radius:50% 50% 50% 0;background:#C21F2D;transform:rotate(-45deg);border:2px solid #fff"></div>', iconSize:[20,20], iconAnchor:[10,20] }) }).addTo(map).bindPopup('Emergencia');`
         : ''
     const hospitalMarkerJs = hospitalLocation
-        ? `L.marker([${hospitalLocation.latitude}, ${hospitalLocation.longitude}], { icon: L.divIcon({ className: '', html: '<div style="width:22px;height:22px;border-radius:4px;background:#8E44AD;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:13px;border:2px solid #fff">H</div>', iconSize:[22,22], iconAnchor:[11,11] }) }).addTo(map).bindPopup(${JSON.stringify(hospitalLocation.name || 'Hospital destino')});`
+        ? `L.marker([${hospitalLocation.latitude}, ${hospitalLocation.longitude}], { icon: L.divIcon({ className: '', html: '<div style="width:22px;height:22px;border-radius:4px;background:#6A4C9C;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:13px;border:2px solid #fff">H</div>', iconSize:[22,22], iconAnchor:[11,11] }) }).addTo(map).bindPopup(${JSON.stringify(hospitalLocation.name || 'Hospital destino')});`
         : ''
 
     return `<!DOCTYPE html>
@@ -66,10 +83,11 @@ ${hospitalMarkerJs}
 
 var myMarker = null;
 var routeLine = null;
+var routeEnd = null;
 
 window.updateMyLocation = function(lat, lng, recenter) {
   if (!myMarker) {
-    myMarker = L.circleMarker([lat, lng], { radius: 8, color: '#1565C0', fillColor: '#1565C0', fillOpacity: 1, weight: 2 }).addTo(map).bindPopup('Tu ubicación');
+    myMarker = L.circleMarker([lat, lng], { radius: 8, color: '#0F766E', fillColor: '#0F766E', fillOpacity: 1, weight: 2 }).addTo(map).bindPopup('Tu ubicación');
   } else {
     myMarker.setLatLng([lat, lng]);
   }
@@ -80,7 +98,13 @@ window.updateRoute = function(coordsJson) {
   var coords = JSON.parse(coordsJson);
   if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
   if (coords && coords.length > 0) {
-    routeLine = L.polyline(coords, { color: '#1565C0', weight: 4, opacity: 0.8 }).addTo(map);
+    routeLine = L.polyline(coords, { color: '#0F766E', weight: 4, opacity: 0.8 }).addTo(map);
+    // Cuando cambia el destino de la ruta (escena -> hospital) se encuadra completa (con margen para la tarjeta de arriba y los botones).
+    var endKey = coords[coords.length - 1].join(',');
+    if (endKey !== routeEnd) {
+      routeEnd = endKey;
+      map.fitBounds(routeLine.getBounds(), { paddingTopLeft: [24, 110], paddingBottomRight: [76, 24], maxZoom: 16 });
+    }
   }
 };
 
@@ -144,7 +168,11 @@ const fetchRoute = (originLat, originLon, destLat, destLon) => {
 // (services/unidades/controllers/unit.js, PARAMEDIC_FORWARD_TRANSITIONS)
 // hace cumplir exactamente esta misma secuencia — esto es solo la UI, no la
 // autoridad real. Ver fundamentos-legales/autoridad-crum-sobre-tamp-paramedico.txt.
-const FORWARD_TRANSITIONS = { 2: { next: 3, label: 'Pasar a "En escena"' }, 3: { next: 4, label: 'Pasar a "Trasladando"' } }
+const FORWARD_TRANSITIONS = {
+    2: { next: 3, label: 'Llegué a la escena', target: 'En escena' },
+    3: { next: 4, label: 'Iniciar traslado al hospital', target: 'Trasladando' },
+}
+const PHASES = ['En camino', 'En escena', 'Traslado', 'Entregado']
 
 const MapaScreen = () => {
     const { token } = useAuth()
@@ -174,6 +202,12 @@ const MapaScreen = () => {
     // página entera).
     const [initialCenter, setInitialCenter] = useState(null)
     const [mapReady, setMapReady] = useState(false)
+    // Se incrementa cada vez que el WebView termina de cargar: si la página se recarga por cualquier motivo,
+    // el estado vivo (mi ubicación, la ruta) se vuelve a inyectar en vez de quedarse perdido.
+    const [mapEpoch, setMapEpoch] = useState(0)
+    const router = useRouter()
+    const { width: screenWidth } = useWindowDimensions()
+    const sideBySide = screenWidth >= 820
     // "Seguir" = el mapa se recentra solo con cada actualización de GPS
     // (como una app de navegación normal). Empieza en true porque para
     // seguir una ambulancia en movimiento es lo que más sirve por defecto;
@@ -252,11 +286,17 @@ const MapaScreen = () => {
                         && p.destination_institution_id
                         && p.destination_latitude && p.destination_longitude
                     )
-                    setHospitalDestination(mine ? {
+                    const next = mine ? {
                         name: mine.destination_institution_name,
                         latitude: parseFloat(mine.destination_latitude),
                         longitude: parseFloat(mine.destination_longitude),
-                    } : null)
+                    } : null
+                    // Solo se actualiza si cambió de verdad: un objeto nuevo en cada sondeo reconstruía el HTML del
+                    // mapa y el WebView se recargaba cada 15 s (perdía zoom, ruta y marcador).
+                    setHospitalDestination((prev) => (
+                        prev && next && prev.name === next.name && prev.latitude === next.latitude && prev.longitude === next.longitude
+                            ? prev : next
+                    ))
                 })
                 .catch((err) => console.error('Error consultando hospital destino de mis pacientes. ', err))
         }
@@ -275,7 +315,7 @@ const MapaScreen = () => {
         const fetchTransfer = () => {
             fetch(`${API_BASE_URL}/unidades/mi-traslado-actual`, { headers })
                 .then((res) => res.json())
-                .then(({ data }) => setActiveTransfer(data ? toLowerCaseKeys(data) : null))
+                .then(({ data }) => setActiveTransfer(data || null))
                 .catch((err) => console.error('Error consultando tu traslado actual. ', err))
         }
         fetchTransfer()
@@ -339,7 +379,7 @@ const MapaScreen = () => {
         webviewRef.current.injectJavaScript(
             `window.updateMyLocation && window.updateMyLocation(${myLocation.latitude}, ${myLocation.longitude}, ${recenter}); true;`
         )
-    }, [mapReady, myLocation, isFollowing])
+    }, [mapReady, mapEpoch, myLocation, isFollowing])
 
     // Mismo criterio para la línea de ruta — se actualiza en el mapa ya
     // cargado, nunca reconstruyendo el HTML.
@@ -349,7 +389,7 @@ const MapaScreen = () => {
         webviewRef.current.injectJavaScript(
             `window.updateRoute && window.updateRoute(${JSON.stringify(JSON.stringify(coords))}); true;`
         )
-    }, [mapReady, route])
+    }, [mapReady, mapEpoch, route])
 
     const handleCenterMap = () => {
         if (!webviewRef.current) return
@@ -401,7 +441,7 @@ const MapaScreen = () => {
         if (ambulanceStatusId === 2 && !withinSceneArrivalRange) return
         Alert.alert(
             'Confirmar cambio de estado',
-            `Vas a marcar la unidad como "${step.label.replace('Pasar a ', '')}". No podrás regresar al paso anterior — solo tu CRUM/hospital puede cerrar o reasignar la emergencia. ¿Confirmas?`,
+            `Vas a marcar la unidad como "${step.target}". No podrás regresar al paso anterior — solo tu CRUM/hospital puede cerrar o reasignar la emergencia. ¿Confirmas?`,
             [
                 { text: 'Cancelar', style: 'cancel' },
                 { text: 'Confirmar', onPress: () => applyStatusUpdate(step.next) },
@@ -444,7 +484,7 @@ const MapaScreen = () => {
                             .then(() => {
                                 fetch(`${API_BASE_URL}/unidades/mi-traslado-actual`, { headers })
                                     .then((res) => res.json())
-                                    .then(({ data }) => setActiveTransfer(data ? toLowerCaseKeys(data) : null))
+                                    .then(({ data }) => setActiveTransfer(data || null))
                             })
                             .catch((err) => { console.error('Error concluyendo traslado. ', err); Alert.alert('Error', err.message) })
                             .finally(() => setConcludingTransfer(false))
@@ -495,67 +535,69 @@ const MapaScreen = () => {
     // pantalla. Esta regla aplica a TODOS los hooks, no solo a este.
     const mapHtml = useMemo(
         () => buildMapHtml({ initialCenter, emergencyLocation, hospitalLocation: hospitalDestination }),
-        [initialCenter, emergencyLocation?.latitude, emergencyLocation?.longitude, hospitalDestination]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [initialCenter, emergencyLocation?.latitude, emergencyLocation?.longitude, hospitalDestination?.latitude, hospitalDestination?.longitude, hospitalDestination?.name]
     )
 
-    // Contenido del ciclo "llegada al hospital" para cuando la unidad está
-    // Trasladando (4) — se usa tanto dentro del mapa normal (mientras
-    // acceptedEmergency sigue viva) como en la pantalla de remate de abajo
-    // (cuando ya se cerró pero el ciclo todavía no termina). Ver activeTransfer
-    // arriba: viene de un endpoint dedicado que no depende de acceptedEmergency.
+    // Ciclo "llegada al hospital" cuando la unidad está Trasladando (4). Vive en un endpoint propio
+    // (activeTransfer) que no depende de acceptedEmergency: sigue funcionando aunque la emergencia ya se cerró.
     const renderTransferStatus = () => {
         if (!activeTransfer) {
-            return <ActivityIndicator color="#1565C0" style={{ marginVertical: 8 }} />
+            return <ActivityIndicator color={colors.steel} style={{ marginVertical: 8 }} />
         }
         if (!activeTransfer.paramedicConcludedAt) {
             if (withinArrivalRange) {
-                return (
-                    <TouchableOpacity style={styles.advanceButton} onPress={handleConcludeTransfer} disabled={concludingTransfer}>
-                        {concludingTransfer
-                            ? <ActivityIndicator color="#fff" />
-                            : <Text style={styles.advanceButtonText}>Concluir traslado (avisar al hospital)</Text>}
-                    </TouchableOpacity>
-                )
+                return <Button label="Llegué al hospital — avisar" tone="primary" onPress={handleConcludeTransfer} loading={concludingTransfer} />
             }
             return (
-                <Text style={styles.hint}>
-                    Trasladando al paciente.{distanceToHospitalMeters != null ? ` Te faltan ${Math.round(distanceToHospitalMeters)} m para poder concluir el traslado.` : ` En cuanto estés a menos de ${ARRIVAL_THRESHOLD_METERS} m del hospital, podrás concluir el traslado.`}
-                </Text>
+                <>
+                    <Button label="Llegué al hospital — avisar" tone="primary" disabled onPress={() => {}} />
+                    <Text style={styles.hint}>
+                        {distanceToHospitalMeters != null
+                            ? `Te faltan ${formatMeters(distanceToHospitalMeters)}. Se activa a menos de ${ARRIVAL_THRESHOLD_METERS} m del hospital.`
+                            : `Se activa a menos de ${ARRIVAL_THRESHOLD_METERS} m del hospital.`}
+                    </Text>
+                </>
             )
         }
         if (activeTransfer.allPatientsDelivered) {
-            return (
-                <TouchableOpacity style={[styles.advanceButton, styles.availableButton]} onPress={handleMarkAvailable} disabled={markingAvailable}>
-                    {markingAvailable
-                        ? <ActivityIndicator color="#fff" />
-                        : <Text style={styles.advanceButtonText}>Marcar unidad como Disponible</Text>}
-                </TouchableOpacity>
-            )
+            return <Button label="Unidad disponible" tone="ok" onPress={handleMarkAvailable} loading={markingAvailable} />
         }
         return (
-            <Text style={styles.hint}>
-                Traslado concluido — esperando que tu hospital confirme la llegada física
-                {activeTransfer.patientsTotal > 1 ? ` (${activeTransfer.patientsDelivered}/${activeTransfer.patientsTotal} pacientes)` : ''}. En cuanto confirme, podrás marcar tu unidad como Disponible.
-            </Text>
+            <View style={styles.waitingBox}>
+                <ActivityIndicator color={colors.steel} />
+                <Text style={styles.waitingText}>
+                    Esperando que el hospital confirme la llegada{activeTransfer.patientsTotal > 1 ? ` (${activeTransfer.patientsDelivered}/${activeTransfer.patientsTotal} pacientes)` : ''}. Después podrás dejar la unidad disponible.
+                </Text>
+            </View>
         )
     }
 
-    // Cuando acceptedEmergency ya se limpió (la emergencia se cerró del lado
-    // del backend) PERO la unidad sigue Trasladando esperando el ciclo
-    // concluir-traslado/marcar-disponible, no tiene caso mostrar el mapa
-    // completo (ya no hay em.latitude/longitude ni ruta que trazar) — pero
-    // TAMPOCO se puede caer al placeholder de "no tienes ninguna emergencia",
-    // porque el paramédico todavía tiene algo pendiente que hacer aquí. Ver
-    // closeEmergencyRaw (services/emergencias) para por qué la unidad se
-    // queda en 4 en vez de liberarse sola.
+    // Fase actual para la barra de pasos
+    const phaseIndex = (() => {
+        if (ambulanceStatusId === 3) return 1
+        if (ambulanceStatusId === 4) return activeTransfer?.paramedicConcludedAt ? 3 : 2
+        return 0
+    })()
+
+    // Traslado que sigue pendiente aunque la emergencia ya se cerró en el backend (p. ej. el hospital ya confirmó
+    // la llegada): la unidad sigue en "Trasladando" hasta que el paramédico la deje disponible.
     if (!em && ambulanceStatusId === 4) {
+        const delivered = Boolean(activeTransfer?.allPatientsDelivered)
         return (
-            <View style={styles.centered}>
-                <Text style={styles.emergencyType}>Traslado en curso</Text>
-                {activeTransfer?.hospitalName && <Text style={styles.hint}>Hospital: {activeTransfer.hospitalName}</Text>}
-                <View style={{ width: '100%', marginTop: 12 }}>
-                    {renderTransferStatus()}
+            <View style={styles.sheetOnly}>
+                <StepTracker steps={PHASES} current={phaseIndex} />
+                <View style={styles.finalBox}>
+                    <View style={[styles.finalIcon, delivered && { backgroundColor: colors.okSoft }]}>
+                        <Ionicons name={delivered ? 'checkmark-circle' : 'time-outline'} size={44} color={delivered ? colors.ok : colors.steel} />
+                    </View>
+                    <Text style={styles.finalTitle}>{delivered ? 'Paciente entregado' : 'Traslado en curso'}</Text>
+                    {activeTransfer?.hospitalName ? <Text style={styles.finalText}>{activeTransfer.hospitalName}</Text> : null}
+                    <Text style={styles.finalText}>
+                        {delivered ? 'El hospital confirmó la llegada. Deja la unidad disponible para recibir nuevas emergencias.' : 'Sigue las indicaciones de abajo.'}
+                    </Text>
                 </View>
+                <View>{renderTransferStatus()}</View>
             </View>
         )
     }
@@ -563,13 +605,37 @@ const MapaScreen = () => {
     if (!em) {
         return (
             <View style={styles.centered}>
-                <Text style={styles.hint}>No tienes ninguna emergencia en curso. Cuando aceptes una desde la pestaña Alerta, aquí verás la navegación.</Text>
+                <Text style={styles.emptyTitle}>Sin emergencia en curso</Text>
+                <Text style={styles.hint}>Cuando te asignen una, aquí verás la ruta y los pasos de la atención.</Text>
             </View>
         )
     }
 
+    const primaryAction = () => {
+        if (ambulanceStatusId == null) return <ActivityIndicator color={colors.steel} />
+        if (ambulanceStatusId === 2) {
+            return withinSceneArrivalRange ? (
+                <Button label={FORWARD_TRANSITIONS[2].label} tone="primary" onPress={handleAdvanceStatus} loading={updatingStatus} />
+            ) : (
+                <>
+                    <Button label={FORWARD_TRANSITIONS[2].label} tone="primary" disabled onPress={() => {}} />
+                    <Text style={styles.hint}>
+                        {distanceToEmergencyMeters != null
+                            ? `Te faltan ${formatMeters(distanceToEmergencyMeters)}. Se activa a menos de ${ARRIVAL_THRESHOLD_METERS} m de la escena.`
+                            : 'Esperando tu ubicación…'}
+                    </Text>
+                </>
+            )
+        }
+        if (FORWARD_TRANSITIONS[ambulanceStatusId]) {
+            return <Button label={FORWARD_TRANSITIONS[ambulanceStatusId].label} tone="primary" onPress={handleAdvanceStatus} loading={updatingStatus} />
+        }
+        if (ambulanceStatusId === 4) return renderTransferStatus()
+        return <Text style={styles.hint}>Consulta con tu CRUM: el estado de la unidad no coincide con esta emergencia.</Text>
+    }
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, sideBySide && { flexDirection: 'row' }]}>
             <View style={styles.mapWrapper}>
                 {canRenderMap ? (
                     <>
@@ -578,150 +644,103 @@ const MapaScreen = () => {
                             style={{ flex: 1 }}
                             originWhitelist={['*']}
                             source={{ html: mapHtml }}
-                            onLoadEnd={() => setMapReady(true)}
+                            onLoadEnd={() => { setMapReady(true); setMapEpoch((e) => e + 1) }}
                         />
-                        {/* El mapa ya no se recentra solo después del primer fix
-                        (a propósito — para no pelearse con el zoom/pan que el
-                        paramédico haya hecho), así que hace falta un botón
-                        manual para volver a encontrar "dónde estoy" en el mapa. */}
-                        <TouchableOpacity style={styles.centerButton} onPress={handleCenterMap} activeOpacity={0.8}>
-                            <Ionicons name="locate" size={22} color="#1565C0" />
+                        <TouchableOpacity style={styles.centerButton} onPress={handleCenterMap} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Centrar el mapa en mi ubicación">
+                            <Ionicons name="locate" size={24} color={colors.steel} />
                         </TouchableOpacity>
-                        {/* Seguir = el mapa se recentra solo con cada actualización
-                        de GPS, como una app de navegación. Se apaga si el
-                        paramédico quiere moverse por el mapa libremente sin que
-                        la vista se le mueva cada pocos segundos. */}
                         <TouchableOpacity
                             style={[styles.followButton, isFollowing && styles.followButtonActive]}
                             onPress={handleToggleFollow}
                             activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isFollowing }}
+                            accessibilityLabel={isFollowing ? 'Dejar de seguir mi ubicación' : 'Seguir mi ubicación'}
                         >
-                            <Ionicons name="navigate" size={20} color={isFollowing ? '#fff' : '#1565C0'} />
+                            <Ionicons name="navigate" size={22} color={isFollowing ? '#fff' : colors.steel} />
                         </TouchableOpacity>
                     </>
                 ) : (
                     <View style={styles.centered}>
-                        <ActivityIndicator color="#1565C0" />
-                        <Text style={styles.hint}>Obteniendo ubicación...</Text>
+                        <ActivityIndicator color={colors.steel} />
+                        <Text style={styles.hint}>Obteniendo ubicación…</Text>
+                    </View>
+                )}
+
+                {/* Resumen de la ruta, siempre a la vista sobre el mapa */}
+                {route && (
+                    <View style={styles.routeCard} accessibilityLabel={`${routeTargetLabel}: ${formatDuration(route.durationMin)}, ${route.distanceKm.toFixed(1)} kilómetros`}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.routeLabel, routingToHospital && { color: colors.hosp }]} numberOfLines={1}>{routeTargetLabel}</Text>
+                            <Text style={styles.routeBig}>{formatDuration(route.durationMin)} <Text style={styles.routeSmall}>· {route.distanceKm.toFixed(route.distanceKm < 100 ? 1 : 0)} km</Text></Text>
+                        </View>
                     </View>
                 )}
                 {!myLocation && (
                     <View style={styles.locationWarningBanner}>
-                        <Text style={styles.locationWarningText}>No se pudo obtener tu ubicación — revisa que el GPS esté activado.</Text>
+                        <Text style={styles.locationWarningText}>No se pudo obtener tu ubicación. Revisa que el GPS esté activado.</Text>
                     </View>
                 )}
             </View>
 
-            <ScrollView style={styles.bottomPanel} contentContainerStyle={{ padding: 14 }}>
-                <Text style={styles.emergencyType}>{em?.type_name || 'Emergencia'}</Text>
-                {em?.description ? <Text style={styles.hint}>{em.description}</Text> : null}
-
+            {/* Panel inferior fijo: el paso actual y la acción principal siempre a la vista, sin desplazarse */}
+            <View style={[styles.sheet, sideBySide && styles.sheetSide]}>
+                <StepTracker steps={PHASES} current={phaseIndex} />
+                <View style={styles.sheetTitleRow}>
+                    <Text style={styles.emergencyType} numberOfLines={1}>{em?.type_name || 'Emergencia'}</Text>
+                    {em?.triage_level ? <TriageBadge level={em.triage_level} /> : null}
+                </View>
+                {em?.description ? <Text style={styles.desc} numberOfLines={2}>{em.description}</Text> : null}
                 {hospitalDestination && (
-                    <Text style={[styles.hint, { color: routingToHospital ? '#8E44AD' : '#888', fontWeight: routingToHospital ? '700' : '400' }]}>
-                        Hospital destino: {hospitalDestination.name}
-                    </Text>
+                    <View style={styles.destRow}>
+                        <Chip label={`Destino: ${hospitalDestination.name}`} tone={routingToHospital ? 'steel' : 'neutral'} />
+                    </View>
                 )}
 
-                {route && (
-                    <>
-                        <Text style={[styles.routeLabel, routingToHospital && { color: '#8E44AD' }]}>Ruta a: {routeTargetLabel}</Text>
-                        <View style={styles.metrics}>
-                            <View>
-                                <Text style={styles.metricLabel}>Tiempo estimado</Text>
-                                <Text style={[styles.metricValue, { color: routingToHospital ? '#8E44AD' : '#C0272D' }]}>{Math.round(route.durationMin)} min</Text>
-                            </View>
-                            <View>
-                                <Text style={styles.metricLabel}>Distancia</Text>
-                                <Text style={styles.metricValue}>{route.distanceKm.toFixed(1)} km</Text>
-                            </View>
-                        </View>
-                    </>
-                )}
+                <View style={styles.primary}>{primaryAction()}</View>
 
-                <Text style={styles.sectionTitle}>Estado de la unidad</Text>
-                {ambulanceStatusId == null ? (
-                    <ActivityIndicator color="#1565C0" style={{ marginBottom: 12 }} />
-                ) : ambulanceStatusId === 2 ? (
-                    // En camino -> En escena: exige estar a ≤ARRIVAL_THRESHOLD_METERS de la
-                    // escena de la emergencia — no se puede marcar de
-                    // antemano ni por accidente antes de llegar de verdad.
-                    withinSceneArrivalRange ? (
-                        <TouchableOpacity
-                            style={styles.advanceButton}
-                            onPress={handleAdvanceStatus}
-                            disabled={updatingStatus}
-                        >
-                            {updatingStatus
-                                ? <ActivityIndicator color="#fff" />
-                                : <Text style={styles.advanceButtonText}>{FORWARD_TRANSITIONS[2].label}</Text>}
-                        </TouchableOpacity>
-                    ) : (
-                        <Text style={styles.hint}>
-                            Todavía no puedes marcar "En escena" — estás lejos de la ubicación reportada.{distanceToEmergencyMeters != null ? ` Te faltan ${Math.round(distanceToEmergencyMeters)} m.` : ' Esperando tu ubicación...'}
-                        </Text>
-                    )
-                ) : FORWARD_TRANSITIONS[ambulanceStatusId] ? (
-                    <TouchableOpacity
-                        style={styles.advanceButton}
-                        onPress={handleAdvanceStatus}
-                        disabled={updatingStatus}
-                    >
-                        {updatingStatus
-                            ? <ActivityIndicator color="#fff" />
-                            : <Text style={styles.advanceButtonText}>{FORWARD_TRANSITIONS[ambulanceStatusId].label}</Text>}
-                    </TouchableOpacity>
-                ) : ambulanceStatusId === 4 ? (
-                    // Trasladando — a partir de aquí el flujo "llegada al
-                    // hospital" (concluir traslado -> hospital confirma ->
-                    // marcar disponible) toma el control, ver renderTransferStatus.
-                    renderTransferStatus()
-                ) : (
-                    // Estado inesperado para tener una emergencia en curso
-                    // (ej. Disponible/Fuera de servicio) — no debería pasar en
-                    // flujo normal, pero no hay ningún botón que ofrecer aquí.
-                    <Text style={styles.hint}>Consulta con tu CRUM — el estado de la unidad no coincide con esta emergencia.</Text>
-                )}
-                {/* No hay botón de "terminar seguimiento" fuera del flujo de
-                arriba — cualquier cierre real pasa por concluir-traslado +
-                confirmación del hospital (Trasladando) o por que el
-                CRUM/hospital cierre la emergencia (los demás estados). La
-                pantalla se limpia sola cuando eso pasa — ver
-                eventEmergencyClosed en SocketContext.jsx. */}
-            </ScrollView>
+                <View style={styles.quickRow}>
+                    <Button label="Paciente" tone="neutral" style={styles.quick} icon={<Ionicons name="people-outline" size={20} color={colors.text} />} onPress={() => router.push('/paciente')} />
+                    <Button label="Nota" tone="neutral" style={styles.quick} icon={<Ionicons name="document-text-outline" size={20} color={colors.text} />} onPress={() => router.push('/notas')} />
+                </View>
+            </View>
         </View>
     )
 }
 
+const SHADOW = { elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3 }
+
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+    container: { flex: 1, backgroundColor: colors.bg },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.bg },
+    sheetOnly: { flex: 1, padding: 18, paddingTop: 24, paddingBottom: 14, backgroundColor: colors.surface, justifyContent: 'space-between' },
+    finalBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 12 },
+    finalIcon: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.steelSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+    finalTitle: { fontSize: 26, fontWeight: '800', color: colors.text, textAlign: 'center' },
+    finalText: { fontSize: 16, color: colors.text2, textAlign: 'center', lineHeight: 22 },
     mapWrapper: { flex: 1 },
-    locationWarningBanner: { position: 'absolute', top: 10, left: 10, right: 10, backgroundColor: '#fff3cd', borderWidth: 1, borderColor: '#e0a800', borderRadius: 8, padding: 8 },
-    locationWarningText: { color: '#7a5c00', fontSize: 11, fontWeight: '600', textAlign: 'center' },
-    centerButton: {
-        position: 'absolute', bottom: 16, right: 16,
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-        elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3,
-    },
-    followButton: {
-        position: 'absolute', bottom: 68, right: 16,
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-        elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3,
-    },
-    followButtonActive: { backgroundColor: '#1565C0' },
-    bottomPanel: { maxHeight: 260, borderTopWidth: 1, borderTopColor: '#eee' },
-    emergencyType: { fontSize: 16, fontWeight: '700', color: '#1a1a2e' },
-    hint: { fontSize: 12, color: '#888', marginTop: 4, marginBottom: 8 },
-    routeLabel: { fontSize: 11, fontWeight: '700', color: '#1565C0', textTransform: 'uppercase', marginTop: 6 },
-    metrics: { flexDirection: 'row', gap: 24, marginVertical: 8 },
-    metricLabel: { fontSize: 10, color: '#888', textTransform: 'uppercase' },
-    metricValue: { fontSize: 18, fontWeight: '700', color: '#222' },
-    sectionTitle: { fontSize: 12, fontWeight: '700', color: '#555', textTransform: 'uppercase', marginTop: 10, marginBottom: 6 },
-    advanceButton: { backgroundColor: '#1565C0', borderRadius: 8, padding: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-    advanceButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-    availableButton: { backgroundColor: '#2E7D32' },
+    emptyTitle: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 8 },
+    locationWarningBanner: { position: 'absolute', bottom: 10, left: 10, right: 76, backgroundColor: colors.warnSoft, borderWidth: 1, borderColor: '#C99A2E', borderRadius: 8, padding: 8 },
+    locationWarningText: { color: colors.warn, fontSize: 13, fontWeight: '600' },
+    routeCard: { position: 'absolute', top: 10, left: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, ...SHADOW },
+    routeLabel: { fontSize: 13, fontWeight: '700', color: colors.steel },
+    routeBig: { fontSize: 26, fontWeight: '800', color: colors.text },
+    routeSmall: { fontSize: 17, fontWeight: '600', color: colors.text2 },
+    centerButton: { position: 'absolute', bottom: 14, right: 14, width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...SHADOW },
+    followButton: { position: 'absolute', bottom: 76, right: 14, width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...SHADOW },
+    followButtonActive: { backgroundColor: colors.steel },
+    sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 16, paddingBottom: 12, ...SHADOW },
+    sheetSide: { width: 400, borderTopLeftRadius: 0, borderTopRightRadius: 0, borderLeftWidth: 1, borderLeftColor: colors.line, justifyContent: 'center' },
+    sheetTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12 },
+    emergencyType: { flex: 1, fontSize: 20, fontWeight: '800', color: colors.text },
+    desc: { fontSize: 14, color: colors.text2, marginTop: 2 },
+    destRow: { marginTop: 8 },
+    primary: { marginTop: 12 },
+    quickRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    quick: { flex: 1, minHeight: 48 },
+    hint: { fontSize: 14, color: colors.text2, marginTop: 8, textAlign: 'center' },
+    waitingBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.steelSoft, borderRadius: 10, padding: 14 },
+    waitingText: { flex: 1, fontSize: 14, color: colors.steel, fontWeight: '600', lineHeight: 20 },
 })
 
 export default MapaScreen

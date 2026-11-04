@@ -5,10 +5,13 @@ import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectEmergencySocket } from '../sockets/emergencySocket'
 import { connectUnitsSocket } from '../sockets/unitsSocket'
+import { useDialogs } from '../context/useDialogs'
 import './MyAmbulances.css'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
 
 const MyAmbulances = () => {
     const { user, token } = useAuth()
+    const { notify } = useDialogs()
     const [ambulances, setAmbulances] = useState([])
     const [statuses, setStatuses] = useState([])
 
@@ -120,16 +123,26 @@ const MyAmbulances = () => {
                 setAmbulances((current) => current.map((a) =>
                     a.ambulance_id === ambulanceId ? { ...a, ambulance_status_id: ambulanceStatusId } : a
                 ))
+                notify('Estado de la unidad actualizado.', 'ok')
             })
             .catch(error => {
                 console.error('Error actualizando estado de ambulancia. ', error)
-                alert('No se pudo actualizar el estado. Intenta de nuevo.')
+                notify('No se pudo actualizar el estado. Intenta de nuevo.', 'error')
             })
     }
 
     return (
-        <div className="my-ambulances-layout">
-            <div className="section-title">Mis Ambulancias</div>
+        <div className="page">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Mis ambulancias</h1>
+                    <p className="page-sub">Estado de las unidades de tu institución. Si una cambia a «Fuera de servicio», el despachador deja de verla disponible.</p>
+                </div>
+                <ul className="stat-row" aria-label="Resumen">
+                    <li><b><AnimatedNumber value={ambulances.length} /></b><span>unidades</span></li>
+                    <li><b><AnimatedNumber value={ambulances.filter((a) => parseInt(a.ambulance_status_id) === 1).length} /></b><span>disponibles</span></li>
+                </ul>
+            </div>
             <div className="my-ambulances-grid">
                 {ambulances.map((a) => (
                     <AmbulanceStatusCard
@@ -145,7 +158,7 @@ const MyAmbulances = () => {
                     />
                 ))}
                 {ambulances.length === 0 && (
-                    <p className="empty-state">Sin ambulancias disponibles para tu institución.</p>
+                    <p className="empty">Tu institución no tiene ambulancias registradas. Un administrador puede agregarlas en Administración.</p>
                 )}
             </div>
         </div>

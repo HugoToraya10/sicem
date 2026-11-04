@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
+import { roleLabel } from '../config/roles'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
 import { getNavLinks } from '../utils/Navlinks';
 import { generateEmergencyReport } from '../utils/generateEmergencyReport';
+import { readableTextOn } from '../utils/color';
+import Icon from '../components/ui/Icon';
 import '../pages/admin/Institutions.css';
 import './History.css';
 import {API_BASE_URL} from '../config/api'
+import { useDialogs } from '../context/useDialogs'
+import '../styles/entities.css'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 // Diferencia entre dos timestamps ISO, mostrada como "Xh Ym"
 const formatDuration = (start, end) => {
@@ -35,19 +39,20 @@ const formatDateTime = (value) => {
 const RESOLUTION_FILTERS = [
     { value: 'all', label: 'Todas' },
     { value: 'resolved', label: 'Resueltas' },
-    { value: 'forced', label: 'Cerradas sin resolver' },
+    { value: 'forced', label: 'Sin resolver' },
 ]
 
 // Estado de la EMERGENCIA (no es lo mismo que la resolución): si cerró o no.
 // "Pendientes" = en curso (closed_at NULL); "Concluidas" = cerrada (closed_at
 // con valor). "Todas" = ambas.
 const STATE_FILTERS = [
-    { value: 'all', label: 'Todas las emergencias' },
-    { value: 'concluidas', label: 'Solo concluidas' },
-    { value: 'pendientes', label: 'Solo pendientes' },
+    { value: 'all', label: 'Todos los estados' },
+    { value: 'concluidas', label: 'Concluidas' },
+    { value: 'pendientes', label: 'Pendientes' },
 ]
 
 const History = () => {
+    const { notify } = useDialogs()
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
     const navigate = useNavigate();
@@ -67,7 +72,7 @@ const History = () => {
         if (generatingReportId) return
         setGeneratingReportId(em.emergency_id)
         generateEmergencyReport(em, token)
-            .catch((e) => alert(`No se pudo generar el reporte: ${e?.message || 'error desconocido'}`))
+            .catch((e) => notify(`No se pudo generar el reporte: ${e?.message || 'error desconocido'}`, 'error'))
             .finally(() => setGeneratingReportId(null))
     }
 
@@ -91,6 +96,9 @@ const History = () => {
             const q = search.trim().toLowerCase()
             return (em.type_name || '').toLowerCase().includes(q) || (em.description || '').toLowerCase().includes(q)
         })
+
+    const hasActiveFilters = Boolean(search) || resolutionFilter !== 'all' || stateFilter !== 'all' || triageFilter !== 'all'
+    const clearFilters = () => { setSearch(''); setResolutionFilter('all'); setStateFilter('all'); setTriageFilter('all') }
 
     useEffect(() => {
         fetch(`${API_BASE_URL}/emergencias/emergencias`, {
@@ -120,100 +128,96 @@ const History = () => {
 
     return (
         <div className="institutions-page">
-            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabels[user?.roleId] || ''} links={navLinks} />
+            <Navbar userName={user?.firstName || 'Usuario'} roleLabel={roleLabel(user?.roleId)} links={navLinks} />
 
-            <div className="institutions-body">
-                <h2 className="institutions-title">Historial de Emergencias</h2>
+            <div role="main" id="contenido" className="institutions-body">
+                <h1 className="institutions-title">Historial de emergencias</h1>
+                <p className="page-sub">Todo lo que ya pasó por el sistema, con su motivo de cierre y su duración.</p>
 
                 {accessDenied && (
                     <p className="institutions-empty">No tienes acceso a esta sección.</p>
                 )}
 
+                {loading && !accessDenied && <p className="institutions-empty" role="status">Cargando historial…</p>}
+
                 {!accessDenied && !loading && (
                     <>
                         <div className="history-search-row">
-                            <input
-                                type="text"
-                                placeholder="Buscar por tipo o descripción..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                            <select className="status-filter-select" value={resolutionFilter} onChange={(e) => setResolutionFilter(e.target.value)}>
+                            <div className="history-search">
+                                <Icon name="search" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por tipo o descripción"
+                                    aria-label="Buscar por tipo o descripción"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="history-seg" role="group" aria-label="Resolución">
                                 {RESOLUTION_FILTERS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        aria-pressed={resolutionFilter === opt.value}
+                                        onClick={() => setResolutionFilter(opt.value)}
+                                    >
+                                        {opt.label}
+                                    </button>
                                 ))}
-                            </select>
-                            <select className="status-filter-select" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+                            </div>
+                            <select className="status-filter-select" aria-label="Estado de la emergencia" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
                                 {STATE_FILTERS.map((opt) => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                             </select>
-                            <select className="status-filter-select" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
-                                <option value="all">Todos los niveles de triage</option>
+                            <select className="status-filter-select" aria-label="Nivel de triage" value={triageFilter} onChange={(e) => setTriageFilter(e.target.value)}>
+                                <option value="all">Todos los niveles</option>
                                 {triageCatalog.map((t) => (
-                                    <option key={t.triage_level_id} value={t.level}>Triage {t.level}</option>
+                                    <option key={t.triage_level_id} value={t.level}>Nivel {t.level}</option>
                                 ))}
                             </select>
-                            {search && <button type="button" className="history-clear-btn" onClick={() => setSearch('')}>Limpiar</button>}
+                            {hasActiveFilters && <button type="button" className="history-clear-btn" onClick={clearFilters}>Limpiar filtros</button>}
                         </div>
 
-                        <div className="catalog-table-wrapper">
-                            <table className="catalog-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tipo</th>
-                                        <th>Triage</th>
-                                        <th>Descripción</th>
-                                        <th>Fecha de registro</th>
-                                        <th>Fecha de cierre</th>
-                                        <th>Duración</th>
-                                        <th>Resolución</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {visibleEmergencies.map((em) => (
-                                        <tr key={em.emergency_id}>
-                                            <td>{em.type_name || '—'}</td>
-                                            <td>
-                                                {em.triage_level ? (
-                                                    <span className="history-triage-pill" style={{ background: em.triage_hex_color || '#888' }}>
-                                                        {em.triage_level}
-                                                    </span>
-                                                ) : '—'}
-                                            </td>
-                                            <td>{em.description || '—'}</td>
-                                            <td>{formatDateTime(em.created_at)}</td>
-                                            <td>{formatDateTime(em.closed_at)}</td>
-                                            <td><span className="history-duration">{formatDuration(em.created_at, em.closed_at)}</span></td>
-                                            <td>
-                                                {!em.closed_at ? (
-                                                    <span className="history-resolution-pill pending">Pendiente</span>
-                                                ) : em.close_reason ? (
-                                                    <span className="history-resolution-pill forced" title={em.close_reason}>Sin resolver</span>
-                                                ) : (
-                                                    <span className="history-resolution-pill resolved">Resuelta</span>
-                                                )}
-                                            </td>
-                                            <td>
-                                                <button className="institutions-edit-btn" onClick={() => navigate(`/emergencias/${em.emergency_id}`)}>
-                                                    Ver detalle
-                                                </button>
-                                                <button
-                                                    className="institutions-edit-btn"
-                                                    onClick={() => handleGenerateReport(em)}
-                                                    disabled={generatingReportId !== null}
-                                                >
-                                                    {generatingReportId === em.emergency_id ? 'Generando...' : 'Generar reporte'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <p className="history-count" role="status">
+                            Mostrando {visibleEmergencies.length} de {emergencies.length} {emergencies.length === 1 ? 'emergencia' : 'emergencias'}
+                        </p>
+
+                        <div className="entity-rows">
+                            {visibleEmergencies.map((em) => {
+                                const pending = !em.closed_at
+                                const unresolved = !pending && em.close_reason
+                                return (
+                                    <article key={em.emergency_id} className="entity-row" style={{ '--accent': em.triage_hex_color || 'var(--line-strong)' }}>
+                                        <span className="tri-badge" style={{ '--c': em.triage_hex_color || 'var(--text-3)', color: readableTextOn(em.triage_hex_color) }} title={em.triage_level ? `Triage ${em.triage_level}` : 'Sin triage'}>
+                                            {em.triage_level || '—'}
+                                        </span>
+                                        <div className="row-main">
+                                            <h2 className="row-title">{em.type_name || 'Emergencia'}</h2>
+                                            <p className="row-desc" title={em.description || ''}>{em.description || 'Sin descripción'}</p>
+                                        </div>
+                                        <div className="row-meta">
+                                            <span><b>Registro</b> {formatDateTime(em.created_at)}</span>
+                                            <span><b>Cierre</b> {pending ? '—' : formatDateTime(em.closed_at)}</span>
+                                            <span className="dur">Duración {formatDuration(em.created_at, em.closed_at)}</span>
+                                        </div>
+                                        <div className="row-actions">
+                                            {pending
+                                                ? <span className="pill pill-warn">Pendiente</span>
+                                                : unresolved
+                                                    ? <span className="pill pill-bad" title={em.close_reason}>Sin resolver</span>
+                                                    : <span className="pill pill-ok">Resuelta</span>}
+                                            <button type="button" className="institutions-edit-btn history-open-btn" onClick={() => navigate(`/emergencias/${em.emergency_id}`)}>Ver detalle</button>
+                                            <button type="button" className="institutions-edit-btn" onClick={() => handleGenerateReport(em)} disabled={generatingReportId !== null}>
+                                                <Icon name="file" size={14} />{generatingReportId === em.emergency_id ? 'Generando…' : 'Reporte'}
+                                            </button>
+                                        </div>
+                                    </article>
+                                )
+                            })}
                             {visibleEmergencies.length === 0 && (
-                                <p className="institutions-empty">
-                                    {emergencies.length === 0 ? 'No hay emergencias registradas todavía.' : 'No hay emergencias que coincidan con los filtros.'}
+                                <p className="entity-empty">
+                                    {emergencies.length === 0 ? 'No hay emergencias registradas todavía.' : 'Ninguna emergencia coincide con estos filtros. Quita alguno para ver más.'}
                                 </p>
                             )}
                         </div>

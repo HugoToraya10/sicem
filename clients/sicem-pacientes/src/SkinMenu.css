@@ -1,0 +1,26 @@
+.skin-menu { position: relative; display: inline-flex; }
+.skin-pop {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 1200; min-width: 224px; padding: 8px;
+    background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-panel);
+}
+.skin-pop-title { margin: 2px 8px 6px; font-size: 12.5px; font-weight: 600; color: var(--text-3); }
+.skin-opt {
+    width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 10px; background: transparent; color: inherit;
+    border: 0; border-radius: var(--r-sm); text-align: left; cursor: pointer; font: inherit; box-shadow: none;
+}
+.skin-opt b { font-weight: 600; font-size: 14px; font-family: var(--font-body); letter-spacing: 0; }
+.skin-opt span:not(.skin-swatch) { flex: 1; }
+.skin-opt:hover { background: var(--surface-2); color: var(--text); }
+.skin-opt.on { background: var(--surface-2); }
+.skin-opt svg { color: var(--ok); }
+
+.skin-swatch { width: 38px; height: 28px; position: relative; display: inline-block; flex: none; border: 1.5px solid; overflow: hidden; }
+
+.skin-swatch-lg { width: 100%; height: 84px; margin-bottom: 4px; }
+.skin-swatch i { position: absolute; left: 0; right: 0; top: 0; height: 22%; }
+.skin-swatch b { position: absolute; left: 10%; top: 38%; width: 38%; height: 40%; }
+.skin-swatch em { position: absolute; right: 10%; top: 38%; width: 30%; height: 40%; }
+
+
+.skin-opt.on { outline: 2px solid var(--steel); outline-offset: -2px; }
+.skin-pop { color: var(--text); }

@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useDialogs } from '../../context/useDialogs'
 import './SpecialityAdminCard.css'
 
 const SpecialityAdminCard = ({ speciality, onUpdateCapacity, onToggleActive }) => {
+    const { notify } = useDialogs()
     const [isEditing, setIsEditing] = useState(false)
     const [inputValue, setInputValue] = useState(speciality.total_beds)
     const [saving, setSaving] = useState(false)
@@ -14,7 +16,7 @@ const SpecialityAdminCard = ({ speciality, onUpdateCapacity, onToggleActive }) =
     const handleSave = () => {
         const parsed = parseInt(inputValue)
         if (isNaN(parsed) || parsed < speciality.available_beds) {
-            alert(`La capacidad total no puede ser menor que las camas disponibles actuales (${speciality.available_beds}).`)
+            notify(`La capacidad total no puede ser menor que las camas disponibles actuales (${speciality.available_beds}).`, 'error')
             return
         }
         setSaving(true)
@@ -26,7 +28,7 @@ const SpecialityAdminCard = ({ speciality, onUpdateCapacity, onToggleActive }) =
     return (
         <div className={`speciality-admin-card ${speciality.is_active ? '' : 'speciality-admin-card-inactive'}`}>
             <div className="speciality-admin-header">
-                <h5>{speciality.name}</h5>
+                <h3>{speciality.name}</h3>
                 <span className={`speciality-admin-status ${speciality.is_active ? 'status-active' : 'status-inactive'}`}>
                     {speciality.is_active ? 'Activa' : 'Inactiva'}
                 </span>
@@ -47,6 +49,7 @@ const SpecialityAdminCard = ({ speciality, onUpdateCapacity, onToggleActive }) =
             {isEditing ? (
                 <div className="speciality-admin-edit-row">
                     <input
+                        aria-label={`Capacidad total de ${speciality.name}`}
                         type="number"
                         min={speciality.available_beds}
                         value={inputValue}

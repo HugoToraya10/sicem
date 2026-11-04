@@ -534,6 +534,20 @@ const getLocationsByAmbulance = (req, res) => {
     }
 }
 
+const getLatestLocationsAll = (req, res) => {
+    const allowedRoles = [1, 2, 3, 4];
+    if (!allowedRoles.includes(parseInt(req.decoded.roleId))) {
+        return res.status(403).json({message: "Acceso denegado."})
+    }
+    unitModel.getLatestLocationsAll((e, r) => {
+        if (e) return res.status(500).json({message: "Error del servidor."})
+        // Si dos registros empatan en el mismo instante, se queda uno por ambulancia.
+        const byAmbulance = new Map()
+        r.forEach((row) => { if (!byAmbulance.has(row.ambulance_id)) byAmbulance.set(row.ambulance_id, row) })
+        res.status(200).json({message: "Últimas ubicaciones", data: [...byAmbulance.values()]})
+    })
+}
+
 //--- gets de administración: incluyen activos e inactivos --------------------------
 const getAllAmbulancesAdmin = (req, res) => {
     if(!(parseInt(req.decoded.roleId) === 1)) {
@@ -1110,7 +1124,7 @@ module.exports = {
     updateAmbulanceType, updateAmbulanceStatusCatalog, updateAmbulance, updateAmbulanceStatus,
     getAllAmbulancesAdmin, getAllAmbulanceTypesAdmin, getAllAmbulanceStatusesAdmin,
     getAllAmbulances, getAvailableAmbulances, getAmbulanceByUnitNumber, getAmbulanceByLicensePlate,
-    getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance,
+    getAllAmbulanceTypes, getAllAmbulanceStatuses, getLocationsByAmbulance, getLatestLocationsAll,
     startShift, endShift, getMyActiveShift, getCrumAmbulances, startShiftExpirySweep, notifyForceLogout,
     reportAmbulanceFailure, getFailureReports, getMyInstitutionAmbulances, concludeTransfer, markAvailableAfterTransfer, getMyActiveTransfer
 }

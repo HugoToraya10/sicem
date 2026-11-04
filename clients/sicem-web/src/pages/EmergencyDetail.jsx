@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
+import { OSRM_ROUTE_URL } from '../config/services'
+import { roleLabel } from '../config/roles'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toLowerCaseKeys } from '../utils/formatData';
 import Navbar from '../components/layout/Navbar';
+import { readableTextOn } from '../utils/color'
+import './admin/Institutions.css'
+import './NewEmergency.css'
 import './EmergencyDetail.css';
 import { getNavLinks } from '../utils/Navlinks';
 import { parseResponse } from '../utils/apiRequest';
@@ -10,8 +15,9 @@ import { connectEmergencySocket } from '../sockets/emergencySocket';
 import { connectUnitsSocket } from '../sockets/unitsSocket';
 import MapArea from '../components/map/MapArea';
 import {API_BASE_URL} from '../config/api'
+import { useDialogs } from '../context/useDialogs'
+import { Drawer } from '../components/ui/Overlay'
 
-const roleLabels = { 1: 'Administrador', 2: 'Despachador', 3: 'Paramédico', 4: 'Hospital', 5: 'Paciente' }
 
 // Secuencia fija de avance manual. "Cerrada" nunca aparece aquí a propósito —
 // el cierre es exclusivo del botón "Cerrar Emergencia".
@@ -81,6 +87,7 @@ const buildTimeline = (emergencyData, assignments, patients, notesByPatient) => 
 }
 
 const EmergencyDetail = () => {
+    const { notify, confirm, prompt } = useDialogs()
     const { emergencyId } = useParams();
     const { token, user } = useAuth();
     const navLinks = getNavLinks(user?.roleId)
@@ -279,7 +286,7 @@ const EmergencyDetail = () => {
         if (withLocation.length === 0) { setAmbulanceRoutes([]); return }
 
         Promise.all(withLocation.map((a) => {
-            const url = `https://router.project-osrm.org/route/v1/driving/${a.longitude},${a.latitude};${emergencyData.longitude},${emergencyData.latitude}?overview=full&geometries=geojson`
+            const url = `${OSRM_ROUTE_URL}/${a.longitude},${a.latitude};${emergencyData.longitude},${emergencyData.latitude}?overview=full&geometries=geojson`
             return fetch(url)
                 .then(res => res.json())
                 .then((data) => {
@@ -381,8 +388,8 @@ const EmergencyDetail = () => {
 
     //---------------------------------registrar, posts--------------------------------------------------
 
-    const handleCloseEmergency = () => {
-        if (!window.confirm('¿Seguro que quieres cerrar esta emergencia? Esta acción no se puede deshacer.')) return
+    const handleCloseEmergency = async () => {
+        if (!(await confirm({ title: 'Cerrar emergencia', message: 'Se cerrará esta emergencia y ya no se podrán registrar cambios. Esta acción no se puede deshacer.', confirmLabel: 'Cerrar emergencia', cancelLabel: 'Volver', danger: true }))) return
         fetch(`${API_BASE_URL}/emergencias/cerrar-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -390,15 +397,22 @@ const EmergencyDetail = () => {
         })
             .then(parseResponse)
             .then(() => navigate('/dashboard'))
-            .catch(error => { console.error('Error cerrando la emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cerrando la emergencia. ', error); notify(error.message, 'error') })
     }
 
     // Válvula de escape exclusiva de rol 1 — para cuando la emergencia nunca va
     // a resolverse sola (ambulancia cancelada, paciente rechazado y nadie lo
     // reasignó, etc.) y el cierre normal la sigue bloqueando.
-    const handleForceCloseEmergency = () => {
-        const reason = window.prompt('Cierre forzado: ¿cuál es el motivo? (ambulancia cancelada, paciente rechazó traslado, etc.)')
-        if (!reason || !reason.trim()) return
+    const handleForceCloseEmergency = async () => {
+        const reason = await prompt({
+            title: 'Cierre forzado de la emergencia',
+            message: 'Úsalo solo cuando la emergencia no puede resolverse sola (ambulancia cancelada, paciente que rechazó el traslado, etc.). Queda registrado.',
+            label: 'Motivo del cierre',
+            confirmLabel: 'Cerrar emergencia',
+            required: true,
+            danger: true,
+        })
+        if (!reason) return
         fetch(`${API_BASE_URL}/emergencias/forzar-cierre-emergencia`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -406,7 +420,7 @@ const EmergencyDetail = () => {
         })
             .then(parseResponse)
             .then(() => navigate('/dashboard'))
-            .catch(error => { console.error('Error en el cierre forzado. ', error); alert(error.message) })
+            .catch(error => { console.error('Error en el cierre forzado. ', error); notify(error.message, 'error') })
     }
 
     const handleAdvanceStatus = (emergencyStatusId) => {
@@ -417,19 +431,19 @@ const EmergencyDetail = () => {
         })
             .then(parseResponse)
             .then(() => fetchEmergencyData())
-            .catch(error => { console.error('Error actualizando el estado de la emergencia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando el estado de la emergencia. ', error); notify(error.message, 'error') })
     }
 
     // También funciona sobre una ya Aceptada (p. ej. dos unidades externas
     // aceptadas para un solo paciente) — el backend suelta la ambulancia de
     // vuelta a Disponible y avisa al hospital dueño con sonido/notificación,
     // ya que él sí había comprometido la unidad.
-    const handleCancelExternalRequest = (r) => {
+    const handleCancelExternalRequest = async (r) => {
         const wasAccepted = parseInt(r.request_status_id) === 2
         const msg = wasAccepted
             ? `Esta unidad ya había sido aceptada por ${r.receiving_institution || 'la otra institución'}. ¿Seguro que ya no la necesitas? Se le avisará que se cancela.`
             : `¿Seguro que quieres cancelar la solicitud de la unidad ${r.unit_number}?`
-        if (!window.confirm(msg)) return
+        if (!(await confirm({ title: 'Cancelar solicitud de unidad', message: msg, confirmLabel: 'Sí, cancelar', cancelLabel: 'No', danger: true }))) return
         fetch(`${API_BASE_URL}/emergencias/cancelar-solicitud`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -437,7 +451,7 @@ const EmergencyDetail = () => {
         })
             .then(parseResponse)
             .then(() => fetchExternalUnitsInPlay())
-            .catch(error => { console.error('Error cancelando solicitud. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cancelando solicitud. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------agregar ambulancia adicional a la emergencia en curso--------------------------------------------------
@@ -451,14 +465,14 @@ const EmergencyDetail = () => {
         })
             .then(parseResponse)
             .then(({ data }) => setAvailableUnitsForAdd((data || []).map(u => toLowerCaseKeys(u))))
-            .catch(error => { console.error('Error consultando unidades disponibles. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando unidades disponibles. ', error); notify(error.message, 'error') })
 
         fetch(`${API_BASE_URL}/unidades/ambulancias-externas/${user.institutionId}`, {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
         })
             .then(parseResponse)
             .then(({ data }) => setExternalUnitsForAdd((data || []).map(u => toLowerCaseKeys(u))))
-            .catch(error => { console.error('Error consultando unidades externas. ', error); alert(error.message) })
+            .catch(error => { console.error('Error consultando unidades externas. ', error); notify(error.message, 'error') })
     }
 
     // Por cada unidad propia disponible: su ubicación actual, y de ahí la ruta
@@ -477,7 +491,7 @@ const EmergencyDetail = () => {
                 .then(({ data }) => {
                     const loc = data ? toLowerCaseKeys(data) : null
                     if (!loc?.latitude || !loc?.longitude) return [u.ambulance_id, null, null]
-                    const url = `https://router.project-osrm.org/route/v1/driving/${loc.longitude},${loc.latitude};${emergencyData.longitude},${emergencyData.latitude}?overview=false`
+                    const url = `${OSRM_ROUTE_URL}/${loc.longitude},${loc.latitude};${emergencyData.longitude},${emergencyData.latitude}?overview=false`
                     return fetch(url)
                         .then(res => res.json())
                         .then((routeData) => {
@@ -518,7 +532,7 @@ const EmergencyDetail = () => {
 
     const handleAddAmbulance = (e) => {
         e.preventDefault();
-        if (selectedUnitsToAdd.length === 0 && selectedExternalUnitsToAdd.length === 0) { alert('Selecciona al menos una unidad.'); return }
+        if (selectedUnitsToAdd.length === 0 && selectedExternalUnitsToAdd.length === 0) { notify('Selecciona al menos una unidad.', 'error'); return }
 
         const ownPromise = selectedUnitsToAdd.length > 0
             ? fetch(`${API_BASE_URL}/emergencias/registrar-asignacion`, {
@@ -546,7 +560,30 @@ const EmergencyDetail = () => {
 
         Promise.all([ownPromise, ...externalPromises])
             .then(() => { setShowAddAmbulanceForm(false); setSelectedUnitsToAdd([]); setSelectedExternalUnitsToAdd([]); fetchAssignments(); fetchExternalUnitsInPlay(); })
-            .catch(error => { console.error('Error agregando ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error agregando ambulancia. ', error); notify(error.message, 'error') })
+    }
+
+    // Quita una unidad de la emergencia (queda libre). Si era la última, la emergencia regresa a "Registrada"
+    // y vuelve a la lista "Por aceptar" del tablero.
+    const handleUnassignAmbulance = async (assignment) => {
+        const lastOne = assignments.filter((a) => !a.unassigned_at).length <= 1 && externalUnitsInPlay.length === 0
+        const ok = await confirm({
+            title: `Desasignar la unidad ${assignment.unit_number}`,
+            message: lastOne
+                ? 'Es la última unidad de esta emergencia: volverá a quedar sin unidad y aparecerá en "Por aceptar" del tablero. La unidad queda disponible.'
+                : 'La unidad queda disponible y sale de esta emergencia.',
+            confirmLabel: 'Desasignar',
+            danger: true,
+        })
+        if (!ok) return
+        fetch(`${API_BASE_URL}/emergencias/desasignar-ambulancia`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ assignmentId: assignment.assignment_id, ambulanceIds: [assignment.ambulance_id], emergencyId })
+        })
+            .then(parseResponse)
+            .then(() => { notify(`Unidad ${assignment.unit_number} desasignada.`, 'ok'); fetchAssignments(); fetchEmergencyData() })
+            .catch(error => { console.error('Error desasignando la ambulancia. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------identificar paciente--------------------------------------------------
@@ -576,7 +613,7 @@ const EmergencyDetail = () => {
         })
             .then(parseResponse)
             .then(() => { setIdentifyingPatientId(null); fetchPatients(); })
-            .catch(error => { console.error('Error identificando al paciente. ', error); alert(error.message) })
+            .catch(error => { console.error('Error identificando al paciente. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------agregar paciente a la emergencia en curso--------------------------------------------------
@@ -626,7 +663,7 @@ const EmergencyDetail = () => {
 
         if (addPatientForm.userProfileId) {
             linkPatientToEmergency(addPatientForm.userProfileId).then(afterLink)
-                .catch(error => { console.error('Error agregando paciente. ', error); alert(error.message) })
+                .catch(error => { console.error('Error agregando paciente. ', error); notify(error.message, 'error') })
             return
         }
 
@@ -647,7 +684,7 @@ const EmergencyDetail = () => {
             .then(parseResponse)
             .then((newProfile) => linkPatientToEmergency(newProfile.userProfileId))
             .then(afterLink)
-            .catch(error => { console.error('Error agregando paciente. ', error); alert(error.message) })
+            .catch(error => { console.error('Error agregando paciente. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------reasignar hospital destino de un paciente--------------------------------------------------
@@ -716,7 +753,7 @@ const EmergencyDetail = () => {
                 setReassignInstitutionId('')
                 setReassignSpecialityId('')
             })
-            .catch(error => { console.error('Error reasignando destino del paciente. ', error); alert(error.message) })
+            .catch(error => { console.error('Error reasignando destino del paciente. ', error); notify(error.message, 'error') })
     }
 
     //---------------------------------asignar unidad a un paciente concreto--------------------------------------------------
@@ -778,7 +815,7 @@ const EmergencyDetail = () => {
                     return copy
                 })
             })
-            .catch(error => { console.error('Error asignando unidad al paciente. ', error); alert(error.message) })
+            .catch(error => { console.error('Error asignando unidad al paciente. ', error); notify(error.message, 'error') })
     }
 
     // Avisa antes de cerrar/recargar la pestaña si hay cambios de unidad sin
@@ -802,18 +839,26 @@ const EmergencyDetail = () => {
         const handler = (e) => {
             if (!hasUnsavedAmbulanceChanges) return
             const link = e.target.closest('a')
-            if (!link) return
-            const confirmed = window.confirm('Tienes cambios de unidad sin confirmar en esta emergencia. ¿Seguro que quieres salir sin guardarlos?')
-            if (!confirmed) {
-                e.preventDefault()
-                e.stopPropagation()
-            } else {
+            if (!link || !link.getAttribute('href') || link.target === '_blank') return
+            // El diálogo es asíncrono: se detiene la navegación ya y, si se confirma, se navega a mano.
+            e.preventDefault()
+            e.stopPropagation()
+            const destination = link.getAttribute('href')
+            confirm({
+                title: 'Cambios sin confirmar',
+                message: 'Tienes cambios de unidad sin confirmar en esta emergencia. ¿Seguro que quieres salir sin guardarlos?',
+                confirmLabel: 'Salir sin guardar',
+                cancelLabel: 'Seguir aquí',
+                danger: true,
+            }).then((leave) => {
+                if (!leave) return
                 setPendingAmbulanceByPatient({})
-            }
+                navigate(destination)
+            })
         }
         document.addEventListener('click', handler, true)
         return () => document.removeEventListener('click', handler, true)
-    }, [hasUnsavedAmbulanceChanges]);
+    }, [hasUnsavedAmbulanceChanges, confirm, navigate]);
 
     //---------------------------------registrar, posts--------------------------------------------------
 
@@ -846,49 +891,53 @@ const EmergencyDetail = () => {
         : null
 
     if (emergencyData === null) {
-        return <div className="detail-loading">Cargando...</div>
+        return <div className="detail-loading" role="status">Cargando emergencia…</div>
     }
 
     return (
         <div className="emergency-detail-page">
             <Navbar
                 userName={user?.firstName || 'Usuario'}
-                roleLabel={roleLabels[user?.roleId] || ''}
+                roleLabel={roleLabel(user?.roleId)}
                 links={navLinks}
             />
 
-            <div className="detail-body">
+            <div role="main" id="contenido" className="detail-body">
                 <div className="detail-header">
-                    <h2>{emergencyData.type_name}</h2>
-                    <span className="detail-status">{emergencyData.status_name}</span>
-                    {emergencyData.triage_level && (
-                        <span className="detail-triage-badge" style={{ background: emergencyData.triage_hex_color }}>
-                            Triage Nivel {emergencyData.triage_level} — {emergencyData.triage_color_name}
-                        </span>
-                    )}
-                    {parseInt(user?.roleId) === 2 && emergencyData.closed_at === null && nextStatus && (
-                        <button
-                            className="detail-advance-btn"
-                            onClick={() => handleAdvanceStatus(nextStatus.emergency_status_id)}
-                        >
-                            Avanzar a: {nextStatus.name}
-                        </button>
-                    )}
-                    {emergencyData.closed_at === null && (
-                        <button className="detail-close-btn" onClick={handleCloseEmergency}>
-                            Cerrar Emergencia
-                        </button>
-                    )}
-                    {emergencyData.closed_at === null && parseInt(user?.roleId) === 1 && (
-                        <button className="detail-close-btn detail-force-close-btn" onClick={handleForceCloseEmergency} title="Cierra sin importar si hay pacientes pendientes — exige un motivo">
-                            Cierre Forzado
-                        </button>
-                    )}
-                    {emergencyData.close_reason && (
-                        <span className="detail-close-reason" title="Motivo del cierre forzado">
-                            Cerrada con motivo: {emergencyData.close_reason}
-                        </span>
-                    )}
+                    <div className="detail-header-main">
+                        <h1>{emergencyData.type_name}</h1>
+                        <span className="detail-status">{emergencyData.status_name}</span>
+                        {emergencyData.triage_level && (
+                            <span className="detail-triage-badge" style={{ background: emergencyData.triage_hex_color, color: readableTextOn(emergencyData.triage_hex_color) }}>
+                                Nivel {emergencyData.triage_level} · {emergencyData.triage_color_name}
+                            </span>
+                        )}
+                        {emergencyData.close_reason && (
+                            <span className="detail-close-reason" title="Motivo del cierre forzado">
+                                Cerrada con motivo: {emergencyData.close_reason}
+                            </span>
+                        )}
+                    </div>
+                    <div className="detail-actions">
+                        {parseInt(user?.roleId) === 2 && emergencyData.closed_at === null && nextStatus && (
+                            <button
+                                className="detail-advance-btn"
+                                onClick={() => handleAdvanceStatus(nextStatus.emergency_status_id)}
+                            >
+                                Avanzar a: {nextStatus.name}
+                            </button>
+                        )}
+                        {emergencyData.closed_at === null && (
+                            <button className="detail-close-btn" onClick={handleCloseEmergency}>
+                                Cerrar emergencia
+                            </button>
+                        )}
+                        {emergencyData.closed_at === null && parseInt(user?.roleId) === 1 && (
+                            <button className="detail-close-btn detail-force-close-btn" onClick={handleForceCloseEmergency} title="Cierra sin importar si hay pacientes pendientes — exige un motivo">
+                                Cierre forzado
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="detail-grid">
@@ -905,6 +954,10 @@ const EmergencyDetail = () => {
                         <span className="field-value">{emergencyData.reporter_phone}</span>
                     </div>
                     <div className="detail-field">
+                        <span className="field-label">Registrada</span>
+                        <span className="field-value">{formatDateTime(emergencyData.created_at)}</span>
+                    </div>
+                    <div className="detail-field">
                         <span className="field-label">Despachador</span>
                         <span className="field-value">{assignedBy || '—'}</span>
                     </div>
@@ -918,135 +971,11 @@ const EmergencyDetail = () => {
                     </div>
                 </div>
 
-                <div className="detail-section">
-                    <h3>Mapa</h3>
-                    {showAddAmbulanceForm && (
-                        <p className="detail-section-hint">
-                            También se muestran las unidades disponibles para agregar (abajo) — así se ven todas antes de elegir.
-                        </p>
-                    )}
-                    <div className="detail-map-wrapper">
-                        <MapArea
-                            ambulances={[
-                                ...ambulanceLocations,
-                                // Mientras el formulario de agregar está abierto, también se ven en
-                                // el mapa las candidatas — sin esto solo se veían las que YA están
-                                // asignadas, el despachador no podía comparar visualmente antes de elegir.
-                                ...(showAddAmbulanceForm
-                                    ? availableUnitsForAdd
-                                        .filter(u => !ambulanceLocations.some(a => a.ambulance_id === u.ambulance_id))
-                                        .map(u => ({ ...u, ...(addUnitLocations[u.ambulance_id] || {}) }))
-                                    : [])
-                            ]}
-                            emergencyLocation={emergencyData.latitude ? { latitude: emergencyData.latitude, longitude: emergencyData.longitude } : null}
-                            routes={ambulanceRoutes}
-                        />
-                    </div>
-                </div>
-
+                <div className="detail-layout">
+                    <div className="detail-col-main">
                 <div className="detail-section">
                     <div className="section-header-row">
-                        <h3>Ambulancias Asignadas ({assignments.length})</h3>
-                        {[1, 2].includes(parseInt(user?.roleId)) && emergencyData.closed_at === null && (
-                            <button className="add-patient-btn" onClick={openAddAmbulanceForm}>+ Agregar ambulancia</button>
-                        )}
-                    </div>
-                    <p className="detail-section-hint">Estas unidades quedan disponibles para asignar a un paciente específico en la sección de Pacientes, abajo — las externas se pueden asignar aunque todavía no las acepten; si las rechazan, se sueltan solas.</p>
-
-                    {showAddAmbulanceForm && (
-                        <form className="patient-form" onSubmit={handleAddAmbulance} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                            <p className="unit-add-subtitle">Tus unidades (asignación directa)</p>
-                            {addRoutesLoading && <p className="ne-distance-hint">Calculando rutas...</p>}
-                            {availableUnitsForAdd.length === 0 ? (
-                                <p className="detail-empty">No hay unidades disponibles en tu institución ahorita mismo.</p>
-                            ) : (
-                                <div className="unit-cards-grid">
-                                    {sortedAvailableUnitsForAdd.map((u) => (
-                                        <label key={u.ambulance_id} className={`unit-card ${selectedUnitsToAdd.includes(u.ambulance_id) ? 'selected' : ''}`}>
-                                            <input type="checkbox" checked={selectedUnitsToAdd.includes(u.ambulance_id)} onChange={() => toggleUnitToAdd(u.ambulance_id)} />
-                                            <div className="unit-card-info">
-                                                <span className="unit-card-number">
-                                                    {u.unit_number}
-                                                    {u.ambulance_id === nearestAddUnitId && <span className="unit-nearest-badge">Más cercana</span>}
-                                                </span>
-                                                <span className="unit-card-plate">
-                                                    {u.license_plate}
-                                                    {u.route && ` · ${u.route.distanceKm.toFixed(1)} km · ${Math.round(u.route.durationMin)} min`}
-                                                </span>
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-
-                            <p className="unit-add-subtitle unit-add-subtitle-external">Otras instituciones (requiere solicitud)</p>
-                            {externalUnitsForAdd.length === 0 ? (
-                                <p className="detail-empty">No hay unidades externas disponibles por el momento.</p>
-                            ) : (
-                                <div className="unit-cards-grid">
-                                    {externalUnitsForAdd.map((u) => (
-                                        <label key={u.ambulance_id} className={`unit-card unit-card-external ${selectedExternalUnitsToAdd.includes(u.ambulance_id) ? 'selected' : ''}`}>
-                                            <input type="checkbox" checked={selectedExternalUnitsToAdd.includes(u.ambulance_id)} onChange={() => toggleExternalUnitToAdd(u.ambulance_id)} />
-                                            <div className="unit-card-info">
-                                                <span className="unit-card-number">{u.unit_number}</span>
-                                                <span className="unit-card-institution">{u.institution_name}</span>
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="institutions-form-actions">
-                                <button type="submit" className="institutions-form-submit">Confirmar unidades seleccionadas</button>
-                                <button type="button" className="institutions-form-cancel" onClick={() => setShowAddAmbulanceForm(false)}>Cancelar</button>
-                            </div>
-                        </form>
-                    )}
-
-                    {assignments.length === 0 && externalUnitsInPlay.length === 0 ? (
-                        <p className="detail-empty">Sin ambulancias asignadas todavía.</p>
-                    ) : (
-                        <div className="assignments-list">
-                            {assignments.map((a) => (
-                                <div key={a.assignment_id} className="assignment-card">
-                                    <span className="assignment-unit">{a.unit_number}</span>
-                                    <span className="assignment-plate">{a.license_plate}</span>
-                                    <span className="assignment-paramedic">
-                                        {a.driver_first_name ? `${a.driver_first_name} ${a.driver_first_surname}` : 'Sin conductor con turno activo'}
-                                    </span>
-                                    {a.unassigned_at && (
-                                        <span className="assignment-tag">Desasignada</span>
-                                    )}
-                                </div>
-                            ))}
-                            {/* Las de otra institución nunca vivían en `assignments` (esa tabla es
-                                solo para asignación directa propia) — por eso una unidad externa,
-                                aunque ya viniera en camino, nunca se veía aquí. */}
-                            {externalUnitsInPlay.map((r) => (
-                                <div key={`ext-${r.inter_institutional_request_id}`} className="assignment-card assignment-card-external">
-                                    <span className="assignment-unit">{r.unit_number}</span>
-                                    <span className="assignment-plate">{r.receiving_institution || 'Otra institución'}</span>
-                                    <span className="assignment-paramedic">Unidad externa</span>
-                                    <span className={`assignment-tag ${parseInt(r.request_status_id) === 1 ? 'assignment-tag-pending' : 'assignment-tag-accepted'}`}>
-                                        {parseInt(r.request_status_id) === 1 ? 'Pendiente de aceptar' : 'En camino (aceptada)'}
-                                    </span>
-                                    {[1, 2].includes(parseInt(user?.roleId)) && (
-                                        <button
-                                            className="assignment-unassign-btn"
-                                            onClick={() => handleCancelExternalRequest(r)}
-                                        >
-                                            Cancelar solicitud
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div className="detail-section">
-                    <div className="section-header-row">
-                        <h3>Pacientes ({patients.length})</h3>
+                        <h2>Pacientes ({patients.length})</h2>
                         {[1, 2, 3].includes(parseInt(user?.roleId)) && (
                             <button className="add-patient-btn" onClick={() => setShowAddPatientForm(!showAddPatientForm)}>
                                 + Agregar paciente
@@ -1057,36 +986,47 @@ const EmergencyDetail = () => {
                         Los pacientes y sus notas de urgencia son registrados por el paramédico en campo desde la app móvil.
                     </p>
 
-                    {showAddPatientForm && (
-                        <form className="patient-form" onSubmit={handleAddPatient} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                            <div className="patient-id-curp-row">
-                                <input
-                                    type="text" placeholder="CURP"
-                                    value={addPatientForm.curp}
-                                    onChange={(e) => setAddPatientForm(p => ({ ...p, curp: e.target.value }))}
-                                    maxLength={18}
-                                />
-                                <button type="button" onClick={handleAddPatientCurpSearch} disabled={addPatientCurpBusy || !addPatientForm.curp.trim()}>
-                                    {addPatientCurpBusy ? 'Buscando...' : 'Buscar'}
-                                </button>
+                    <Drawer open={Boolean(showAddPatientForm)} onClose={() => setShowAddPatientForm(false)} title="Agregar paciente" subtitle="Busca por CURP o captura los datos a mano." size="md">
+                        <form className="institutions-form" onSubmit={handleAddPatient}>
+                            <div className="institutions-field">
+                                <label htmlFor="ap-curp">CURP</label>
+                                <div className="inline-search">
+                                    <input id="ap-curp" type="text" value={addPatientForm.curp} onChange={(e) => setAddPatientForm(p => ({ ...p, curp: e.target.value.toUpperCase() }))} maxLength={18} />
+                                    <button type="button" className="institutions-secondary-btn" onClick={handleAddPatientCurpSearch} disabled={addPatientCurpBusy || !addPatientForm.curp.trim()}>
+                                        {addPatientCurpBusy ? 'Buscando…' : 'Buscar'}
+                                    </button>
+                                </div>
+                                {addPatientForm.found === true && <p className="patient-id-found">✓ Paciente encontrado: datos cargados</p>}
+                                {addPatientForm.found === false && <p className="patient-id-notfound">No se encontró. Captura los datos a mano si los tienes.</p>}
                             </div>
-                            {addPatientForm.found === true && <p className="patient-id-found">✓ Paciente encontrado — datos cargados automáticamente</p>}
-                            {addPatientForm.found === false && <p className="patient-id-notfound">No se encontró. Llena los datos manualmente si los tienes.</p>}
-                            <div className="patient-id-row">
-                                <input type="text" placeholder="Nombre(s)" value={addPatientForm.firstName} onChange={(e) => setAddPatientForm(p => ({ ...p, firstName: e.target.value }))} readOnly={addPatientForm.found === true} maxLength={100} />
-                                <input type="text" placeholder="Apellido paterno" value={addPatientForm.firstSurname} onChange={(e) => setAddPatientForm(p => ({ ...p, firstSurname: e.target.value }))} readOnly={addPatientForm.found === true} maxLength={150} />
+                            <div className="institutions-form-row">
+                                <div className="institutions-field">
+                                    <label htmlFor="ap-first">Nombre(s)</label>
+                                    <input id="ap-first" type="text" value={addPatientForm.firstName} onChange={(e) => setAddPatientForm(p => ({ ...p, firstName: e.target.value }))} readOnly={addPatientForm.found === true} maxLength={100} />
+                                </div>
+                                <div className="institutions-field">
+                                    <label htmlFor="ap-s1">Apellido paterno</label>
+                                    <input id="ap-s1" type="text" value={addPatientForm.firstSurname} onChange={(e) => setAddPatientForm(p => ({ ...p, firstSurname: e.target.value }))} readOnly={addPatientForm.found === true} maxLength={150} />
+                                </div>
+                                <div className="institutions-field">
+                                    <label htmlFor="ap-s2">Apellido materno</label>
+                                    <input id="ap-s2" type="text" value={addPatientForm.secondSurname} onChange={(e) => setAddPatientForm(p => ({ ...p, secondSurname: e.target.value }))} readOnly={addPatientForm.found === true} maxLength={150} />
+                                </div>
                             </div>
-                            <div className="patient-id-row">
-                                <input type="text" placeholder="Apellido materno" value={addPatientForm.secondSurname} onChange={(e) => setAddPatientForm(p => ({ ...p, secondSurname: e.target.value }))} readOnly={addPatientForm.found === true} maxLength={150} />
-                                <input type="text" placeholder="Teléfono" value={addPatientForm.phone} onChange={(e) => setAddPatientForm(p => ({ ...p, phone: e.target.value }))} readOnly={addPatientForm.found === true} maxLength={10} />
+                            <div className="institutions-field">
+                                <label htmlFor="ap-phone">Teléfono</label>
+                                <input id="ap-phone" type="tel" inputMode="numeric" value={addPatientForm.phone} onChange={(e) => setAddPatientForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))} readOnly={addPatientForm.found === true} maxLength={10} />
                             </div>
-                            <textarea placeholder="Notas (opcional)" value={addPatientForm.notes} onChange={(e) => setAddPatientForm(p => ({ ...p, notes: e.target.value }))} maxLength={300} />
+                            <div className="institutions-field">
+                                <label htmlFor="ap-notes">Notas <span className="optional">(opcional)</span></label>
+                                <textarea id="ap-notes" rows={3} value={addPatientForm.notes} onChange={(e) => setAddPatientForm(p => ({ ...p, notes: e.target.value }))} maxLength={300} />
+                            </div>
                             <div className="institutions-form-actions">
                                 <button type="submit" className="institutions-form-submit">Agregar paciente</button>
                                 <button type="button" className="institutions-form-cancel" onClick={() => setShowAddPatientForm(false)}>Cancelar</button>
                             </div>
                         </form>
-                    )}
+                        </Drawer>
 
                     {patients.length === 0 ? (
                         <p className="detail-empty">Sin pacientes registrados todavía.</p>
@@ -1110,7 +1050,7 @@ const EmergencyDetail = () => {
                                 {[1, 2].includes(parseInt(user?.roleId)) && (
                                     <div className="patient-unit-row">
                                         <label className="patient-unit-label">Unidad asignada:</label>
-                                        <select
+                                        <select aria-label="Unidad asignada:"
                                             value={pendingAmbulanceByPatient[patient.emergency_patient_id] ?? (patient.ambulance_id || '')}
                                             onChange={(e) => handleStageAmbulanceChange(patient, e.target.value)}
                                         >
@@ -1128,7 +1068,7 @@ const EmergencyDetail = () => {
                                             </>
                                         )}
                                         {assignableUnits.length === 0 && (
-                                            <span className="patient-unit-hint">Agrega una ambulancia arriba para poder asignarla.</span>
+                                            <span className="patient-unit-hint">Agrega una ambulancia en el panel de la derecha para poder asignarla.</span>
                                         )}
                                     </div>
                                 )}
@@ -1153,7 +1093,7 @@ const EmergencyDetail = () => {
                                             [1, 2].includes(parseInt(user?.roleId)) && (
                                             reassigningPatientId === patient.emergency_patient_id ? (
                                                 <div className="reassign-control">
-                                                    <select
+                                                    <select aria-label="Hospital destino"
                                                         value={reassignInstitutionId}
                                                         onChange={(e) => handleReassignInstitutionChange(e.target.value)}
                                                     >
@@ -1164,7 +1104,7 @@ const EmergencyDetail = () => {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                    <select
+                                                    <select aria-label="Especialidad"
                                                         value={reassignSpecialityId}
                                                         onChange={(e) => setReassignSpecialityId(e.target.value)}
                                                         disabled={!reassignInstitutionId}
@@ -1209,24 +1149,42 @@ const EmergencyDetail = () => {
                                     </div>
                                 )}
 
-                                {identifyingPatientId === patient.emergency_patient_id && (
-                                    <form className="note-form" onSubmit={(e) => handleIdentifyPatient(e, patient)}>
-                                        <div className="note-form-row">
-                                            <input type="text" placeholder="Nombre(s)" value={identifyForm.firstName} onChange={(e) => setIdentifyForm(p => ({ ...p, firstName: e.target.value }))} maxLength={100} required />
-                                            <input type="text" placeholder="Apellido paterno" value={identifyForm.firstSurname} onChange={(e) => setIdentifyForm(p => ({ ...p, firstSurname: e.target.value }))} maxLength={150} required />
+                                <Drawer open={Boolean(identifyingPatientId === patient.emergency_patient_id)} onClose={() => setIdentifyingPatientId(null)} title="Identificar paciente" subtitle="Completa los datos del paciente no identificado." size="md">
+                                    <form className="institutions-form" onSubmit={(e) => handleIdentifyPatient(e, patient)}>
+                                        <div className="institutions-form-row">
+                                            <div className="institutions-field">
+                                                <label htmlFor="idf-first">Nombre(s)</label>
+                                                <input id="idf-first" type="text" value={identifyForm.firstName} onChange={(e) => setIdentifyForm(p => ({ ...p, firstName: e.target.value }))} maxLength={100} required />
+                                            </div>
+                                            <div className="institutions-field">
+                                                <label htmlFor="idf-sur1">Apellido paterno</label>
+                                                <input id="idf-sur1" type="text" value={identifyForm.firstSurname} onChange={(e) => setIdentifyForm(p => ({ ...p, firstSurname: e.target.value }))} maxLength={150} required />
+                                            </div>
+                                            <div className="institutions-field">
+                                                <label htmlFor="idf-sur2">Apellido materno</label>
+                                                <input id="idf-sur2" type="text" value={identifyForm.secondSurname} onChange={(e) => setIdentifyForm(p => ({ ...p, secondSurname: e.target.value }))} maxLength={150} />
+                                            </div>
                                         </div>
-                                        <div className="note-form-row">
-                                            <input type="text" placeholder="Apellido materno" value={identifyForm.secondSurname} onChange={(e) => setIdentifyForm(p => ({ ...p, secondSurname: e.target.value }))} maxLength={150} />
-                                            <input type="text" placeholder="CURP" maxLength={18} value={identifyForm.cveUnicaRegistroPob} onChange={(e) => setIdentifyForm(p => ({ ...p, cveUnicaRegistroPob: e.target.value }))} />
+                                        <div className="institutions-form-row">
+                                            <div className="institutions-field">
+                                                <label htmlFor="idf-curp">CURP</label>
+                                                <input id="idf-curp" type="text" maxLength={18} value={identifyForm.cveUnicaRegistroPob} onChange={(e) => setIdentifyForm(p => ({ ...p, cveUnicaRegistroPob: e.target.value.toUpperCase() }))} />
+                                            </div>
+                                            <div className="institutions-field">
+                                                <label htmlFor="idf-birth">Fecha de nacimiento</label>
+                                                <input id="idf-birth" type="date" value={identifyForm.birthDate} onChange={(e) => setIdentifyForm(p => ({ ...p, birthDate: e.target.value }))} />
+                                            </div>
+                                            <div className="institutions-field">
+                                                <label htmlFor="idf-phone">Teléfono</label>
+                                                <input id="idf-phone" type="tel" inputMode="numeric" value={identifyForm.phone} onChange={(e) => setIdentifyForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '') }))} maxLength={10} />
+                                            </div>
                                         </div>
-                                        <div className="note-form-row">
-                                            <input type="date" value={identifyForm.birthDate} onChange={(e) => setIdentifyForm(p => ({ ...p, birthDate: e.target.value }))} />
-                                            <input type="text" placeholder="Teléfono" value={identifyForm.phone} onChange={(e) => setIdentifyForm(p => ({ ...p, phone: e.target.value }))} maxLength={10} />
+                                        <div className="institutions-form-actions">
+                                            <button type="submit" className="institutions-form-submit">Guardar identidad</button>
+                                            <button type="button" className="institutions-form-cancel" onClick={() => setIdentifyingPatientId(null)}>Cancelar</button>
                                         </div>
-                                        <button type="submit">Guardar identidad</button>
-                                        <button type="button" className="institutions-form-cancel" onClick={() => setIdentifyingPatientId(null)}>Cancelar</button>
                                     </form>
-                                )}
+                                    </Drawer>
 
                                 {clinicalByPatient[patient.emergency_patient_id] && (
                                     <div className="patient-clinical-info">
@@ -1262,7 +1220,7 @@ const EmergencyDetail = () => {
                 </div>
 
                 <div className="detail-section">
-                    <h3>Línea de Tiempo</h3>
+                    <h2>Línea de tiempo</h2>
                     {timeline.length === 0 ? (
                         <p className="detail-empty">Sin eventos registrados todavía.</p>
                     ) : (
@@ -1282,6 +1240,139 @@ const EmergencyDetail = () => {
                             ))}
                         </div>
                     )}
+                </div>
+                    </div>
+                    <aside className="detail-col-side">
+                <div className="detail-section">
+                    <h2>Mapa</h2>
+                    {showAddAmbulanceForm && (
+                        <p className="detail-section-hint">
+                            También se muestran las unidades disponibles para agregar (abajo) — así se ven todas antes de elegir.
+                        </p>
+                    )}
+                    <div className="detail-map-wrapper">
+                        <MapArea
+                            ambulances={[
+                                ...ambulanceLocations,
+                                // Mientras el formulario de agregar está abierto, también se ven en
+                                // el mapa las candidatas — sin esto solo se veían las que YA están
+                                // asignadas, el despachador no podía comparar visualmente antes de elegir.
+                                ...(showAddAmbulanceForm
+                                    ? availableUnitsForAdd
+                                        .filter(u => !ambulanceLocations.some(a => a.ambulance_id === u.ambulance_id))
+                                        .map(u => ({ ...u, ...(addUnitLocations[u.ambulance_id] || {}) }))
+                                    : [])
+                            ]}
+                            emergencyLocation={emergencyData.latitude ? { latitude: emergencyData.latitude, longitude: emergencyData.longitude } : null}
+                            routes={ambulanceRoutes}
+                        />
+                    </div>
+                </div>
+
+                <div className="detail-section">
+                    <div className="section-header-row">
+                        <h2>Ambulancias asignadas ({assignments.length})</h2>
+                        {[1, 2].includes(parseInt(user?.roleId)) && emergencyData.closed_at === null && (
+                            <button className="add-patient-btn" onClick={openAddAmbulanceForm}>+ Agregar ambulancia</button>
+                        )}
+                    </div>
+                    <p className="detail-section-hint">Estas unidades quedan disponibles para asignar a un paciente específico en la sección de Pacientes. Las externas se pueden asignar aunque todavía no las acepten; si las rechazan, se sueltan solas.</p>
+
+                    <Drawer open={Boolean(showAddAmbulanceForm)} onClose={() => setShowAddAmbulanceForm(false)} title="Agregar ambulancia" subtitle="Elige las unidades que se suman a esta emergencia." size="lg">
+                        <form className="patient-form" onSubmit={handleAddAmbulance}>
+                            <p className="unit-add-subtitle">Tus unidades (asignación directa)</p>
+                            {addRoutesLoading && <p className="ne-distance-hint">Calculando rutas…</p>}
+                            {availableUnitsForAdd.length === 0 ? (
+                                <p className="detail-empty">No hay unidades disponibles en tu institución ahorita mismo.</p>
+                            ) : (
+                                <div className="unit-cards-grid">
+                                    {sortedAvailableUnitsForAdd.map((u) => (
+                                        <label key={u.ambulance_id} className={`unit-card ${selectedUnitsToAdd.includes(u.ambulance_id) ? 'selected' : ''}`}>
+                                            <input type="checkbox" checked={selectedUnitsToAdd.includes(u.ambulance_id)} onChange={() => toggleUnitToAdd(u.ambulance_id)} />
+                                            <div className="unit-card-info">
+                                                <span className="unit-card-number">
+                                                    {u.unit_number}
+                                                    {u.ambulance_id === nearestAddUnitId && <span className="unit-nearest-badge">Más cercana</span>}
+                                                </span>
+                                                <span className="unit-card-plate">
+                                                    {u.license_plate}
+                                                    {u.route && ` · ${u.route.distanceKm.toFixed(1)} km · ${Math.round(u.route.durationMin)} min`}
+                                                </span>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+
+                            <p className="unit-add-subtitle unit-add-subtitle-external">Otras instituciones (requiere solicitud)</p>
+                            {externalUnitsForAdd.length === 0 ? (
+                                <p className="detail-empty">No hay unidades externas disponibles por el momento.</p>
+                            ) : (
+                                <div className="unit-cards-grid">
+                                    {externalUnitsForAdd.map((u) => (
+                                        <label key={u.ambulance_id} className={`unit-card unit-card-external ${selectedExternalUnitsToAdd.includes(u.ambulance_id) ? 'selected' : ''}`}>
+                                            <input type="checkbox" checked={selectedExternalUnitsToAdd.includes(u.ambulance_id)} onChange={() => toggleExternalUnitToAdd(u.ambulance_id)} />
+                                            <div className="unit-card-info">
+                                                <span className="unit-card-number">{u.unit_number}</span>
+                                                <span className="unit-card-institution">{u.institution_name}</span>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="institutions-form-actions">
+                                <button type="submit" className="institutions-form-submit">Confirmar unidades seleccionadas</button>
+                                <button type="button" className="institutions-form-cancel" onClick={() => setShowAddAmbulanceForm(false)}>Cancelar</button>
+                            </div>
+                        </form>
+                        </Drawer>
+
+                    {assignments.length === 0 && externalUnitsInPlay.length === 0 ? (
+                        <p className="detail-empty">Sin ambulancias asignadas todavía.</p>
+                    ) : (
+                        <div className="assignments-list">
+                            {assignments.map((a) => (
+                                <div key={a.assignment_id} className="assignment-card">
+                                    <span className="assignment-unit">{a.unit_number}</span>
+                                    <span className="assignment-plate">{a.license_plate}</span>
+                                    <span className="assignment-paramedic">
+                                        {a.driver_first_name ? `${a.driver_first_name} ${a.driver_first_surname}` : 'Sin conductor con turno activo'}
+                                    </span>
+                                    {a.unassigned_at && (
+                                        <span className="assignment-tag">Desasignada</span>
+                                    )}
+                                    {!a.unassigned_at && [1, 2].includes(parseInt(user?.roleId)) && emergencyData.closed_at === null && (
+                                        <button type="button" className="assignment-unassign-btn" onClick={() => handleUnassignAmbulance(a)}>Desasignar</button>
+                                    )}
+                                </div>
+                            ))}
+                            {/* Las de otra institución nunca vivían en `assignments` (esa tabla es
+                                solo para asignación directa propia) — por eso una unidad externa,
+                                aunque ya viniera en camino, nunca se veía aquí. */}
+                            {externalUnitsInPlay.map((r) => (
+                                <div key={`ext-${r.inter_institutional_request_id}`} className="assignment-card assignment-card-external">
+                                    <span className="assignment-unit">{r.unit_number}</span>
+                                    <span className="assignment-plate">{r.receiving_institution || 'Otra institución'}</span>
+                                    <span className="assignment-paramedic">Unidad externa</span>
+                                    <span className={`assignment-tag ${parseInt(r.request_status_id) === 1 ? 'assignment-tag-pending' : 'assignment-tag-accepted'}`}>
+                                        {parseInt(r.request_status_id) === 1 ? 'Pendiente de aceptar' : 'En camino (aceptada)'}
+                                    </span>
+                                    {[1, 2].includes(parseInt(user?.roleId)) && (
+                                        <button
+                                            className="assignment-unassign-btn"
+                                            onClick={() => handleCancelExternalRequest(r)}
+                                        >
+                                            Cancelar solicitud
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                    </aside>
                 </div>
             </div>
         </div>

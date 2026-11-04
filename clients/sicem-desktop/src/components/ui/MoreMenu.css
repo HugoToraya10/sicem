@@ -1,0 +1,22 @@
+.more-menu { position: relative; display: inline-block; }
+.more-btn {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px;
+    background: var(--surface); color: var(--text-2); border: 1px solid var(--line-strong); border-radius: var(--r-md);
+    font: 600 13px var(--font-body); cursor: pointer;
+}
+.more-btn:hover { background: var(--surface-2); color: var(--text); }
+.more-list {
+    position: fixed; z-index: 2100; min-width: 190px; margin: 0; padding: 6px; list-style: none;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-panel);
+}
+.more-list button {
+    width: 100%; text-align: left; min-height: 36px; padding: 0 12px; background: none; border: none; border-radius: var(--r-sm);
+    color: var(--text); font: 500 14px var(--font-body); cursor: pointer;
+}
+.more-list button:hover:not(:disabled) { background: var(--surface-2); }
+.more-list button.danger { color: var(--brand); }
+.more-list button:disabled { color: var(--text-3); cursor: not-allowed; }
+
+.more-list { transform-origin: top right; }
+.more-list.up { transform-origin: bottom right; }
+.more-list button:focus-visible { outline: 2px solid var(--steel); outline-offset: -2px; box-shadow: none; }

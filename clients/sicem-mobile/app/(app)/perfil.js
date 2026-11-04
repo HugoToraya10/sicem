@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
+import { Alert } from '../../utils/alert'
 import { useAuth } from '../../context/AuthContext'
 import { API_BASE_URL } from '../../constants/api'
 import { toLowerCaseKeys } from '../../utils/formatData'
@@ -111,7 +112,7 @@ const ProfileScreen = () => {
     }
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+        <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
             <Text style={styles.title}>Mi perfil</Text>
 
             <View style={styles.card}>
@@ -183,21 +184,21 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    title: { fontSize: 20, fontWeight: '700', color: '#1a1a2e', marginBottom: 16 },
-    card: { borderWidth: 1, borderColor: '#eee', borderRadius: 10, padding: 14, marginBottom: 16, backgroundColor: '#fafafa' },
+    title: { fontSize: 20, fontWeight: '700', color: '#14181F', marginBottom: 16 },
+    card: { borderWidth: 1, borderColor: '#E3E8EE', borderRadius: 10, padding: 14, marginBottom: 16, backgroundColor: '#F0F3F6' },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-    sectionTitle: { fontSize: 11, fontWeight: '700', color: '#555', textTransform: 'uppercase' },
-    editLink: { color: '#1565C0', fontSize: 12, fontWeight: '600' },
-    row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-    label: { fontSize: 12, color: '#666' },
-    value: { fontSize: 12, fontWeight: '600', color: '#222', flexShrink: 1, textAlign: 'right' },
-    input: { borderWidth: 1, borderColor: '#dcdce4', borderRadius: 8, padding: 10, marginBottom: 8, fontSize: 14 },
-    miniLabel: { fontSize: 11, color: '#666', marginTop: 4, marginBottom: 6 },
+    sectionTitle: { fontSize: 13, fontWeight: '700', color: '#4A5360', textTransform: 'uppercase' },
+    editLink: { color: '#0F766E', fontSize: 13, fontWeight: '600' },
+    row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#EDEBE5' },
+    label: { fontSize: 13, color: '#4A5360' },
+    value: { fontSize: 13, fontWeight: '600', color: '#14181F', flexShrink: 1, textAlign: 'right' },
+    input: { borderWidth: 1, borderColor: '#CBD3DD', borderRadius: 8, padding: 10, marginBottom: 8, fontSize: 14 },
+    miniLabel: { fontSize: 13, color: '#4A5360', marginTop: 4, marginBottom: 6 },
     formActions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end', marginTop: 4 },
-    primaryButton: { backgroundColor: '#1565C0', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
+    primaryButton: { backgroundColor: '#0F766E', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
     primaryButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
     cancelButton: { paddingVertical: 10, paddingHorizontal: 14, justifyContent: 'center' },
-    cancelButtonText: { color: '#666', fontSize: 14, fontWeight: '600' },
+    cancelButtonText: { color: '#4A5360', fontSize: 14, fontWeight: '600' },
 })
 
 export default ProfileScreen

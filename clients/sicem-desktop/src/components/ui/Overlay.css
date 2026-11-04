@@ -1,0 +1,105 @@
+/* Paneles laterales y diálogos. Todo sale de los tokens: cambia con el tema visual y con el claro/oscuro. */
+.ov-root { position: fixed; inset: 0; z-index: 1800; display: flex; }
+.ov-backdrop { position: absolute; inset: 0; background: rgba(11, 13, 18, .52); backdrop-filter: blur(3px); animation: ov-fade 180ms ease both; }
+.ov-root.is-closing .ov-backdrop { animation: ov-fade-out 190ms ease both; }
+
+.ov-panel {
+    position: relative; display: flex; flex-direction: column; background: var(--surface); color: var(--text);
+    outline: none; min-height: 0; box-shadow: var(--shadow-panel);
+}
+
+/* ---------- Panel lateral ---------- */
+.ov-drawer { justify-content: flex-end; }
+.ov-drawer .ov-panel {
+    width: var(--ov-w, 520px); max-width: 100vw; height: 100%; border-left: 1px solid var(--line-strong);
+    animation: ov-slide-in 260ms cubic-bezier(.2, .7, .2, 1) both;
+}
+.ov-root.is-closing.ov-drawer .ov-panel { animation: ov-slide-out 190ms cubic-bezier(.4, 0, 1, 1) both; }
+
+/* ---------- Diálogo centrado ---------- */
+.ov-modal { align-items: center; justify-content: center; padding: 24px 16px; }
+.ov-modal .ov-panel {
+    width: var(--ov-w, 560px); max-width: 100%; max-height: min(100%, 880px);
+    border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+    animation: ov-pop 240ms cubic-bezier(.2, .7, .2, 1) both;
+}
+.ov-root.is-closing.ov-modal .ov-panel { animation: ov-pop-out 170ms ease both; }
+
+.ov-sm { --ov-w: 420px; }
+.ov-md { --ov-w: 540px; }
+.ov-lg { --ov-w: 760px; }
+.ov-xl { --ov-w: 980px; }
+.ov-full { --ov-w: 1180px; }
+
+/* ---------- Estructura ---------- */
+.ov-head { display: flex; align-items: flex-start; gap: 12px; padding: 20px 20px 16px 24px; border-bottom: 1px solid var(--line); flex: none; }
+.ov-titles { flex: 1; min-width: 0; }
+.ov-eyebrow { margin: 0 0 4px; font-size: 12.5px; font-weight: 600; color: var(--text-3); }
+.ov-title { margin: 0; font: 650 21px/1.2 var(--font-display); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.ov-sub { margin: 4px 0 0; font-size: 14px; color: var(--text-2); line-height: 1.4; }
+.ov-close {
+    flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; margin: -4px -2px 0 0;
+    background: transparent; color: var(--text-2); border: 1px solid transparent; border-radius: var(--r-md); cursor: pointer;
+}
+.ov-close:hover { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+
+.ov-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 24px 24px; }
+.ov-foot { flex: none; display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; padding: 14px 24px; border-top: 1px solid var(--line); background: var(--surface); }
+
+.ov-tone-danger .ov-head { border-bottom-color: var(--brand); }
+
+/* ---------- Formularios existentes dentro de un panel ---------- */
+.ov-body :is([class$="-form"], [class$="inline-form"]):not(.beds-edit-form) {
+    border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 0; margin: 0; max-width: none; display: flex; flex-direction: column; gap: 18px; animation: none; transform: none;
+}
+.ov-body :is([class$="-form"], [class$="inline-form"]) > h3:first-child { display: none; }
+.ov-body :is([class$="form-row"]) { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+.ov-body :is([class$="-field"]) { min-width: 0; }
+.ov-body :is([class$="-field"]) :is(input, select, textarea) { width: 100%; }
+.ov-body :is([class$="form-actions"]) {
+    position: sticky; bottom: -24px; z-index: 3; display: flex; gap: 10px; flex-wrap: wrap; margin: 8px -24px -24px; padding: 14px 24px;
+    background: var(--surface); border-top: 1px solid var(--line);
+}
+.ov-body :is([class$="form-actions"]) button[type="submit"] { order: 2; margin-left: auto; }
+.ov-body :is([class$="form-actions"]) button[type="button"] { order: 1; }
+.ov-body :is([class$="form-hint"]) { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.45; }
+
+/* ---------- Pantallas angostas: el panel sube desde abajo ---------- */
+@media (max-width: 640px) {
+    .ov-drawer { align-items: flex-end; }
+    .ov-drawer .ov-panel {
+        width: 100%; height: auto; max-height: 94dvh; border-left: 0; border-top: 1px solid var(--line-strong);
+        border-radius: var(--r-lg) var(--r-lg) 0 0; animation-name: ov-sheet-in;
+    }
+    .ov-root.is-closing.ov-drawer .ov-panel { animation-name: ov-sheet-out; }
+    .ov-head { padding: 16px 12px 12px 18px; }
+    .ov-body { padding: 16px 18px 20px; }
+    .ov-body :is([class$="form-actions"]) { margin: 8px -18px -20px; padding: 12px 18px; bottom: -20px; }
+    .ov-foot { padding: 12px 18px; }
+    .ov-modal { padding: 12px; align-items: flex-end; }
+    .ov-modal .ov-panel { max-height: 94dvh; }
+}
+
+@keyframes ov-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ov-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ov-slide-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ov-slide-out { from { transform: none; opacity: 1; } to { transform: translateX(40px); opacity: 0; } }
+@keyframes ov-pop { from { transform: translateY(14px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ov-pop-out { from { transform: none; opacity: 1; } to { transform: translateY(8px) scale(.98); opacity: 0; } }
+@keyframes ov-sheet-in { from { transform: translateY(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ov-sheet-out { from { transform: none; opacity: 1; } to { transform: translateY(60px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .ov-backdrop, .ov-panel { animation-duration: .001ms !important; }
+}
+
+.field-hint { margin: 4px 0 0; font-size: 12.5px; color: var(--text-3); line-height: 1.35; }
+
+.ov-body .patient-form :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { width: 100%; }
+.ov-body .patient-form .patient-id-row, .ov-body .patient-form .patient-id-curp-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+
+.inline-search { display: flex; gap: 8px; }
+.inline-search input { flex: 1; min-width: 0; }
+.optional { font-weight: 400; color: var(--text-3); }
+.ov-body label { display: block; font-weight: 600; font-size: 13.5px; margin-bottom: 6px; color: var(--text); }
+.ov-body textarea { min-height: 88px; resize: vertical; width: 100%; }

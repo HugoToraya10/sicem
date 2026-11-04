@@ -26,7 +26,7 @@ const SpecialtyCapacityCard = ({ specialty, onUpdate }) => {
 
     return (
         <div className="capacity-card">
-            <h5>{specialty.name}</h5>
+            <h3>{specialty.name}</h3>
             <div className="capacity-numbers">
                 <div className="cn-item">
                     <div className="cn-num available">{specialty.available_beds}</div>
@@ -41,14 +41,14 @@ const SpecialtyCapacityCard = ({ specialty, onUpdate }) => {
                     <div className="cn-label">Total</div>
                 </div>
             </div>
-            <div className="progress-bar">
+            <div className="progress-bar" role="img" aria-label={`${occupiedPercent}% ocupado`}>
                 <div
                     className={`progress-fill ${getFillLevel(occupiedPercent)}`}
                     style={{ width: `${occupiedPercent}%` }}
                 />
             </div>
 
-            <button className="update-btn" onClick={() => setModalOpen(true)}>Gestionar camas</button>
+            <button type="button" className="btn" onClick={() => setModalOpen(true)}>Gestionar camas</button>
 
             {modalOpen && (
                 <BedMatrixModal

@@ -2,10 +2,10 @@
 // Se mantiene el mismo parámetro roleId que usa sicem-web para poder diferenciar
 // más adelante si el rol admin necesita pantallas extra aquí también.
 const baseNavLinks = [
-    { to: '/pacientes-en-camino', label: 'Pacientes en Camino' },
+    { to: '/pacientes-en-camino', label: 'En camino' },
     { to: '/pacientes', label: 'Pacientes' },
     { to: '/seguimiento', label: 'Seguimiento' },
-    { to: '/solicitudes-unidad', label: 'Solicitudes de Unidad' },
+    { to: '/solicitudes-unidad', label: 'Solicitudes' },
     { to: '/capacidad', label: 'Capacidad' },
     { to: '/historial', label: 'Historial' },
     { to: '/graficas', label: 'Gráficas' },
@@ -16,7 +16,7 @@ export const getNavLinks = (roleId, isInstitutionAdmin) => {
     // Mis Ambulancias es de cualquier usuario rol 4 (hospital), sin importar si
     // además es admin de su institución.
     if (parseInt(roleId) === 4) {
-        links.push({ to: '/mis-ambulancias', label: 'Mis Ambulancias' })
+        links.push({ to: '/mis-ambulancias', label: 'Mis ambulancias' })
     }
     // Administración solo aparece si el usuario tiene is_institution_admin — la
     // ruta en sí también se protege con InstitutionAdminRoute, esto solo oculta

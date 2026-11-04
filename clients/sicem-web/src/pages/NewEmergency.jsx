@@ -1,14 +1,23 @@
 import { useEffect, useRef, useState } from "react";
+import { OSRM_ROUTE_URL } from '../config/services'
+import { MAX_PATIENTS_PER_AMBULANCE, ADDRESS_RESULTS_LIMIT } from '../config/operations'
+import { roleLabel } from '../config/roles'
 import { useAuth } from "../context/AuthContext";
 import { toLowerCaseKeys } from "../utils/formatData";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import MapArea from "../components/map/MapArea";
+import Icon from "../components/ui/Icon";
+import { readableTextOn } from "../utils/color";
+import { useRegion } from "../context/useRegion";
+import { searchAddress } from "../utils/geocode";
+import RegionNotice from "../components/ui/RegionNotice";
 import { getNavLinks } from "../utils/Navlinks";
 import { parseResponse } from '../utils/apiRequest';
 import { connectUnitsSocket } from '../sockets/unitsSocket';
 import './NewEmergency.css';
 import {API_BASE_URL} from '../config/api'
+import { useDialogs } from '../context/useDialogs'
 
 // Ruta real por calle (no línea recta) vía OSRM — mismo ecosistema OpenStreetMap
 // que ya usa esta pantalla para geocodificar direcciones (Nominatim) y pintar
@@ -20,7 +29,7 @@ import {API_BASE_URL} from '../config/api'
 // software libre) con el mapa de México, en vez de seguir pegándole al
 // servidor demo compartido.
 const fetchRouteDistance = (originLat, originLon, destLat, destLon) => {
-    const url = `https://router.project-osrm.org/route/v1/driving/${originLon},${originLat};${destLon},${destLat}?overview=false`
+    const url = `${OSRM_ROUTE_URL}/${originLon},${originLat};${destLon},${destLat}?overview=false`
     return fetch(url)
         .then(res => res.json())
         .then((data) => {
@@ -36,22 +45,15 @@ const fetchRouteDistance = (originLat, originLon, destLat, destLon) => {
         })
 }
 
-// Tope de pacientes por ambulancia en una misma emergencia. No hay un número
-// oficial en ambulance_types (la BD no trae capacidad de pacientes por tipo),
-// y la NOM-034-SSA3-2013 solo exige que el compartimento dé cabida "al menos
-// a un paciente en camilla" — no fija un máximo. 2 es lo que de verdad cabe
-// en la práctica (1 en camilla + 1 ambulatorio sentado), sin ser tan rígido
-// que le quite al despachador la libertad de decidir en casos razonables.
-const MAX_PATIENTS_PER_AMBULANCE = 5
-
 const NewEmergency = () => {
+    const { notify } = useDialogs()
     const [emergencyTypeId, setEmergencyTypeId] = useState('');
     const [longitude, setLongitude] = useState('');
     const [latitude, setLatitude] = useState('');
     const [description, setDescription] = useState('');
     const [reporterName, setReporterName] = useState('');
     const [reporterPhone, setReporterPhone] = useState('');
-    const [numPatients, setNumPatients] = useState('');
+    const [numPatients, setNumPatients] = useState('1');
     const [emergencyTypes, setEmergencyTypes] = useState([]);
     const [triageLevelId, setTriageLevelId] = useState('');
     const [triageLevels, setTriageLevels] = useState([]);
@@ -62,7 +64,7 @@ const NewEmergency = () => {
     const [availableUnits, setAvailableUnits] = useState([]);
     const [groupedUnits, setGroupedUnits] = useState({});
     const [selectedUnits, setSelectedUnits] = useState([]);
-    const [notes, setNotes] = useState('');
+    const [notes] = useState('');
     const [unitTypes, setUnitTypes] = useState([]);
     const [unitLocations, setUnitLocations] = useState({});
     const [unitRoutes, setUnitRoutes] = useState({});
@@ -85,6 +87,9 @@ const NewEmergency = () => {
 
     const [addressSearch, setAddressSearch] = useState('');
     const [searchingAddress, setSearchingAddress] = useState(false);
+    const [addressResults, setAddressResults] = useState([]);
+    const [addressMessage, setAddressMessage] = useState('');
+    const { region } = useRegion();
 
     const [destinationInstitutions, setDestinationInstitutions] = useState([]);
     const [institutionSpecialities, setInstitutionSpecialities] = useState([]);
@@ -306,7 +311,9 @@ const NewEmergency = () => {
             .then(res => res.json())
             .then(({data}) => setDestinationInstitutions(data.map(inst => toLowerCaseKeys(inst))))
             .catch(error => console.error('Error recuperando instituciones de destino. ', error))
-    }, []);
+        // Se vuelve a pedir al pasar al paso de pacientes: las camas y especialidades de un hospital
+        // cambian mientras el despachador tiene esta pantalla abierta.
+    }, [step]);
 
     // Mismo patrón que ya usa Capacity.jsx en sicem-desktop: trae ambas listas una
     // sola vez al montar, y se filtra en el cliente por institución al renderizar
@@ -321,7 +328,7 @@ const NewEmergency = () => {
                 setSpecialitiesCatalog((catalogRes.data || []).map(s => toLowerCaseKeys(s)))
             })
             .catch(error => console.error('Error recuperando especialidades por institución. ', error))
-    }, []);
+    }, [step]);
 
     //---------------------------------registrar, posts--------------------------------------------------
 
@@ -346,7 +353,7 @@ const NewEmergency = () => {
                 .then(parseResponse)
                 .catch(error => {
                     console.error('Error registrando la emergencia. ', error)
-                    alert(error.message)
+                    notify(error.message, 'error')
                     throw error // nunca se creó nada — aborta el flujo, es seguro reintentar
                 })
                 .then(emergencyData => {
@@ -366,7 +373,7 @@ const NewEmergency = () => {
                             })
                         }).then(parseResponse).catch(error => {
                             console.error('Error asignando unidades. ', error)
-                            alert(`La emergencia se registró, pero no se pudieron asignar las unidades: ${error.message}`)
+                            notify(`La emergencia se registró, pero no se pudieron asignar las unidades: ${error.message}`, 'error')
                         })
                         : Promise.resolve(null)
 
@@ -385,7 +392,7 @@ const NewEmergency = () => {
                             })
                         }).then(parseResponse).catch(error => {
                             console.error('Error enviando solicitud interinstitucional. ', error)
-                            alert(`La emergencia se registró, pero no se pudo enviar la solicitud para la unidad ${externalUnit?.unit_number || ''}: ${error.message}`)
+                            notify(`La emergencia se registró, pero no se pudo enviar la solicitud para la unidad ${externalUnit?.unit_number || ''}: ${error.message}`, 'error')
                         })
                     })
 
@@ -418,21 +425,37 @@ const NewEmergency = () => {
                 })
     }
 
+    // Marca el punto elegido: coordenadas al formulario (el mapa se centra solo con flyToLocation)
+    const applyAddressResult = (result) => {
+        setLatitude(result.lat.toFixed(8))
+        setLongitude(result.lon.toFixed(8))
+        setAddressResults([])
+        setAddressMessage('')
+    }
+
+    // Busca la dirección dentro de la región de la institución. Con una sola coincidencia se marca
+    // sola; con varias se muestran para elegir (la primera a ciegas puede mandar la unidad al lugar
+    // equivocado).
     const handleAddressSearch = () => {
         if (!addressSearch.trim()) return
         setSearchingAddress(true)
-        const query = `${addressSearch}, Tabasco, México`
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
-            .then(res => res.json())
+        setAddressResults([])
+        setAddressMessage('')
+        searchAddress(addressSearch, region, { limit: ADDRESS_RESULTS_LIMIT })
             .then((results) => {
-                if (results.length > 0) {
-                    setLatitude(parseFloat(results[0].lat).toFixed(8))
-                    setLongitude(parseFloat(results[0].lon).toFixed(8))
+                if (results.length === 0) {
+                    setAddressMessage('No encontramos esa dirección. Prueba con la calle y la colonia, o marca el punto directamente en el mapa.')
+                } else if (results.length === 1) {
+                    applyAddressResult(results[0])
                 } else {
-                    alert('No se encontró esa dirección. Intenta ser más específico o marca directamente en el mapa.')
+                    setAddressResults(results)
+                    setAddressMessage('Hay varias coincidencias: elige la correcta.')
                 }
             })
-            .catch(error => console.error('Error buscando dirección. ', error))
+            .catch((error) => {
+                console.error('Error buscando dirección. ', error)
+                setAddressMessage('No se pudo consultar el buscador de direcciones. Marca el punto directamente en el mapa.')
+            })
             .finally(() => setSearchingAddress(false))
     }
 
@@ -551,7 +574,7 @@ const handleConfirmPatients = () => {
         })
         .catch(error => {
             console.error('Error verificando CURPs antes de registrar. ', error)
-            alert('No se pudo verificar las CURPs contra el sistema. Revisa tu conexión e intenta de nuevo.')
+            notify('No se pudo verificar las CURPs contra el sistema. Revisa tu conexión e intenta de nuevo.', 'error')
         })
 }
 
@@ -561,14 +584,14 @@ const proceedWithConfirmation = (forms) => {
 
     const emptyIndex = forms.findIndex((p) => !hasAnyData(p))
     if (emptyIndex !== -1) {
-        alert(`El Paciente ${emptyIndex + 1} no tiene ningún dato. Llena al menos un campo (CURP, nombre o notas) o usa "Omitir por ahora".`)
+        notify(`El Paciente ${emptyIndex + 1} no tiene ningún dato. Llena al menos un campo (CURP, nombre o notas) o usa "Omitir por ahora".`, 'error')
         return
     }
 
     const filledCurps = forms.map(p => p.curp.trim()).filter(curp => curp !== '')
     const duplicatedCurp = filledCurps.find((curp, index) => filledCurps.indexOf(curp) !== index)
     if (duplicatedCurp) {
-        alert(`La CURP ${duplicatedCurp} está repetida en más de un paciente. Cada paciente debe tener una CURP distinta.`)
+        notify(`La CURP ${duplicatedCurp} está repetida en más de un paciente. Cada paciente debe tener una CURP distinta.`, 'error')
         return
     }
 
@@ -576,7 +599,7 @@ const proceedWithConfirmation = (forms) => {
     // la ambulancia necesita saber a dónde va, no es opcional como la unidad.
     const missingDestinationIndex = forms.findIndex((p) => !p.destinationInstitutionId)
     if (missingDestinationIndex !== -1) {
-        alert(`El Paciente ${missingDestinationIndex + 1} no tiene hospital destino asignado. Selecciona uno antes de continuar.`)
+        notify(`El Paciente ${missingDestinationIndex + 1} no tiene hospital destino asignado. Selecciona uno antes de continuar.`, 'error')
         return
     }
 
@@ -591,7 +614,7 @@ const proceedWithConfirmation = (forms) => {
         if (!p.ambulanceId) continue
         const previousDestination = destinationByAmbulance[p.ambulanceId]
         if (previousDestination && previousDestination.destinationInstitutionId !== p.destinationInstitutionId) {
-            alert(`El Paciente ${previousDestination.index + 1} y el Paciente ${i + 1} tienen la misma unidad asignada pero hospitales destino distintos. Una ambulancia no puede ir a dos hospitales a la vez — corrígelo antes de continuar.`)
+            notify(`El Paciente ${previousDestination.index + 1} y el Paciente ${i + 1} tienen la misma unidad asignada pero hospitales destino distintos. Una ambulancia no puede ir a dos hospitales a la vez — corrígelo antes de continuar.`, 'error')
             return
         }
         destinationByAmbulance[p.ambulanceId] = { destinationInstitutionId: p.destinationInstitutionId, index: i }
@@ -611,7 +634,7 @@ const proceedWithConfirmation = (forms) => {
         if (indices.length > MAX_PATIENTS_PER_AMBULANCE) {
             const unit = assignedUnitsForPatients.find(u => String(u.ambulance_id) === String(ambulanceId))
             const pacientesTexto = indices.map(i => i + 1).join(', ')
-            alert(`La unidad ${unit?.unit_number || ambulanceId} tiene ${indices.length} pacientes asignados (Paciente ${pacientesTexto}) — el máximo es ${MAX_PATIENTS_PER_AMBULANCE} por ambulancia. Reparte los pacientes entre más unidades antes de continuar.`)
+            notify(`La unidad ${unit?.unit_number || ambulanceId} tiene ${indices.length} pacientes asignados (Paciente ${pacientesTexto}) — el máximo es ${MAX_PATIENTS_PER_AMBULANCE} por ambulancia. Reparte los pacientes entre más unidades antes de continuar.`, 'error')
             return
         }
     }
@@ -668,7 +691,7 @@ const proceedWithConfirmation = (forms) => {
         .then(() => navigate('/dashboard'))
         .catch(error => {
             console.error('Error registrando pacientes. ', error)
-            alert(`La emergencia ya está registrada y en curso. No se pudo guardar la identificación de uno o más pacientes: ${error.message}. Puedes agregarla después desde el detalle de la emergencia.`)
+            notify(`La emergencia ya está registrada y en curso. No se pudo guardar la identificación de uno o más pacientes: ${error.message}. Puedes agregarla después desde el detalle de la emergencia.`, 'error')
             navigate('/dashboard')
         })
 }
@@ -686,7 +709,7 @@ const proceedWithConfirmation = (forms) => {
         const newExternalIds = selectedExternalUnits.filter((id) => !committedExternalUnitIds.includes(id))
 
         if (newOwnIds.length === 0 && newExternalIds.length === 0) {
-            alert('Selecciona al menos una unidad nueva antes de confirmar.')
+            notify('Selecciona al menos una unidad nueva antes de confirmar.', 'error')
             return
         }
 
@@ -729,7 +752,7 @@ const proceedWithConfirmation = (forms) => {
             })
             .catch((error) => {
                 console.error('Error agregando unidades adicionales. ', error)
-                alert(`No se pudieron agregar las unidades nuevas: ${error.message}`)
+                notify(`No se pudieron agregar las unidades nuevas: ${error.message}`, 'error')
             })
             .finally(() => setAddingUnits(false))
     }
@@ -842,7 +865,7 @@ const proceedWithConfirmation = (forms) => {
         if (!loc?.latitude || !loc?.longitude) { setNearestRouteGeometry(null); return }
 
         const run = () => {
-            const url = `https://router.project-osrm.org/route/v1/driving/${loc.longitude},${loc.latitude};${longitude},${latitude}?overview=full&geometries=geojson`
+            const url = `${OSRM_ROUTE_URL}/${loc.longitude},${loc.latitude};${longitude},${latitude}?overview=full&geometries=geojson`
             fetch(url)
                 .then(res => res.json())
                 .then((data) => {
@@ -874,21 +897,59 @@ const proceedWithConfirmation = (forms) => {
         ...externalUnits.filter((u) => selectedExternalUnits.includes(u.ambulance_id)),
     ]
 
+    //---------------------------------PRESENTACIÓN COMPARTIDA (solo visual)--------------------------------------------------
+
+    const ROMAN = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V' }
+
+    // Encabezado con el indicador de pasos. `active` = 1 (reporte y unidades) | 2 (pacientes)
+    const renderHeader = (active) => (
+        <div className="ne-header">
+            <div>
+                <h1 className="ne-title">{active === 1 ? 'Nueva emergencia' : 'Identificación de pacientes'}</h1>
+                <p className="ne-subtitle">
+                    {active === 1
+                        ? 'Registra el reporte, elige la unidad más cercana y deja listo el traslado.'
+                        : (chosenUnitNames.length > 0 ? 'La ambulancia ya va en camino. ' : 'Aún no hay unidad asignada. ') + 'Esta información es opcional y puedes completarla ahora o después.'}
+                </p>
+            </div>
+            <ol className="ne-steps" aria-label="Pasos del registro">
+                <li className={active === 1 ? 'on' : 'done'} aria-current={active === 1 ? 'step' : undefined}>
+                    <span className="ne-step-n">{active === 1 ? '1' : <Icon name="check" size={14} strokeWidth={3} />}</span>Reporte y unidades
+                </li>
+                <li className={active === 2 ? 'on' : ''} aria-current={active === 2 ? 'step' : undefined}>
+                    <span className="ne-step-n">2</span>Pacientes
+                </li>
+            </ol>
+        </div>
+    )
+
+    // Resumen de lo que se va a registrar, para la barra de acción del paso 1
+    const selectedTypeName = emergencyTypes.find((t) => String(t.emergency_type_id) === String(emergencyTypeId))?.name
+    const selectedTriage = triageLevels.find((t) => String(t.triage_level_id) === String(triageLevelId))
+    const chosenUnitNames = [
+        ...availableUnits.filter((u) => selectedUnits.includes(u.ambulance_id)).map((u) => u.unit_number),
+        ...externalUnits.filter((u) => selectedExternalUnits.includes(u.ambulance_id)).map((u) => `${u.unit_number} (otra institución)`),
+    ]
+    const missingFields = [
+        !(latitude && longitude) && 'ubicación en el mapa',
+        !emergencyTypeId && 'tipo de emergencia',
+        !description.trim() && 'descripción',
+        !reporterName.trim() && 'quién reporta',
+        reporterPhone.length !== 10 && 'teléfono de 10 dígitos',
+        !numPatients && 'número de pacientes',
+    ].filter(Boolean)
+
     if (step === 2) {
         return (
             <div className="new-emergency-page">
                 <Navbar
                     userName={user?.firstName || 'Usuario'}
-                    roleLabel="Despachador"
+                    roleLabel={roleLabel(user?.roleId)}
                     links={navLinks}
                 />
 
-                <div className="ne-header">
-                    <h2 className="ne-title">Identificación de Pacientes</h2>
-                    <p className="ne-subtitle">
-                        La ambulancia ya va en camino. Esta información es opcional y puedes completarla ahora o después.
-                    </p>
-                </div>
+                <main id="contenido" className="ne-step2-main">
+                {renderHeader(2)}
 
                 <div className="ne-step2-body">
                     <div className="ne-add-units-box">
@@ -952,13 +1013,11 @@ const proceedWithConfirmation = (forms) => {
                                 <h4>Paciente {index + 1}</h4>
 
                                 <div className="patient-id-curp-row">
-                                    <input
-                                        type="text"
-                                        placeholder="CURP"
+                                    <label className="pid-field pid-grow"><span>CURP</span><input type="text" 
                                         value={patient.curp}
                                         onChange={(e) => updatePatientField(index, 'curp', e.target.value)}
                                         maxLength={18}
-                                    />
+                                    /></label>
                                     <button
                                         type="button"
                                         onClick={() => handleCurpSearch(index)}
@@ -976,55 +1035,49 @@ const proceedWithConfirmation = (forms) => {
                                 )}
 
                                 <div className="patient-id-row">
-                                    <input
-                                        type="text" placeholder="Nombre(s)"
+                                    <label className="pid-field"><span>Nombre(s)</span><input type="text" 
                                         value={patient.firstName}
                                         onChange={(e) => updatePatientField(index, 'firstName', e.target.value)}
                                         readOnly={patient.found === true}
                                         maxLength={100}
-                                    />
-                                    <input
-                                        type="text" placeholder="Apellido paterno"
+                                    /></label>
+                                    <label className="pid-field"><span>Apellido paterno</span><input type="text" 
                                         value={patient.firstSurname}
                                         onChange={(e) => updatePatientField(index, 'firstSurname', e.target.value)}
                                         readOnly={patient.found === true}
                                         maxLength={150}
-                                    />
+                                    /></label>
                                 </div>
                                 <div className="patient-id-row">
-                                    <input
-                                        type="text" placeholder="Apellido materno"
+                                    <label className="pid-field"><span>Apellido materno</span><input type="text" 
                                         value={patient.secondSurname}
                                         onChange={(e) => updatePatientField(index, 'secondSurname', e.target.value)}
                                         readOnly={patient.found === true}
                                         maxLength={150}
-                                    />
-                                    <input
-                                        type="text" placeholder="Teléfono"
+                                    /></label>
+                                    <label className="pid-field"><span>Teléfono</span><input type="text" 
                                         value={patient.phone}
                                         onChange={(e) => updatePatientField(index, 'phone', e.target.value)}
                                         readOnly={patient.found === true}
                                         maxLength={10}
-                                    />
+                                    /></label>
                                 </div>
 
-                                <input
-                                    type="date"
+                                <label className="pid-field"><span>Fecha de nacimiento</span><input type="date" 
                                     value={patient.birthDate}
                                     onChange={(e) => updatePatientField(index, 'birthDate', e.target.value)}
                                     readOnly={patient.found === true}
                                     className="patient-id-date"
-                                />
+                                /></label>
 
-                                <textarea
-                                    placeholder="Notas adicionales (ej. descripción física si no hay identificación)"
+                                <label className="pid-field"><span>Notas adicionales <em>(opcional: descripción física si no hay identificación)</em></span><textarea 
                                     value={patient.notes}
                                     onChange={(e) => updatePatientField(index, 'notes', e.target.value)}
                                     maxLength={300}
-                                />
+                                /></label>
 
                                 <div className="patient-id-row">
-                                    <select
+                                    <select aria-label="Hospital destino"
                                         value={patient.destinationInstitutionId}
                                         onChange={(e) => handlePatientDestinationChange(index, e.target.value)}
                                     >
@@ -1035,7 +1088,7 @@ const proceedWithConfirmation = (forms) => {
                                             </option>
                                         ))}
                                     </select>
-                                    <select
+                                    <select aria-label="Especialidad"
                                         value={patient.destinationSpecialityId}
                                         onChange={(e) => updatePatientField(index, 'destinationSpecialityId', e.target.value)}
                                         disabled={!patient.destinationInstitutionId}
@@ -1050,7 +1103,7 @@ const proceedWithConfirmation = (forms) => {
                                         ))}
                                     </select>
                                     {assignedUnitsForPatients.length > 1 ? (
-                                        <select
+                                        <select aria-label="Unidad asignada"
                                             value={patient.ambulanceId}
                                             onChange={(e) => updatePatientField(index, 'ambulanceId', e.target.value)}
                                         >
@@ -1086,6 +1139,7 @@ const proceedWithConfirmation = (forms) => {
                         Omitir por ahora
                     </button>
                 </div>
+                </main>
             </div>
         )
     }
@@ -1096,230 +1150,310 @@ const proceedWithConfirmation = (forms) => {
         <div className="new-emergency-page">
             <Navbar
                 userName={user?.firstName || 'Usuario'}
-                roleLabel="Despachador"
+                roleLabel={roleLabel(user?.roleId)}
                 links={navLinks}
             />
 
-            <div className="ne-header">
-                <h2 className="ne-title">Registrar Nueva Emergencia</h2>
-                <p className="ne-subtitle">Busca la dirección o haz clic en el mapa para marcar la ubicación.</p>
-            </div>
+            <div role="main" id="contenido" className="ne-scroll">
+                <RegionNotice />
+                {renderHeader(1)}
 
-            <form onSubmit={handleSubmit} className="new-emergency-body">
+                <form onSubmit={handleSubmit} className="ne-form">
+                    <div className="ne-layout">
 
-                <div className="ne-map-column">
-                    <div className="ne-address-search">
-                        <input
-                            type="text"
-                            value={addressSearch}
-                            onChange={(e) => setAddressSearch(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddressSearch(); } }}
-                            placeholder="Dirección reportada por la llamada..."
-                        />
-                        <button type="button" onClick={handleAddressSearch} disabled={searchingAddress}>
-                            {searchingAddress ? 'Buscando...' : 'Buscar'}
-                        </button>
-                    </div>
+                        <div className="ne-main">
+                            <section className="ne-card" aria-labelledby="ne-loc-title">
+                                <h2 className="ne-card-title" id="ne-loc-title">Ubicación</h2>
+                                <p className="ne-card-sub">Busca la dirección que dio quien llamó, o haz clic en el mapa para marcarla.</p>
 
-                    <div className="ne-map-wrapper">
-                        <MapArea
-                            ambulances={allUnitsForMap}
-                            emergencyLocation={latitude && longitude ? { latitude, longitude } : null}
-                            hospitals={destinationInstitutions}
-                            onMapClick={handleMapClick}
-                            flyToLocation={latitude && longitude ? [parseFloat(latitude), parseFloat(longitude)] : null}
-                            routes={nearestRouteGeometry ? [{ coordinates: nearestRouteGeometry }] : []}
-                        />
-                    </div>
-
-                    <div className="ne-coords">
-                        <div className="ne-field">
-                            <label>Latitud</label>
-                            <input
-                                type="number" step="0.00000001"
-                                value={latitude}
-                                onChange={(e) => setLatitude(e.target.value)}
-                                placeholder="Clic en el mapa"
-                                required
-                            />
-                        </div>
-                        <div className="ne-field">
-                            <label>Longitud</label>
-                            <input
-                                type="number" step="0.00000001"
-                                value={longitude}
-                                onChange={(e) => setLongitude(e.target.value)}
-                                placeholder="Clic en el mapa"
-                                required
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="ne-form-column">
-                    <div className="ne-field">
-                        <label>Tipo de emergencia</label>
-                        <select value={emergencyTypeId} onChange={(e) => setEmergencyTypeId(e.target.value)} required>
-                            <option value="">Selecciona un tipo</option>
-                            {emergencyTypes.map((type) => (
-                                <option key={type.emergency_type_id} value={type.emergency_type_id}>{type.name}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="ne-field">
-                        <label>Descripción del evento</label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Describe lo que reportó la persona que llamó"
-                            maxLength={200}
-                            required
-                        />
-                    </div>
-
-                    <div className="ne-row">
-                        <div className="ne-field">
-                            <label>Nombre de quien reporta</label>
-                            <input type="text" value={reporterName} onChange={(e) => setReporterName(e.target.value)} maxLength={200} required />
-                        </div>
-                        <div className="ne-field">
-                            <label>Teléfono de quien reporta</label>
-                            <input type="text" value={reporterPhone} onChange={(e) => setReporterPhone(e.target.value)} maxLength={10} required />
-                        </div>
-                    </div>
-
-                    <div className="ne-field">
-                        <label>Número de pacientes</label>
-                        <input type="number" value={numPatients} onChange={(e) => setNumPatients(e.target.value)} min="1" required />
-                    </div>
-
-                    <div className="ne-field">
-                        <label>Nivel de urgencia estimado (opcional)</label>
-                        <div className="ne-triage-row">
-                            <select value={triageLevelId} onChange={(e) => setTriageLevelId(e.target.value)}>
-                                <option value="">Sin estimar todavía</option>
-                                {triageLevels.map((t) => (
-                                    <option key={t.triage_level_id} value={t.triage_level_id}>
-                                        Nivel {t.level} — {t.color}
-                                    </option>
-                                ))}
-                            </select>
-                            {triageLevelId && (
-                                <span
-                                    className="ne-triage-swatch"
-                                    style={{ background: triageLevels.find(t => String(t.triage_level_id) === String(triageLevelId))?.hex_color }}
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                    <button className="ne-submit" type="submit">
-                        Registrar Emergencia
-                    </button>
-                </div>
-
-                <div className="ne-units-column">
-                    <label className="ne-units-title">Tus Unidades (asignación directa)</label>
-                    {latitude && longitude && (
-                        <p className="ne-distance-hint">
-                            {routesLoading ? 'Calculando rutas...' : 'Ordenadas por tiempo de traslado real a la ubicación marcada.'}
-                        </p>
-                    )}
-
-                    {unitTypes.map((type) => {
-                        const unitsOfThisType = sortUnitsByDistance(groupedUnits[type.ambulance_type_id] || [])
-                        return (
-                            <div key={type.ambulance_type_id} className="unit-type-group">
-                                <div className="unit-type-header">
-                                    {type.image_url && (
-                                        <img className="unit-type-image" src={`/assets/units/${type.image_url}`} alt={type.ambulance_type} />
-                                    )}
-                                    <span className="unit-type-name">{type.ambulance_type}</span>
-                                    <span className="unit-type-count">{unitsOfThisType.length} disp.</span>
+                                <div className="ne-address-search">
+                                    <input
+                                        type="text"
+                                        value={addressSearch}
+                                        onChange={(e) => setAddressSearch(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddressSearch(); } }}
+                                        placeholder="Dirección reportada por la llamada"
+                                        aria-label="Dirección reportada"
+                                    />
+                                    <button type="button" className="ne-btn ne-btn-primary" onClick={handleAddressSearch} disabled={searchingAddress}>
+                                        <Icon name="search" size={16} />{searchingAddress ? 'Buscando…' : 'Buscar'}
+                                    </button>
                                 </div>
 
-                                {unitsOfThisType.length === 0 ? (
-                                    <p className="unit-empty">Sin unidades de este tipo.</p>
-                                ) : (
-                                    <div className="unit-cards-grid">
-                                        {unitsOfThisType.map((unit) => (
-                                            <label key={unit.ambulance_id} className={`unit-card ${selectedUnits.includes(unit.ambulance_id) ? 'selected' : ''}`}>
-                                                <input type="checkbox" checked={selectedUnits.includes(unit.ambulance_id)} onChange={() => toggleUnitSelection(unit.ambulance_id)} />
-                                                <div className="unit-card-info">
-                                                    <span className="unit-card-number">
-                                                        {unit.unit_number}
-                                                        {unit.ambulance_id === nearestUnitId && <span className="unit-nearest-badge">Más cercana</span>}
-                                                    </span>
-                                                    <span className="unit-card-plate">
-                                                        {unit.license_plate}
-                                                        {unit.route && ` · ${unit.route.distanceKm.toFixed(1)} km · ${Math.round(unit.route.durationMin)} min`}
-                                                    </span>
-                                                </div>
-                                            </label>
+                                {addressMessage && <p className="ne-address-msg" role="status">{addressMessage}</p>}
+                                {addressResults.length > 0 && (
+                                    <ul className="ne-address-results" aria-label="Coincidencias de la dirección">
+                                        {addressResults.map((r, i) => (
+                                            <li key={`${r.lat}-${r.lon}-${i}`}>
+                                                <button type="button" onClick={() => applyAddressResult(r)}>
+                                                    <Icon name="pin" size={15} />{r.label}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+
+                                <div className="ne-map-wrapper">
+                                    <MapArea
+                                        ambulances={allUnitsForMap}
+                                        emergencyLocation={latitude && longitude ? { latitude, longitude } : null}
+                                        hospitals={destinationInstitutions}
+                                        onMapClick={handleMapClick}
+                                        flyToLocation={latitude && longitude ? [parseFloat(latitude), parseFloat(longitude)] : null}
+                                        routes={nearestRouteGeometry ? [{ coordinates: nearestRouteGeometry }] : []}
+                                    />
+                                </div>
+
+                                <div className="ne-coords">
+                                    <div className="ne-field">
+                                        <label htmlFor="ne-lat">Latitud</label>
+                                        <input
+                                            id="ne-lat"
+                                            type="number" step="0.00000001"
+                                            value={latitude}
+                                            onChange={(e) => setLatitude(e.target.value)}
+                                            placeholder="Clic en el mapa"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="ne-field">
+                                        <label htmlFor="ne-lon">Longitud</label>
+                                        <input
+                                            id="ne-lon"
+                                            type="number" step="0.00000001"
+                                            value={longitude}
+                                            onChange={(e) => setLongitude(e.target.value)}
+                                            placeholder="Clic en el mapa"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="ne-card" aria-labelledby="ne-rep-title">
+                                <h2 className="ne-card-title" id="ne-rep-title">Reporte</h2>
+                                <p className="ne-card-sub">Con estos datos el equipo en campo sabrá qué esperar.</p>
+
+                                <div className="ne-row">
+                                    <div className="ne-field">
+                                        <label htmlFor="ne-type">Tipo de emergencia</label>
+                                        <select id="ne-type" value={emergencyTypeId} onChange={(e) => setEmergencyTypeId(e.target.value)} required>
+                                            <option value="">Selecciona un tipo</option>
+                                            {emergencyTypes.map((type) => (
+                                                <option key={type.emergency_type_id} value={type.emergency_type_id}>{type.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="ne-field">
+                                        <label htmlFor="ne-pac">Número de pacientes</label>
+                                        <input id="ne-pac" type="number" value={numPatients} onChange={(e) => setNumPatients(e.target.value)} min="1" required />
+                                    </div>
+                                </div>
+
+                                <div className="ne-field">
+                                    <label htmlFor="ne-desc">Qué pasó</label>
+                                    <textarea
+                                        id="ne-desc"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="Describe lo que reportó la persona que llamó"
+                                        maxLength={200}
+                                        required
+                                    />
+                                    <span className="ne-hint">{description.length}/200 · Anota solo lo que dijo quien llamó.</span>
+                                </div>
+
+                                <div className="ne-row">
+                                    <div className="ne-field">
+                                        <label htmlFor="ne-who">Quién reporta</label>
+                                        <input id="ne-who" type="text" value={reporterName} onChange={(e) => setReporterName(e.target.value)} maxLength={200} required />
+                                    </div>
+                                    <div className="ne-field">
+                                        <label htmlFor="ne-tel">Teléfono de contacto</label>
+                                        <input
+                                            id="ne-tel"
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={reporterPhone}
+                                            onChange={(e) => setReporterPhone(e.target.value)}
+                                            maxLength={10}
+                                            required
+                                            aria-describedby="ne-tel-hint"
+                                            className={reporterPhone.length > 0 && reporterPhone.length < 10 ? 'ne-invalid' : ''}
+                                        />
+                                        <span id="ne-tel-hint" className={reporterPhone.length > 0 && reporterPhone.length < 10 ? 'ne-hint-error' : 'ne-hint'}>
+                                            {reporterPhone.length > 0 && reporterPhone.length < 10
+                                                ? <><Icon name="alert" size={14} />Faltan dígitos: el teléfono tiene 10 ({reporterPhone.length} de 10).</>
+                                                : '10 dígitos, sin lada internacional.'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="ne-field">
+                                    <span className="ne-label">Nivel de urgencia estimado <span className="ne-optional">(opcional)</span></span>
+                                    <div className="ne-tri" role="group" aria-label="Nivel de urgencia estimado">
+                                        <button
+                                            type="button"
+                                            className="ne-tri-opt ne-tri-none"
+                                            aria-pressed={triageLevelId === ''}
+                                            onClick={() => setTriageLevelId('')}
+                                        >
+                                            Sin estimar
+                                        </button>
+                                        {triageLevels.map((t) => (
+                                            <button
+                                                key={t.triage_level_id}
+                                                type="button"
+                                                className="ne-tri-opt"
+                                                style={{ '--c': t.hex_color }}
+                                                aria-pressed={String(triageLevelId) === String(t.triage_level_id)}
+                                                onClick={() => setTriageLevelId(String(t.triage_level_id))}
+                                            >
+                                                <b>{ROMAN[t.level] || t.level}</b>
+                                                <span>{t.color}</span>
+                                            </button>
                                         ))}
                                     </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <aside className="ne-side">
+                            <section className="ne-card ne-units-card" aria-labelledby="ne-units-title">
+                                <h2 className="ne-card-title" id="ne-units-title">Tus unidades</h2>
+                                <p className="ne-card-sub">Asignación directa, sin pedir permiso a nadie.</p>
+                                {latitude && longitude && (
+                                    <p className="ne-distance-hint">
+                                        {routesLoading ? 'Calculando rutas…' : 'Ordenadas por tiempo real de traslado a la ubicación marcada.'}
+                                    </p>
                                 )}
-                            </div>
-                        )
-                    })}
 
-                    <label className="ne-units-title ne-units-title-external">
-                        Otras Instituciones (requiere solicitud)
-                    </label>
-
-                    <label className="ne-recommend-external-toggle">
-                        <input
-                            type="checkbox"
-                            checked={recommendExternalUnits}
-                            onChange={(e) => setRecommendExternalUnits(e.target.checked)}
-                        />
-                        Recomendar unidades de otras instituciones como "más cercana"
-                    </label>
-                    <p className="ne-distance-hint">
-                        {recommendExternalUnits
-                            ? 'Compiten contra tus propias unidades — pero pedirlas de verdad necesita autorización de su hospital, no es asignación directa.'
-                            : 'Apagado: solo tus propias unidades pueden salir recomendadas como "más cercana". Actívalo para incluir también las externas en esa comparación.'}
-                    </p>
-
-                    {unitTypes.map((type) => {
-                        const unitsOfType = groupedExternalUnits[type.ambulance_type_id] || []
-                        const unitsOfThisType = recommendExternalUnits ? sortExternalUnitsByDistance(unitsOfType) : unitsOfType
-                        if (unitsOfThisType.length === 0) return null
-                        return (
-                            <div key={`ext-${type.ambulance_type_id}`} className="unit-type-group unit-type-group-external">
-                                <div className="unit-type-header">
-                                    {type.image_url && (
-                                        <img className="unit-type-image" src={`/assets/units/${type.image_url}`} alt={type.ambulance_type} />
-                                    )}
-                                    <span className="unit-type-name">{type.ambulance_type}</span>
-                                    <span className="unit-type-count">{unitsOfThisType.length} disp.</span>
-                                </div>
-                                <div className="unit-cards-grid">
-                                    {unitsOfThisType.map((unit) => (
-                                        <label key={unit.ambulance_id} className={`unit-card unit-card-external ${selectedExternalUnits.includes(unit.ambulance_id) ? 'selected' : ''}`}>
-                                            <input type="checkbox" checked={selectedExternalUnits.includes(unit.ambulance_id)} onChange={() => toggleExternalUnitSelection(unit.ambulance_id)} />
-                                            <div className="unit-card-info">
-                                                <span className="unit-card-number">
-                                                    {unit.unit_number}
-                                                    {recommendExternalUnits && unit.ambulance_id === nearestUnitId && <span className="unit-nearest-badge">Más cercana</span>}
-                                                </span>
-                                                <span className="unit-card-institution">
-                                                    {unit.institution_name}
-                                                    {recommendExternalUnits && unit.route && ` · ${unit.route.distanceKm.toFixed(1)} km · ${Math.round(unit.route.durationMin)} min`}
-                                                </span>
+                                {unitTypes.map((type) => {
+                                    const unitsOfThisType = sortUnitsByDistance(groupedUnits[type.ambulance_type_id] || [])
+                                    return (
+                                        <div key={type.ambulance_type_id} className="unit-type-group">
+                                            <div className="unit-type-header">
+                                                {type.image_url && (
+                                                    <img className="unit-type-image" src={`/assets/units/${type.image_url}`} alt="" />
+                                                )}
+                                                <span className="unit-type-name">{type.ambulance_type}</span>
+                                                <span className="unit-type-count">{unitsOfThisType.length} disp.</span>
                                             </div>
-                                        </label>
-                                    ))}
-                                </div>
+
+                                            {unitsOfThisType.length === 0 ? (
+                                                <p className="unit-empty">Sin unidades de este tipo.</p>
+                                            ) : (
+                                                <div className="unit-cards-grid">
+                                                    {unitsOfThisType.map((unit) => (
+                                                        <label key={unit.ambulance_id} className={`unit-card ${selectedUnits.includes(unit.ambulance_id) ? 'selected' : ''}`}>
+                                                            <input type="checkbox" checked={selectedUnits.includes(unit.ambulance_id)} onChange={() => toggleUnitSelection(unit.ambulance_id)} />
+                                                            <div className="unit-card-info">
+                                                                <span className="unit-card-number">
+                                                                    {unit.unit_number}
+                                                                    {unit.ambulance_id === nearestUnitId && <span className="unit-nearest-badge"><Icon name="check" size={12} />Más cercana</span>}
+                                                                </span>
+                                                                <span className="unit-card-plate">
+                                                                    {unit.license_plate}
+                                                                    {unit.route && ` · ${unit.route.distanceKm.toFixed(1)} km · ${Math.round(unit.route.durationMin)} min`}
+                                                                </span>
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </section>
+
+                            <section className="ne-card ne-units-card" aria-labelledby="ne-ext-title">
+                                <h2 className="ne-card-title" id="ne-ext-title">Otras instituciones</h2>
+                                <p className="ne-card-sub">Requieren solicitud: el hospital dueño de la unidad debe aceptarla.</p>
+
+                                <label className="ne-recommend-external-toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={recommendExternalUnits}
+                                        onChange={(e) => setRecommendExternalUnits(e.target.checked)}
+                                    />
+                                    <span>Recomendar unidades de otras instituciones como "más cercana"</span>
+                                </label>
+                                <p className="ne-distance-hint">
+                                    {recommendExternalUnits
+                                        ? 'Compiten contra tus propias unidades, pero pedirlas de verdad necesita autorización de su hospital: no es asignación directa.'
+                                        : 'Apagado: solo tus propias unidades pueden salir recomendadas como "más cercana". Actívalo para incluir también las externas en esa comparación.'}
+                                </p>
+
+                                {unitTypes.map((type) => {
+                                    const unitsOfType = groupedExternalUnits[type.ambulance_type_id] || []
+                                    const unitsOfThisType = recommendExternalUnits ? sortExternalUnitsByDistance(unitsOfType) : unitsOfType
+                                    if (unitsOfThisType.length === 0) return null
+                                    return (
+                                        <div key={`ext-${type.ambulance_type_id}`} className="unit-type-group unit-type-group-external">
+                                            <div className="unit-type-header">
+                                                {type.image_url && (
+                                                    <img className="unit-type-image" src={`/assets/units/${type.image_url}`} alt="" />
+                                                )}
+                                                <span className="unit-type-name">{type.ambulance_type}</span>
+                                                <span className="unit-type-count">{unitsOfThisType.length} disp.</span>
+                                            </div>
+                                            <div className="unit-cards-grid">
+                                                {unitsOfThisType.map((unit) => (
+                                                    <label key={unit.ambulance_id} className={`unit-card unit-card-external ${selectedExternalUnits.includes(unit.ambulance_id) ? 'selected' : ''}`}>
+                                                        <input type="checkbox" checked={selectedExternalUnits.includes(unit.ambulance_id)} onChange={() => toggleExternalUnitSelection(unit.ambulance_id)} />
+                                                        <div className="unit-card-info">
+                                                            <span className="unit-card-number">
+                                                                {unit.unit_number}
+                                                                {recommendExternalUnits && unit.ambulance_id === nearestUnitId && <span className="unit-nearest-badge"><Icon name="check" size={12} />Más cercana</span>}
+                                                            </span>
+                                                            <span className="unit-card-institution">
+                                                                {unit.institution_name}
+                                                                {recommendExternalUnits && unit.route && ` · ${unit.route.distanceKm.toFixed(1)} km · ${Math.round(unit.route.durationMin)} min`}
+                                                            </span>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                                {externalUnits.length === 0 && (
+                                    <p className="unit-empty">No hay unidades externas disponibles por el momento.</p>
+                                )}
+                            </section>
+                        </aside>
+                    </div>
+
+                    <div className="ne-actionbar" role="region" aria-label="Resumen y registro">
+                        <dl className="ne-summary">
+                            <div>
+                                <dt>Emergencia</dt>
+                                <dd>{selectedTypeName || <span className="ne-pending">Sin tipo</span>}{numPatients ? ` · ${numPatients} ${Number(numPatients) === 1 ? 'paciente' : 'pacientes'}` : ''}</dd>
                             </div>
-                        )
-                    })}
-                    {externalUnits.length === 0 && (
-                        <p className="unit-empty">No hay unidades externas disponibles por el momento.</p>
-                    )}
-                </div>
-            </form>
+                            <div>
+                                <dt>Urgencia</dt>
+                                <dd>
+                                    {selectedTriage
+                                        ? <><span className="ne-tri-chip" style={{ '--c': selectedTriage.hex_color, color: readableTextOn(selectedTriage.hex_color) }}>{ROMAN[selectedTriage.level] || selectedTriage.level}</span> {selectedTriage.color}</>
+                                        : <span className="ne-pending">Sin estimar</span>}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt>Unidades</dt>
+                                <dd>{chosenUnitNames.length > 0 ? chosenUnitNames.join(', ') : <span className="ne-pending">Ninguna elegida</span>}</dd>
+                            </div>
+                        </dl>
+                        <div className="ne-actionbar-end">
+                            {missingFields.length > 0 && (
+                                <span className="ne-missing">Falta: {missingFields.join(', ')}.</span>
+                            )}
+                            <button className="ne-submit" type="submit">
+                                Registrar emergencia
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     )
 }

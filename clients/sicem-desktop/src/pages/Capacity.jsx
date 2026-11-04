@@ -4,10 +4,13 @@ import BedMatrixModal from '../components/capacity/BedMatrixModal'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
+import { useDialogs } from '../context/useDialogs'
 import './Capacity.css'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
 
 const Capacity = () => {
     const { user, token } = useAuth()
+    const { notify } = useDialogs()
     const [specialties, setSpecialties] = useState([])
     const [generalBeds, setGeneralBeds] = useState(null)
     const [generalBedsModalOpen, setGeneralBedsModalOpen] = useState(false)
@@ -72,10 +75,11 @@ const Capacity = () => {
             .then(() => {
                 setGeneralBeds((current) => ({ ...current, available_beds: newAvailable }))
                 setGeneralBedsModalOpen(false)
+                notify('Camas generales actualizadas.', 'ok')
             })
             .catch(error => {
                 console.error('Error actualizando camas generales disponibles. ', error)
-                alert('No se pudo actualizar. Intenta de nuevo.')
+                notify('No se pudo actualizar. Intenta de nuevo.', 'error')
             })
             .finally(() => setSavingGeneralBeds(false))
     }
@@ -96,29 +100,40 @@ const Capacity = () => {
                         ? { ...s, available_beds: availableBeds }
                         : s
                 ))
+                notify('Disponibilidad actualizada.', 'ok')
             })
             .catch(error => {
                 console.error('Error actualizando camas disponibles. ', error)
-                alert('No se pudo actualizar la disponibilidad. Intenta de nuevo.')
+                notify('No se pudo actualizar la disponibilidad. Intenta de nuevo.', 'error')
             })
     }
 
+    const totalFree = specialties.reduce((sum, x) => sum + (Number(x.available_beds) || 0), 0)
+
     return (
-        <div className="capacity-layout">
+        <div className="page">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Capacidad</h1>
+                    <p className="page-sub">Mantén al día las camas libres: el despachador decide a dónde enviar pacientes con estos números.</p>
+                </div>
+                <ul className="stat-row" aria-label="Resumen">
+                    {generalBeds && <li><b><AnimatedNumber value={generalBeds.available_beds} /></b><span>de {generalBeds.bed_capacity} camas generales</span></li>}
+                    <li><b><AnimatedNumber value={totalFree} /></b><span>libres en especialidades</span></li>
+                </ul>
+            </div>
+
             {generalBeds && (
-                <div className="general-beds-card">
-                    <span className="general-beds-label">Camas generales del hospital</span>
-                    <span className="general-beds-numbers">
-                        <strong>{generalBeds.available_beds}</strong> / {generalBeds.bed_capacity} disponibles
-                    </span>
-                    <button className="update-btn general-beds-update-btn" onClick={() => setGeneralBedsModalOpen(true)}>
-                        Gestionar camas
-                    </button>
-                    <span className="general-beds-hint">Ajusta esto si llega un paciente que no pasó por una emergencia registrada en SICEM (p. ej. no enviado por el CRUM) — la capacidad TOTAL solo la edita un administrador, desde Administración.</span>
+                <section className="general-beds-card" aria-labelledby="gb-title">
+                    <div>
+                        <h2 id="gb-title" className="general-beds-label">Camas generales del hospital</h2>
+                        <p className="general-beds-hint">Ajusta esto si llega un paciente que no pasó por una emergencia registrada en SICEM (por ejemplo, uno que el CRUM no envió). La capacidad total solo la edita un administrador, en Administración.</p>
+                    </div>
+                    <button type="button" className="btn btn-primary" onClick={() => setGeneralBedsModalOpen(true)}>Gestionar camas</button>
 
                     {generalBedsModalOpen && (
                         <BedMatrixModal
-                            title="Camas Generales del Hospital"
+                            title="Camas generales del hospital"
                             totalBeds={generalBeds.bed_capacity}
                             availableBeds={generalBeds.available_beds}
                             saving={savingGeneralBeds}
@@ -126,16 +141,16 @@ const Capacity = () => {
                             onClose={() => setGeneralBedsModalOpen(false)}
                         />
                     )}
-                </div>
+                </section>
             )}
 
-            <div className="section-title">Capacidad por Especialidad</div>
+            <h2 className="capacity-heading">Por especialidad</h2>
             <div className="capacity-grid">
                 {specialties.map((s) => (
                     <SpecialtyCapacityCard key={s.institution_speciality_id} specialty={s} onUpdate={handleUpdate} />
                 ))}
                 {specialties.length === 0 && (
-                    <p className="empty-state">Sin especialidades registradas para tu institución.</p>
+                    <p className="empty">Tu institución no tiene especialidades activas. Un administrador puede agregarlas en Administración.</p>
                 )}
             </div>
         </div>

@@ -1,0 +1,38 @@
+.region-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    background: var(--warn-soft);
+    color: var(--text);
+    border-bottom: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+    font-size: 14px;
+}
+
+.region-notice p { margin: 0; max-width: 78ch; line-height: 1.4; }
+.region-notice-row { display: flex; gap: 8px; align-items: center; }
+
+.region-notice select {
+    height: 38px;
+    min-width: 200px;
+    padding: 0 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--text);
+}
+
+.region-notice button {
+    height: 38px;
+    padding: 0 16px;
+    background: var(--text);
+    border: 1px solid var(--text);
+    border-radius: var(--r-md);
+    color: var(--surface);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.region-notice button:disabled { opacity: 0.5; cursor: not-allowed; }

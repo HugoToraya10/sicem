@@ -1,11 +1,16 @@
-import { useState, useEffect, useCallback, Fragment } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import SpecialityAdminCard from '../components/hospitalAdmin/SpecialityAdminCard'
 import AmbulanceAdminCard from '../components/hospitalAdmin/AmbulanceAdminCard'
 import { API_BASE_URL } from '../config/api'
 import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import { connectUnitsSocket } from '../sockets/unitsSocket'
+import { useDialogs } from '../context/useDialogs'
 import './HospitalAdmin.css'
+import MoreMenu from '../components/ui/MoreMenu'
+import { compactSchedule } from '../utils/time'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
+import { Drawer } from '../components/ui/Overlay'
 
 const TABS = ['Camas y Especialidades', 'Ambulancias', 'Empleados', 'Mi Institución']
 
@@ -30,6 +35,7 @@ const emptyEmployeeForm = {
 
 const HospitalAdmin = () => {
     const { user, token } = useAuth()
+    const { notify, confirm } = useDialogs()
     const [activeTab, setActiveTab] = useState(TABS[0])
     const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${token}` }
 
@@ -75,7 +81,7 @@ const HospitalAdmin = () => {
     const handleAssignSpeciality = (e) => {
         e.preventDefault()
         if (Number(assignSpecialityForm.availableBeds) > Number(assignSpecialityForm.totalBeds)) {
-            alert('Las camas disponibles no pueden ser más que las camas totales.')
+            notify('Las camas disponibles no pueden ser más que las camas totales.', 'error')
             return
         }
         // No se manda institutionId — el backend lo fuerza a la propia del usuario
@@ -90,7 +96,7 @@ const HospitalAdmin = () => {
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo asignar'); return body }))
             .then(() => { setAssignSpecialityForm(emptyAssignSpecialityForm); setShowAssignSpecialityForm(false); fetchSpecialities() })
-            .catch(error => { console.error('Error asignando especialidad. ', error); alert(error.message) })
+            .catch(error => { console.error('Error asignando especialidad. ', error); notify(error.message, 'error') })
     }
 
     const handleUpdateCapacity = (institutionSpecialityId, totalBeds) => {
@@ -100,19 +106,19 @@ const HospitalAdmin = () => {
         })
             .then(res => { if (!res.ok) throw new Error('No se pudo actualizar'); return res.json() })
             .then(() => fetchSpecialities())
-            .catch(error => { console.error('Error actualizando capacidad. ', error); alert('No se pudo actualizar la capacidad total. Intenta de nuevo.') })
+            .catch(error => { console.error('Error actualizando capacidad. ', error); notify('No se pudo actualizar la capacidad total. Intenta de nuevo.', 'error') })
     }
 
-    const handleToggleSpeciality = (speciality) => {
+    const handleToggleSpeciality = async (speciality) => {
         const action = speciality.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} "${speciality.name}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} "${speciality.name}"?`, confirmLabel: 'Sí, continuar' }))) return
         fetch(`${API_BASE_URL}/hospitales/alternar-especialidad-institucion`, {
             method: "PATCH", headers,
             body: JSON.stringify({ institutionSpecialityId: speciality.institution_speciality_id })
         })
             .then(res => { if (!res.ok) throw new Error('No se pudo cambiar el estado'); return res.json() })
             .then(() => fetchSpecialities())
-            .catch(error => { console.error('Error cambiando estado de especialidad. ', error); alert('No se pudo cambiar el estado. Intenta de nuevo.') })
+            .catch(error => { console.error('Error cambiando estado de especialidad. ', error); notify('No se pudo cambiar el estado. Intenta de nuevo.', 'error') })
     }
 
     // ── Ambulancias ──────────────────────────────────────────
@@ -203,7 +209,7 @@ const HospitalAdmin = () => {
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo registrar'); return body }))
             .then(() => { setAmbulanceForm(emptyAmbulanceForm); setShowAmbulanceForm(false); fetchAmbulances() })
-            .catch(error => { console.error('Error registrando ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando ambulancia. ', error); notify(error.message, 'error') })
     }
 
     const handleUpdateAmbulance = (ambulanceId, form) => {
@@ -219,19 +225,19 @@ const HospitalAdmin = () => {
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo actualizar'); return body }))
             .then(() => fetchAmbulances())
-            .catch(error => { console.error('Error actualizando ambulancia. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando ambulancia. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleAmbulance = (ambulance) => {
+    const handleToggleAmbulance = async (ambulance) => {
         const action = ambulance.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} la unidad "${ambulance.unit_number}"?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} la unidad "${ambulance.unit_number}"?`, confirmLabel: 'Sí, continuar' }))) return
         fetch(`${API_BASE_URL}/unidades/alternar-ambulancia`, {
             method: "PATCH", headers,
             body: JSON.stringify({ ambulanceId: ambulance.ambulance_id })
         })
             .then(res => { if (!res.ok) throw new Error('No se pudo cambiar el estado'); return res.json() })
             .then(() => fetchAmbulances())
-            .catch(error => { console.error('Error cambiando estado de ambulancia. ', error); alert('No se pudo cambiar el estado. Intenta de nuevo.') })
+            .catch(error => { console.error('Error cambiando estado de ambulancia. ', error); notify('No se pudo cambiar el estado. Intenta de nuevo.', 'error') })
     }
 
     // ── Empleados (personal rol 4 de mi institución) ────────
@@ -282,7 +288,7 @@ const HospitalAdmin = () => {
     const handleCreateEmployee = (e) => {
         e.preventDefault()
         if (parseInt(employeeForm.roleId) === 3 && !employeeForm.assignedAmbulanceId) {
-            alert('Selecciona a qué ambulancia queda asignado este paramédico.')
+            notify('Selecciona a qué ambulancia queda asignado este paramédico.', 'error')
             return
         }
         // No se manda institutionId — eso el backend lo fuerza a la propia
@@ -317,32 +323,32 @@ const HospitalAdmin = () => {
                 // registró un rol 4.
                 fetchInstitutionAdmins()
             })
-            .catch(error => { console.error('Error registrando empleado. ', error); alert(error.message) })
+            .catch(error => { console.error('Error registrando empleado. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleInstitutionAdmin = (u) => {
+    const handleToggleInstitutionAdmin = async (u) => {
         const nextValue = !u.is_institution_admin
         const action = nextValue ? 'otorgar' : 'quitar'
-        if (!window.confirm(`¿Seguro que quieres ${action} el privilegio de administrador a ${u.first_name} ${u.first_surname || ''}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} el privilegio de administrador a ${u.first_name} ${u.first_surname || ''}?`, confirmLabel: 'Sí, continuar' }))) return
         fetch(`${API_BASE_URL}/usuarios/alternar-admin-institucion`, {
             method: "PATCH", headers,
             body: JSON.stringify({ userProfileId: u.user_profile_id, isInstitutionAdmin: nextValue })
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo actualizar'); return body }))
             .then(() => fetchInstitutionAdmins())
-            .catch(error => { console.error('Error cambiando privilegio de administrador. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando privilegio de administrador. ', error); notify(error.message, 'error') })
     }
 
-    const handleToggleEmployeeActive = (u) => {
+    const handleToggleEmployeeActive = async (u) => {
         const action = u.is_active ? 'desactivar' : 'activar'
-        if (!window.confirm(`¿Seguro que quieres ${action} a ${u.first_name} ${u.first_surname || ''}?`)) return
+        if (!(await confirm({ title: 'Confirmar', message: `¿Seguro que quieres ${action} a ${u.first_name} ${u.first_surname || ''}?`, confirmLabel: 'Sí, continuar' }))) return
         fetch(`${API_BASE_URL}/usuarios/invertir-estado-usuario`, {
             method: "PATCH", headers,
             body: JSON.stringify({ userCredentialId: u.user_credential_id })
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo cambiar el estado'); return body }))
             .then(() => fetchInstitutionAdmins())
-            .catch(error => { console.error('Error cambiando estado del empleado. ', error); alert(error.message) })
+            .catch(error => { console.error('Error cambiando estado del empleado. ', error); notify(error.message, 'error') })
     }
 
     const openEditEmployee = (u) => {
@@ -387,7 +393,7 @@ const HospitalAdmin = () => {
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo actualizar'); return body }))
             .then(() => { setEditingEmployeeId(null); fetchInstitutionAdmins() })
-            .catch(error => { console.error('Error actualizando empleado. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando empleado. ', error); notify(error.message, 'error') })
     }
 
     const openCredentialsEmployee = (u) => {
@@ -408,7 +414,7 @@ const HospitalAdmin = () => {
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo actualizar'); return body }))
             .then(() => { setCredentialsEmployeeId(null); fetchInstitutionAdmins() })
-            .catch(error => { console.error('Error actualizando credenciales. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando credenciales. ', error); notify(error.message, 'error') })
     }
 
     // ── Mi Institución (solo dirección/CP/ciudad — nombre y tipo son de CRUM) ──
@@ -455,7 +461,7 @@ const HospitalAdmin = () => {
     const handleUpdateGeneralBeds = (e) => {
         e.preventDefault()
         if (Number(generalBedsForm.availableBeds) > Number(generalBedsForm.bedCapacity)) {
-            alert('Las camas disponibles no pueden ser más que la capacidad total.')
+            notify('Las camas disponibles no pueden ser más que la capacidad total.', 'error')
             return
         }
         Promise.all([
@@ -470,7 +476,7 @@ const HospitalAdmin = () => {
         ])
             .then(([res1, res2]) => { if (!res1.ok || !res2.ok) throw new Error('No se pudo actualizar'); })
             .then(() => { setShowGeneralBedsForm(false); fetchInstitutionDetail() })
-            .catch(error => { console.error('Error actualizando camas generales. ', error); alert('No se pudo actualizar. Intenta de nuevo.') })
+            .catch(error => { console.error('Error actualizando camas generales. ', error); notify('No se pudo actualizar. Intenta de nuevo.', 'error') })
     }
 
     useEffect(() => {
@@ -502,17 +508,25 @@ const HospitalAdmin = () => {
         })
             .then(res => res.json().then(body => { if (!res.ok) throw new Error(body.message || 'No se pudo actualizar'); return body }))
             .then(() => fetchInstitutionDetail())
-            .catch(error => { console.error('Error actualizando dirección de la institución. ', error); alert(error.message) })
+            .catch(error => { console.error('Error actualizando dirección de la institución. ', error); notify(error.message, 'error') })
     }
 
     return (
-        <div className="hospital-admin-layout">
-            <h2 className="hospital-admin-title">Administración de mi Hospital</h2>
+        <div className="page hospital-admin-layout">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Administración</h1>
+                    <p className="page-sub">Camas, ambulancias, personal y datos de tu institución. Solo los administradores del hospital ven esta sección.</p>
+                </div>
+            </div>
 
-            <div className="hospital-admin-tabs">
+            <div className="hospital-admin-tabs" role="tablist" aria-label="Secciones de administración">
                 {TABS.map((tab) => (
                     <button
                         key={tab}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === tab}
                         className={`hospital-admin-tab ${activeTab === tab ? 'active' : ''}`}
                         onClick={() => setActiveTab(tab)}
                     >
@@ -535,63 +549,48 @@ const HospitalAdmin = () => {
                         )}
                     </div>
 
-                    {showGeneralBedsForm && (
+                    <Drawer open={Boolean(showGeneralBedsForm)} onClose={() => setShowGeneralBedsForm(false)} title="Camas generales" subtitle="Capacidad total del hospital." size="md">
                         <form className="hospital-admin-form" onSubmit={handleUpdateGeneralBeds}>
-                            <h3>Editar Camas Generales</h3>
+                            <h2>Editar Camas Generales</h2>
                             <p className="hospital-admin-form-hint">Esta es la capacidad TOTAL del hospital (independiente de las camas por especialidad, que pueden traslaparse).</p>
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Capacidad total</label>
-                                    <input type="number" min="0" value={generalBedsForm.bedCapacity} onChange={(e) => setGeneralBedsForm(p => ({ ...p, bedCapacity: e.target.value }))} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Camas disponibles</label>
-                                    <input type="number" min="0" value={generalBedsForm.availableBeds} onChange={(e) => setGeneralBedsForm(p => ({ ...p, availableBeds: e.target.value }))} required />
-                                </div>
+                                <label className="hospital-admin-field"><span>Capacidad total</span><input type="number" min="0" value={generalBedsForm.bedCapacity} onChange={(e) => setGeneralBedsForm(p => ({ ...p, bedCapacity: e.target.value }))} required /></label>
+                                <label className="hospital-admin-field"><span>Camas disponibles</span><input type="number" min="0" value={generalBedsForm.availableBeds} onChange={(e) => setGeneralBedsForm(p => ({ ...p, availableBeds: e.target.value }))} required /></label>
                             </div>
                             <div className="hospital-admin-form-actions">
                                 <button type="submit" className="hospital-admin-form-submit">Guardar cambios</button>
                                 <button type="button" className="hospital-admin-form-cancel" onClick={() => setShowGeneralBedsForm(false)}>Cancelar</button>
                             </div>
                         </form>
-                    )}
+                        </Drawer>
 
                     <div className="hospital-admin-section-header">
-                        <h3 className="hospital-admin-section-title">Especialidades</h3>
+                        <h2 className="hospital-admin-section-title">Especialidades</h2>
                         <button className="hospital-admin-add-btn" onClick={() => setShowAssignSpecialityForm(!showAssignSpecialityForm)}>
                             + Asignar Especialidad
                         </button>
                     </div>
 
-                    {showAssignSpecialityForm && (
+                    <Drawer open={Boolean(showAssignSpecialityForm)} onClose={() => setShowAssignSpecialityForm(false)} title="Asignar especialidad" subtitle="Solo las que tu institución todavía no tiene." size="md">
                         <form className="hospital-admin-form" onSubmit={handleAssignSpeciality}>
-                            <h3>Asignar Especialidad Existente a mi Institución</h3>
+                            <h2>Asignar Especialidad Existente a mi Institución</h2>
                             <p className="hospital-admin-form-hint">Solo se listan especialidades del catálogo que tu institución todavía no tiene. Crear una especialidad nueva en el catálogo sigue siendo exclusivo de CRUM.</p>
-                            <div className="hospital-admin-field">
-                                <label>Especialidad</label>
-                                <select value={assignSpecialityForm.specialityId} onChange={(e) => setAssignSpecialityForm(p => ({ ...p, specialityId: e.target.value }))} required>
+                            <label className="hospital-admin-field"><span>Especialidad</span><select value={assignSpecialityForm.specialityId} onChange={(e) => setAssignSpecialityForm(p => ({ ...p, specialityId: e.target.value }))} required>
                                     <option value="">Selecciona una especialidad</option>
                                     {unassignedSpecialities.map((s) => (
                                         <option key={s.speciality_id} value={s.speciality_id}>{s.name}</option>
                                     ))}
-                                </select>
-                            </div>
+                                </select></label>
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Camas totales</label>
-                                    <input type="number" min="0" value={assignSpecialityForm.totalBeds} onChange={(e) => setAssignSpecialityForm(p => ({ ...p, totalBeds: e.target.value }))} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Camas disponibles</label>
-                                    <input type="number" min="0" value={assignSpecialityForm.availableBeds} onChange={(e) => setAssignSpecialityForm(p => ({ ...p, availableBeds: e.target.value }))} required />
-                                </div>
+                                <label className="hospital-admin-field"><span>Camas totales</span><input type="number" min="0" value={assignSpecialityForm.totalBeds} onChange={(e) => setAssignSpecialityForm(p => ({ ...p, totalBeds: e.target.value }))} required /></label>
+                                <label className="hospital-admin-field"><span>Camas disponibles</span><input type="number" min="0" value={assignSpecialityForm.availableBeds} onChange={(e) => setAssignSpecialityForm(p => ({ ...p, availableBeds: e.target.value }))} required /></label>
                             </div>
                             <div className="hospital-admin-form-actions">
                                 <button type="submit" className="hospital-admin-form-submit">Asignar</button>
                                 <button type="button" className="hospital-admin-form-cancel" onClick={() => setShowAssignSpecialityForm(false)}>Cancelar</button>
                             </div>
                         </form>
-                    )}
+                        </Drawer>
 
                     <div className="hospital-admin-grid">
                         {specialities.map((s) => (
@@ -602,7 +601,7 @@ const HospitalAdmin = () => {
                                 onToggleActive={handleToggleSpeciality}
                             />
                         ))}
-                        {specialities.length === 0 && <p className="empty-state">Sin especialidades registradas para tu institución.</p>}
+                        {specialities.length === 0 && <p className="empty">Sin especialidades registradas para tu institución.</p>}
                     </div>
                 </>
             )}
@@ -615,38 +614,26 @@ const HospitalAdmin = () => {
                         </button>
                     </div>
 
-                    {showAmbulanceForm && (
+                    <Drawer open={Boolean(showAmbulanceForm)} onClose={() => setShowAmbulanceForm(false)} title="Registrar ambulancia" subtitle="Quedará en tu institución." size="md">
                         <form className="hospital-admin-form" onSubmit={handleRegisterAmbulance}>
-                            <h3>Registrar Nueva Ambulancia</h3>
+                            <h2>Registrar Nueva Ambulancia</h2>
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Número de unidad</label>
-                                    <input type="text" value={ambulanceForm.unitNumber} onChange={(e) => setAmbulanceForm(p => ({ ...p, unitNumber: e.target.value }))} maxLength={8} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Placa</label>
-                                    <input type="text" value={ambulanceForm.licensePlate} onChange={(e) => setAmbulanceForm(p => ({ ...p, licensePlate: e.target.value }))} maxLength={9} required />
-                                </div>
+                                <label className="hospital-admin-field"><span>Número de unidad</span><input type="text" value={ambulanceForm.unitNumber} onChange={(e) => setAmbulanceForm(p => ({ ...p, unitNumber: e.target.value }))} maxLength={8} required /></label>
+                                <label className="hospital-admin-field"><span>Placa</span><input type="text" value={ambulanceForm.licensePlate} onChange={(e) => setAmbulanceForm(p => ({ ...p, licensePlate: e.target.value }))} maxLength={9} required /></label>
                             </div>
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Tipo</label>
-                                    <select value={ambulanceForm.ambulanceTypeId} onChange={(e) => setAmbulanceForm(p => ({ ...p, ambulanceTypeId: e.target.value }))} required>
+                                <label className="hospital-admin-field"><span>Tipo</span><select value={ambulanceForm.ambulanceTypeId} onChange={(e) => setAmbulanceForm(p => ({ ...p, ambulanceTypeId: e.target.value }))} required>
                                         <option value="">Selecciona un tipo</option>
                                         {ambulanceTypes.map((t) => (
                                             <option key={t.ambulance_type_id} value={t.ambulance_type_id}>{t.ambulance_type}</option>
                                         ))}
-                                    </select>
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Estado inicial</label>
-                                    <select value={ambulanceForm.ambulanceStatusId} onChange={(e) => setAmbulanceForm(p => ({ ...p, ambulanceStatusId: e.target.value }))} required>
+                                    </select></label>
+                                <label className="hospital-admin-field"><span>Estado inicial</span><select value={ambulanceForm.ambulanceStatusId} onChange={(e) => setAmbulanceForm(p => ({ ...p, ambulanceStatusId: e.target.value }))} required>
                                         <option value="">Selecciona un estado</option>
                                         {ambulanceStatuses.map((s) => (
                                             <option key={s.ambulance_status_id} value={s.ambulance_status_id}>{s.name}</option>
                                         ))}
-                                    </select>
-                                </div>
+                                    </select></label>
                             </div>
                             <p className="hospital-admin-form-hint">La institución siempre es la tuya — no es editable desde este formulario.</p>
                             <div className="hospital-admin-form-actions">
@@ -654,7 +641,7 @@ const HospitalAdmin = () => {
                                 <button type="button" className="hospital-admin-form-cancel" onClick={() => setShowAmbulanceForm(false)}>Cancelar</button>
                             </div>
                         </form>
-                    )}
+                        </Drawer>
 
                     <div className="hospital-admin-grid">
                         {ambulances.map((a) => (
@@ -670,7 +657,7 @@ const HospitalAdmin = () => {
                                 onToggleDetail={() => toggleAmbulanceDetail(a.ambulance_id)}
                             />
                         ))}
-                        {ambulances.length === 0 && <p className="empty-state">Sin ambulancias registradas para tu institución.</p>}
+                        {ambulances.length === 0 && <p className="empty">Sin ambulancias registradas para tu institución.</p>}
                     </div>
                 </>
             )}
@@ -683,18 +670,15 @@ const HospitalAdmin = () => {
                         </button>
                     </div>
 
-                    {showEmployeeForm && (
+                    <Drawer open={Boolean(showEmployeeForm)} onClose={() => setShowEmployeeForm(false)} title="Nuevo empleado" subtitle="Se registra como personal de tu institución." size="md">
                         <form className="hospital-admin-form" onSubmit={handleCreateEmployee}>
-                            <h3>Registrar Nuevo Empleado</h3>
+                            <h2>Registrar Nuevo Empleado</h2>
                             <p className="hospital-admin-form-hint">Se registra como personal de tu institución — la institución no es opción, ya está fija.</p>
 
-                            <div className="hospital-admin-field">
-                                <label>Tipo de personal</label>
-                                <select value={employeeForm.roleId} onChange={(e) => setEmployeeForm(p => ({ ...p, roleId: e.target.value, assignedAmbulanceId: '' }))}>
+                            <label className="hospital-admin-field"><span>Tipo de personal</span><select value={employeeForm.roleId} onChange={(e) => setEmployeeForm(p => ({ ...p, roleId: e.target.value, assignedAmbulanceId: '' }))}>
                                     <option value="4">Empleado administrativo</option>
                                     <option value="3">Paramédico</option>
-                                </select>
-                            </div>
+                                </select></label>
 
                             {parseInt(employeeForm.roleId) === 3 && (
                                 <div className="hospital-admin-field">
@@ -734,166 +718,82 @@ const HospitalAdmin = () => {
                             )}
 
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Correo electrónico</label>
-                                    <input type="email" value={employeeForm.email} onChange={(e) => setEmployeeForm(p => ({ ...p, email: e.target.value }))} maxLength={150} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Contraseña</label>
-                                    <input type="password" value={employeeForm.password} onChange={(e) => setEmployeeForm(p => ({ ...p, password: e.target.value }))} minLength={8} required />
-                                </div>
+                                <label className="hospital-admin-field"><span>Correo electrónico</span><input type="email" value={employeeForm.email} onChange={(e) => setEmployeeForm(p => ({ ...p, email: e.target.value }))} maxLength={150} required /></label>
+                                <label className="hospital-admin-field"><span>Contraseña</span><input type="password" value={employeeForm.password} onChange={(e) => setEmployeeForm(p => ({ ...p, password: e.target.value }))} minLength={8} required /></label>
                             </div>
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Nombre(s)</label>
-                                    <input type="text" value={employeeForm.firstName} onChange={(e) => setEmployeeForm(p => ({ ...p, firstName: e.target.value }))} maxLength={100} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Apellido paterno</label>
-                                    <input type="text" value={employeeForm.firstSurname} onChange={(e) => setEmployeeForm(p => ({ ...p, firstSurname: e.target.value }))} maxLength={150} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Apellido materno</label>
-                                    <input type="text" value={employeeForm.secondSurname} onChange={(e) => setEmployeeForm(p => ({ ...p, secondSurname: e.target.value }))} maxLength={150} />
-                                </div>
+                                <label className="hospital-admin-field"><span>Nombre(s)</span><input type="text" value={employeeForm.firstName} onChange={(e) => setEmployeeForm(p => ({ ...p, firstName: e.target.value }))} maxLength={100} required /></label>
+                                <label className="hospital-admin-field"><span>Apellido paterno</span><input type="text" value={employeeForm.firstSurname} onChange={(e) => setEmployeeForm(p => ({ ...p, firstSurname: e.target.value }))} maxLength={150} required /></label>
+                                <label className="hospital-admin-field"><span>Apellido materno</span><input type="text" value={employeeForm.secondSurname} onChange={(e) => setEmployeeForm(p => ({ ...p, secondSurname: e.target.value }))} maxLength={150} /></label>
                             </div>
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Teléfono</label>
-                                    <input type="text" value={employeeForm.phone} onChange={(e) => setEmployeeForm(p => ({ ...p, phone: e.target.value }))} maxLength={10} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Fecha de nacimiento</label>
-                                    <input type="date" value={employeeForm.birthDate} onChange={(e) => setEmployeeForm(p => ({ ...p, birthDate: e.target.value }))} required />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>CURP</label>
-                                    <input type="text" value={employeeForm.cveUnicaRegistroPob} onChange={(e) => setEmployeeForm(p => ({ ...p, cveUnicaRegistroPob: e.target.value }))} maxLength={18} required />
-                                </div>
+                                <label className="hospital-admin-field"><span>Teléfono</span><input type="text" value={employeeForm.phone} onChange={(e) => setEmployeeForm(p => ({ ...p, phone: e.target.value }))} maxLength={10} required /></label>
+                                <label className="hospital-admin-field"><span>Fecha de nacimiento</span><input type="date" value={employeeForm.birthDate} onChange={(e) => setEmployeeForm(p => ({ ...p, birthDate: e.target.value }))} required /></label>
+                                <label className="hospital-admin-field"><span>CURP</span><input type="text" value={employeeForm.cveUnicaRegistroPob} onChange={(e) => setEmployeeForm(p => ({ ...p, cveUnicaRegistroPob: e.target.value }))} maxLength={18} required /></label>
                             </div>
                             <div className="hospital-admin-form-row">
-                                <div className="hospital-admin-field">
-                                    <label>Contacto de emergencia</label>
-                                    <input type="text" value={employeeForm.emergencyContact} onChange={(e) => setEmployeeForm(p => ({ ...p, emergencyContact: e.target.value }))} maxLength={200} />
-                                </div>
-                                <div className="hospital-admin-field">
-                                    <label>Teléfono de emergencia</label>
-                                    <input type="text" value={employeeForm.emergencyPhone} onChange={(e) => setEmployeeForm(p => ({ ...p, emergencyPhone: e.target.value }))} maxLength={10} />
-                                </div>
+                                <label className="hospital-admin-field"><span>Contacto de emergencia</span><input type="text" value={employeeForm.emergencyContact} onChange={(e) => setEmployeeForm(p => ({ ...p, emergencyContact: e.target.value }))} maxLength={200} /></label>
+                                <label className="hospital-admin-field"><span>Teléfono de emergencia</span><input type="text" value={employeeForm.emergencyPhone} onChange={(e) => setEmployeeForm(p => ({ ...p, emergencyPhone: e.target.value }))} maxLength={10} /></label>
                             </div>
                             <div className="hospital-admin-form-actions">
                                 <button type="submit" className="hospital-admin-form-submit">Registrar empleado</button>
                                 <button type="button" className="hospital-admin-form-cancel" onClick={() => setShowEmployeeForm(false)}>Cancelar</button>
                             </div>
                         </form>
-                    )}
+                        </Drawer>
 
-                    <div className="hospital-admin-table-wrapper">
-                        <table className="hospital-admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Correo</th>
-                                    <th>Tipo</th>
-                                    <th>Estado</th>
-                                    <th>Admin de institución</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {institutionAdmins.map((u) => {
-                                    const isSelf = parseInt(u.user_profile_id) === parseInt(user?.profileId)
-                                    const isParamedic = parseInt(u.role_id) === 3
-                                    return (
-                                        <Fragment key={u.user_profile_id}>
-                                            <tr>
-                                                <td>{u.first_name} {u.first_surname} {u.second_surname}</td>
-                                                <td>{u.email || '—'}</td>
-                                                <td>
-                                                    {isParamedic ? (
-                                                        (() => {
-                                                            const amb = assignedAmbulance(u.assigned_ambulance_id)
-                                                            return (
-                                                                <>
-                                                                    <div className="hospital-admin-employee-type">Paramédico</div>
-                                                                    {amb ? (
-                                                                        <div className="hospital-admin-ambulance-pill">
-                                                                            Unidad {amb.unit_number} · {amb.license_plate}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="hospital-admin-shift-hint">Sin ambulancia asignada</div>
-                                                                    )}
-                                                                    {u.shift_windows && u.shift_windows.length ? (
-                                                                        <div className="hospital-admin-shift-list">
-                                                                            {u.shift_windows.map((w) => (
-                                                                                <span key={w.day} className="hospital-admin-shift-pill">
-                                                                                    {WEEKDAYS.find(d => d.value === parseInt(w.day))?.label} {w.start}-{w.end}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    ) : null}
-                                                                </>
-                                                            )
-                                                        })()
-                                                    ) : 'Empleado'}
-                                                </td>
-                                                <td>
-                                                    <span className={`hospital-admin-status ${u.is_active ? 'status-active' : 'status-inactive'}`}>
-                                                        {u.is_active ? 'Activo' : 'Inactivo'}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    {isParamedic ? '—' : (
-                                                        <span className={`hospital-admin-status ${u.is_institution_admin ? 'status-active' : 'status-inactive'}`}>
-                                                            {u.is_institution_admin ? 'Sí' : 'No'}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="hospital-admin-row-actions">
-                                                    <button className="hospital-admin-toggle-btn" onClick={() => openEditEmployee(u)}>Editar</button>
-                                                    <button className="hospital-admin-toggle-btn" onClick={() => openCredentialsEmployee(u)} disabled={!u.user_credential_id}>Credenciales</button>
-                                                    <button
-                                                        className="hospital-admin-toggle-btn"
-                                                        onClick={() => handleToggleEmployeeActive(u)}
-                                                        disabled={isSelf || !u.user_credential_id}
-                                                        title={isSelf ? 'No puedes desactivar tu propia cuenta' : undefined}
-                                                    >
-                                                        {u.is_active ? 'Desactivar' : 'Activar'}
-                                                    </button>
-                                                    {!isParamedic && (
-                                                        <button
-                                                            className="hospital-admin-toggle-btn"
-                                                            onClick={() => handleToggleInstitutionAdmin(u)}
-                                                            disabled={isSelf && u.is_institution_admin}
-                                                            title={isSelf && u.is_institution_admin ? 'No puedes quitarte tu propio privilegio de administrador' : undefined}
-                                                        >
-                                                            {u.is_institution_admin ? 'Quitar privilegio' : 'Dar privilegio'}
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                            {editingEmployeeId === u.user_profile_id && (
-                                                <tr className="hospital-admin-detail-row">
-                                                    <td colSpan={6}>
-                                                        <form className="hospital-admin-inline-form" onSubmit={handleUpdateEmployeeProfile}>
+                    <ul className="stat-strip" aria-label="Resumen del personal">
+                        <li><b><AnimatedNumber value={institutionAdmins.length} /></b><span>personas</span></li>
+                        <li><b><AnimatedNumber value={institutionAdmins.filter((x) => parseInt(x.role_id) === 3).length} /></b><span>paramédicos</span></li>
+                        <li><b><AnimatedNumber value={institutionAdmins.filter((x) => parseInt(x.role_id) !== 3).length} /></b><span>administrativos</span></li>
+                        <li className={institutionAdmins.some((x) => !x.is_active) ? 'warn' : ''}><b><AnimatedNumber value={institutionAdmins.filter((x) => !x.is_active).length} /></b><span>inactivos</span></li>
+                    </ul>
+
+                    <div className="entity-grid">
+                        {institutionAdmins.map((u) => {
+                            const isSelf = parseInt(u.user_profile_id) === parseInt(user?.profileId)
+                            const isParamedic = parseInt(u.role_id) === 3
+                            const amb = isParamedic ? assignedAmbulance(u.assigned_ambulance_id) : null
+                            const fullName = [u.first_name, u.first_surname, u.second_surname].filter(Boolean).join(' ') || 'Sin nombre'
+                            const initials = [u.first_name, u.first_surname].filter(Boolean).map((n) => n[0]).join('').toUpperCase() || '?'
+                            const editing = editingEmployeeId === u.user_profile_id
+                            const editingCreds = credentialsEmployeeId === u.user_profile_id
+                            return (
+                                <article key={u.user_profile_id} className={`entity ${isParamedic ? 'acc-medic' : 'acc-hospital'}${u.is_active ? '' : ' is-off'}${editing || editingCreds ? ' is-wide' : ''}`} aria-label={fullName}>
+                                    <div className="entity-head">
+                                        <span className="entity-avatar" aria-hidden="true">{initials}</span>
+                                        <div className="entity-titles">
+                                            <h2 className="entity-title">{fullName}</h2>
+                                            <p className="entity-sub">{u.email || 'Sin correo'}</p>
+                                        </div>
+                                        <span className={`pill ${u.is_active ? 'pill-ok' : 'pill-warn'}`}>{u.is_active ? 'Activo' : 'Inactivo'}</span>
+                                    </div>
+                                    <div className="entity-chips">
+                                        <span className="pill pill-steel">{isParamedic ? 'Paramédico' : 'Administrativo'}</span>
+                                        {!isParamedic && u.is_institution_admin ? <span className="pill pill-hosp">Administrador</span> : null}
+                                        {isSelf ? <span className="pill">Tú</span> : null}
+                                    </div>
+                                    {isParamedic && (
+                                        <dl className="entity-facts">
+                                            <div><dt>Ambulancia</dt><dd>{amb ? `${amb.unit_number} · ${amb.license_plate}` : 'Sin asignar'}</dd></div>
+                                            <div><dt>Horario</dt><dd>{compactSchedule(u.shift_windows)}</dd></div>
+                                        </dl>
+                                    )}
+
+                                    <Drawer open={Boolean(editing)} onClose={() => setEditingEmployeeId(null)} title="Editar empleado" subtitle={`${u.first_name} ${u.first_surname}`} size="md">
+<form className="hospital-admin-form" onSubmit={handleUpdateEmployeeProfile}>
                                                             <div className="hospital-admin-form-row">
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Tipo de personal</label>
-                                                                    <select value={editEmployeeForm.roleId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, roleId: e.target.value, assignedAmbulanceId: '' }))}>
+                                                                <label className="hospital-admin-field"><span>Tipo de personal</span><select value={editEmployeeForm.roleId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, roleId: e.target.value, assignedAmbulanceId: '' }))}>
                                                                         <option value="4">Empleado administrativo</option>
                                                                         <option value="3">Paramédico</option>
-                                                                    </select>
-                                                                </div>
+                                                                    </select></label>
                                                                 {parseInt(editEmployeeForm.roleId) === 3 && (
-                                                                    <div className="hospital-admin-field">
-                                                                        <label>Ambulancia asignada</label>
-<select value={editEmployeeForm.assignedAmbulanceId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, assignedAmbulanceId: e.target.value }))}>
+                                                                    <label className="hospital-admin-field"><span>Ambulancia asignada</span><select value={editEmployeeForm.assignedAmbulanceId} onChange={(e) => setEditEmployeeForm(p => ({ ...p, assignedAmbulanceId: e.target.value }))}>
                                             <option value="">Sin ambulancia</option>
                                             {ambulances.map((amb) => (
                                                 <option key={amb.ambulance_id} value={amb.ambulance_id}>{amb.unit_number}</option>
                                             ))}
-                                        </select>
-                                                                    </div>
+                                        </select></label>
                                                                 )}
                                                             </div>
 
@@ -920,119 +820,97 @@ const HospitalAdmin = () => {
                                                                 </div>
                                                             )}
                                                             <div className="hospital-admin-form-row">
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Nombre(s)</label>
-                                                                    <input type="text" value={editEmployeeForm.firstName} onChange={(e) => setEditEmployeeForm(p => ({ ...p, firstName: e.target.value }))} maxLength={100} required />
-                                                                </div>
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Apellido paterno</label>
-                                                                    <input type="text" value={editEmployeeForm.firstSurname} onChange={(e) => setEditEmployeeForm(p => ({ ...p, firstSurname: e.target.value }))} maxLength={150} required />
-                                                                </div>
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Apellido materno</label>
-                                                                    <input type="text" value={editEmployeeForm.secondSurname} onChange={(e) => setEditEmployeeForm(p => ({ ...p, secondSurname: e.target.value }))} maxLength={150} />
-                                                                </div>
+                                                                <label className="hospital-admin-field"><span>Nombre(s)</span><input type="text" value={editEmployeeForm.firstName} onChange={(e) => setEditEmployeeForm(p => ({ ...p, firstName: e.target.value }))} maxLength={100} required /></label>
+                                                                <label className="hospital-admin-field"><span>Apellido paterno</span><input type="text" value={editEmployeeForm.firstSurname} onChange={(e) => setEditEmployeeForm(p => ({ ...p, firstSurname: e.target.value }))} maxLength={150} required /></label>
+                                                                <label className="hospital-admin-field"><span>Apellido materno</span><input type="text" value={editEmployeeForm.secondSurname} onChange={(e) => setEditEmployeeForm(p => ({ ...p, secondSurname: e.target.value }))} maxLength={150} /></label>
                                                             </div>
                                                             <div className="hospital-admin-form-row">
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Teléfono</label>
-                                                                    <input type="text" value={editEmployeeForm.phone} onChange={(e) => setEditEmployeeForm(p => ({ ...p, phone: e.target.value }))} maxLength={10} required />
-                                                                </div>
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Fecha de nacimiento</label>
-                                                                    <input type="date" value={editEmployeeForm.birthDate} onChange={(e) => setEditEmployeeForm(p => ({ ...p, birthDate: e.target.value }))} required />
-                                                                </div>
-                                                                <div className="hospital-admin-field">
-                                                                    <label>CURP</label>
-                                                                    <input type="text" value={editEmployeeForm.cveUnicaRegistroPob} onChange={(e) => setEditEmployeeForm(p => ({ ...p, cveUnicaRegistroPob: e.target.value }))} maxLength={18} required />
-                                                                </div>
+                                                                <label className="hospital-admin-field"><span>Teléfono</span><input type="text" value={editEmployeeForm.phone} onChange={(e) => setEditEmployeeForm(p => ({ ...p, phone: e.target.value }))} maxLength={10} required /></label>
+                                                                <label className="hospital-admin-field"><span>Fecha de nacimiento</span><input type="date" value={editEmployeeForm.birthDate} onChange={(e) => setEditEmployeeForm(p => ({ ...p, birthDate: e.target.value }))} required /></label>
+                                                                <label className="hospital-admin-field"><span>CURP</span><input type="text" value={editEmployeeForm.cveUnicaRegistroPob} onChange={(e) => setEditEmployeeForm(p => ({ ...p, cveUnicaRegistroPob: e.target.value }))} maxLength={18} required /></label>
                                                             </div>
                                                             <div className="hospital-admin-form-row">
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Contacto de emergencia</label>
-                                                                    <input type="text" value={editEmployeeForm.emergencyContact} onChange={(e) => setEditEmployeeForm(p => ({ ...p, emergencyContact: e.target.value }))} maxLength={200} />
-                                                                </div>
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Teléfono de emergencia</label>
-                                                                    <input type="text" value={editEmployeeForm.emergencyPhone} onChange={(e) => setEditEmployeeForm(p => ({ ...p, emergencyPhone: e.target.value }))} maxLength={10} />
-                                                                </div>
+                                                                <label className="hospital-admin-field"><span>Contacto de emergencia</span><input type="text" value={editEmployeeForm.emergencyContact} onChange={(e) => setEditEmployeeForm(p => ({ ...p, emergencyContact: e.target.value }))} maxLength={200} /></label>
+                                                                <label className="hospital-admin-field"><span>Teléfono de emergencia</span><input type="text" value={editEmployeeForm.emergencyPhone} onChange={(e) => setEditEmployeeForm(p => ({ ...p, emergencyPhone: e.target.value }))} maxLength={10} /></label>
                                                             </div>
                                                             <div className="hospital-admin-form-actions">
                                                                 <button type="submit" className="hospital-admin-form-submit">Guardar cambios</button>
                                                                 <button type="button" className="hospital-admin-form-cancel" onClick={() => setEditingEmployeeId(null)}>Cancelar</button>
                                                             </div>
                                                         </form>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {credentialsEmployeeId === u.user_profile_id && (
-                                                <tr className="hospital-admin-detail-row">
-                                                    <td colSpan={6}>
-                                                        <form className="hospital-admin-inline-form" onSubmit={(e) => handleUpdateEmployeeCredentials(e, u)}>
+</Drawer>
+                                    <Drawer open={Boolean(editingCreds)} onClose={() => setCredentialsEmployeeId(null)} title="Credenciales de acceso" subtitle={`${u.first_name} ${u.first_surname}`} size="sm">
+<form className="hospital-admin-form" onSubmit={(e) => handleUpdateEmployeeCredentials(e, u)}>
                                                             <div className="hospital-admin-form-row">
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Correo electrónico</label>
-                                                                    <input type="email" value={credentialsForm.email} onChange={(e) => setCredentialsForm(p => ({ ...p, email: e.target.value }))} maxLength={150} required />
-                                                                </div>
-                                                                <div className="hospital-admin-field">
-                                                                    <label>Nueva contraseña</label>
-                                                                    <input type="password" value={credentialsForm.password} onChange={(e) => setCredentialsForm(p => ({ ...p, password: e.target.value }))} minLength={8} required />
-                                                                </div>
+                                                                <label className="hospital-admin-field"><span>Correo electrónico</span><input type="email" value={credentialsForm.email} onChange={(e) => setCredentialsForm(p => ({ ...p, email: e.target.value }))} maxLength={150} required /></label>
+                                                                <label className="hospital-admin-field"><span>Nueva contraseña</span><input type="password" value={credentialsForm.password} onChange={(e) => setCredentialsForm(p => ({ ...p, password: e.target.value }))} minLength={8} required /></label>
                                                             </div>
                                                             <div className="hospital-admin-form-actions">
                                                                 <button type="submit" className="hospital-admin-form-submit">Guardar credenciales</button>
                                                                 <button type="button" className="hospital-admin-form-cancel" onClick={() => setCredentialsEmployeeId(null)}>Cancelar</button>
                                                             </div>
                                                         </form>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </Fragment>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                        {institutionAdmins.length === 0 && <p className="empty-state">Sin usuarios de tu institución registrados.</p>}
+</Drawer>
+
+                                    <div className="entity-actions">
+                                        <button type="button" className="hospital-admin-toggle-btn" onClick={() => openEditEmployee(u)}>Editar</button>
+                                        <button type="button" className="hospital-admin-toggle-btn" onClick={() => openCredentialsEmployee(u)} disabled={!u.user_credential_id}>Credenciales</button>
+                                        <span className="spacer" />
+                                        <MoreMenu items={[
+                                            !isParamedic && {
+                                                label: u.is_institution_admin ? 'Quitar privilegio de administrador' : 'Dar privilegio de administrador',
+                                                onClick: () => handleToggleInstitutionAdmin(u),
+                                                disabled: isSelf && u.is_institution_admin,
+                                                title: isSelf && u.is_institution_admin ? 'No puedes quitarte tu propio privilegio de administrador' : undefined,
+                                            },
+                                            {
+                                                label: u.is_active ? 'Desactivar cuenta' : 'Activar cuenta',
+                                                onClick: () => handleToggleEmployeeActive(u),
+                                                disabled: isSelf || !u.user_credential_id,
+                                                danger: Boolean(u.is_active),
+                                                title: isSelf ? 'No puedes desactivar tu propia cuenta' : undefined,
+                                            },
+                                        ]} />
+                                    </div>
+                                </article>
+                            )
+                        })}
+                        {institutionAdmins.length === 0 && <p className="entity-empty">Tu institución todavía no tiene personal registrado. Usa «Nuevo empleado» para agregar al primero.</p>}
                     </div>
                 </>
             )}
 
             {activeTab === 'Mi Institución' && (
-                <form className="hospital-admin-form" onSubmit={handleUpdateAddress}>
-                    <h3>Editar Dirección de {institutionDetail?.name || 'mi institución'}</h3>
-                    <p className="hospital-admin-form-hint">El nombre y el tipo de institución son responsabilidad exclusiva de CRUM — solo puedes editar dirección, código postal y ciudad.</p>
-                    <div className="hospital-admin-field">
-                        <label>Dirección</label>
-                        <input type="text" value={editAddressForm.streetAddress} onChange={(e) => setEditAddressForm(p => ({ ...p, streetAddress: e.target.value }))} maxLength={150} required />
+                <section className="institution-tab">
+                    <div className="institution-tab-head">
+                        <h2>{institutionDetail?.name || 'Mi institución'}</h2>
+                        <p>Aquí actualizas dónde está tu institución. El nombre y el tipo los define CRUM.</p>
                     </div>
+                    <div className="institution-tab-card">
+                        <form className="hospital-admin-form" onSubmit={handleUpdateAddress}>
+                                        <p className="hospital-admin-form-hint">El nombre y el tipo de institución son responsabilidad exclusiva de CRUM — solo puedes editar dirección, código postal y ciudad.</p>
+                    <label className="hospital-admin-field"><span>Dirección</span><input type="text" value={editAddressForm.streetAddress} onChange={(e) => setEditAddressForm(p => ({ ...p, streetAddress: e.target.value }))} maxLength={150} required /></label>
                     <div className="hospital-admin-form-row">
-                        <div className="hospital-admin-field">
-                            <label>Código postal</label>
-                            <input type="text" value={editAddressForm.zipCode} onChange={(e) => setEditAddressForm(p => ({ ...p, zipCode: e.target.value }))} maxLength={5} required />
-                        </div>
-                        <div className="hospital-admin-field">
-                            <label>Estado</label>
-                            <select value={selectedStateId} onChange={(e) => { setSelectedStateId(e.target.value); setEditAddressForm(p => ({ ...p, cityId: '' })) }} required>
+                        <label className="hospital-admin-field"><span>Código postal</span><input type="text" value={editAddressForm.zipCode} onChange={(e) => setEditAddressForm(p => ({ ...p, zipCode: e.target.value }))} maxLength={5} required /></label>
+                        <label className="hospital-admin-field"><span>Estado</span><select value={selectedStateId} onChange={(e) => { setSelectedStateId(e.target.value); setEditAddressForm(p => ({ ...p, cityId: '' })) }} required>
                                 <option value="">Selecciona un estado</option>
                                 {states.map((s) => (
                                     <option key={s.state_id} value={s.state_id}>{s.name}</option>
                                 ))}
-                            </select>
-                        </div>
-                        <div className="hospital-admin-field">
-                            <label>Ciudad</label>
-                            <select value={editAddressForm.cityId} onChange={(e) => setEditAddressForm(p => ({ ...p, cityId: e.target.value }))} disabled={!selectedStateId} required>
+                            </select></label>
+                        <label className="hospital-admin-field"><span>Ciudad</span><select value={editAddressForm.cityId} onChange={(e) => setEditAddressForm(p => ({ ...p, cityId: e.target.value }))} disabled={!selectedStateId} required>
                                 <option value="">{selectedStateId ? 'Selecciona una ciudad' : 'Elige un estado primero'}</option>
                                 {cities.map((c) => (
                                     <option key={c.city_id} value={c.city_id}>{c.name}</option>
                                 ))}
-                            </select>
-                        </div>
+                            </select></label>
                     </div>
                     <div className="hospital-admin-form-actions">
                         <button type="submit" className="hospital-admin-form-submit">Guardar cambios</button>
                     </div>
                 </form>
+                    </div>
+                </section>
             )}
         </div>
     )

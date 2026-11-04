@@ -8,7 +8,10 @@ import { useAuth } from '../context/AuthContext'
 import { toLowerCaseKeys } from '../utils/formatData'
 import './Charts.css'
 
-const PIE_COLORS = ['#1565C0', '#C0272D', '#2E7D32', '#E65100', '#6A1B9A', '#00838F']
+// Colores de las series: variables de tokens.css (siguen al tema claro/oscuro)
+const PIE_COLORS = ['var(--steel)', 'var(--brand)', 'var(--ok)', 'var(--u-scene)', 'var(--u-transfer)', 'var(--text-3)']
+
+const TOOLTIP_STYLE = { background: 'var(--surface)', border: '1px solid var(--line-strong)', borderRadius: 8, color: 'var(--text)' }
 
 const Charts = () => {
     const { user, token } = useAuth()
@@ -66,25 +69,30 @@ const Charts = () => {
     }, [user, token])
 
     return (
-        <div className="charts-layout">
-            <div className="section-title">Gráficas</div>
+        <div className="page">
+            <div className="page-head">
+                <div>
+                    <h1 className="page-title">Gráficas</h1>
+                    <p className="page-sub">Cómo ha trabajado tu institución: qué pacientes recibe, cuánto tardan los traslados y qué especialidades están más ocupadas.</p>
+                </div>
+            </div>
             <div className="charts-grid">
 
                 <div className="chart-box">
-                    <h5>Pacientes recibidos por tipo</h5>
+                    <h2>Pacientes recibidos por tipo</h2>
                     <ResponsiveContainer width="100%" height={180}>
                         <BarChart data={byType}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="type_name" tick={{ fontSize: 10 }} />
-                            <YAxis allowDecimals={false} />
-                            <Tooltip />
-                            <Bar dataKey="patient_count" fill="#1565C0" radius={[2, 2, 0, 0]} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                            <XAxis dataKey="type_name" tick={{ fontSize: 12, fill: 'var(--text-2)' }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'var(--text-2)' }} />
+                            <Tooltip contentStyle={TOOLTIP_STYLE} />
+                            <Bar dataKey="patient_count" fill="var(--steel)" radius={[3, 3, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div className="chart-box">
-                    <h5>Ocupación de camas por especialidad</h5>
+                    <h2>Ocupación de camas por especialidad</h2>
                     <ResponsiveContainer width="100%" height={180}>
                         <PieChart>
                             <Pie data={bedOccupancy} dataKey="percent" nameKey="name" outerRadius={70} label={(d) => `${d.percent}%`}>
@@ -92,14 +100,14 @@ const Charts = () => {
                                     <Cell key={entry.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Legend wrapperStyle={{ fontSize: 10 }} />
-                            <Tooltip />
+                            <Legend wrapperStyle={{ fontSize: 12 }} />
+                            <Tooltip contentStyle={TOOLTIP_STYLE} />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div className="chart-box kpi-box">
-                    <h5>Tiempo promedio de traslado</h5>
+                    <h2>Tiempo promedio de traslado</h2>
                     <div className="kpi-value-big">
                         {avgTransferMinutes !== null ? `${Math.round(avgTransferMinutes)} min` : '—'}
                     </div>
@@ -107,14 +115,14 @@ const Charts = () => {
                 </div>
 
                 <div className="chart-box">
-                    <h5>Pacientes atendidos por mes</h5>
+                    <h2>Pacientes atendidos por mes</h2>
                     <ResponsiveContainer width="100%" height={180}>
                         <BarChart data={byMonth}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                            <YAxis allowDecimals={false} />
-                            <Tooltip />
-                            <Bar dataKey="patient_count" fill="#1565C0" radius={[2, 2, 0, 0]} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                            <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--text-2)' }} />
+                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'var(--text-2)' }} />
+                            <Tooltip contentStyle={TOOLTIP_STYLE} />
+                            <Bar dataKey="patient_count" fill="var(--steel)" radius={[3, 3, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

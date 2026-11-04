@@ -1,134 +1,44 @@
-.ambulance-card {
-    border: 1px solid #e4e4ec; border-left: 4px solid #ccc; border-radius: 10px; padding: 18px; background: white;
-    box-shadow: 0 1px 3px rgba(20, 20, 40, 0.04); transition: box-shadow 0.15s ease;
-}
-.ambulance-card:hover { box-shadow: 0 4px 12px rgba(20, 20, 40, 0.08); }
-.ambulance-card h5 {
-    font-size: 12px; font-weight: 700; color: #555;
-    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
-}
-.ambulance-detail { font-size: 12.5px; color: #666; margin-bottom: 4px; }
+.ambulance-card { display: grid; gap: 10px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--text-3); border-radius: var(--r-md); }
+.ambulance-card h2 { margin: 0 0 6px; font: 600 20px var(--font-display); }
+.ambulance-detail { font-size: 14px; color: var(--text-2); }
+.ambulance-status-badge { display: inline-block; padding: 1px 9px; border-radius: 11px; font-size: 12.5px; font-weight: 600; }
 
-/* ── Distinción visual por estado — franja izquierda de la tarjeta + badge ── */
-.ambulance-status-badge {
-    font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11.5px;
-}
+/* Franja y etiqueta por estado, con los mismos colores que el mapa */
+.ambulance-card.status-available { border-left-color: var(--u-free); }
+.ambulance-card.status-enroute { border-left-color: var(--u-route); }
+.ambulance-card.status-onscene { border-left-color: var(--u-scene); }
+.ambulance-card.status-transporting { border-left-color: var(--u-transfer); }
+.ambulance-card.status-outofservice, .ambulance-card.status-maintenance, .ambulance-card.status-unknown { border-left-color: var(--u-off); }
+.ambulance-card.status-reserved { border-left-color: var(--u-transfer); }
+.ambulance-status-badge.status-available { background: var(--ok-soft); color: var(--ok); }
+.ambulance-status-badge.status-enroute { background: var(--steel-soft); color: var(--steel); }
+.ambulance-status-badge.status-onscene, .ambulance-status-badge.status-transporting { background: var(--warn-soft); color: var(--warn); }
+.ambulance-status-badge.status-outofservice, .ambulance-status-badge.status-maintenance, .ambulance-status-badge.status-reserved, .ambulance-status-badge.status-unknown { background: var(--surface-2); color: var(--text-2); }
 
-.ambulance-card.status-available { border-left-color: #2E7D32; }
-.ambulance-status-badge.status-available { background: #E8F5E9; color: #2E7D32; }
+.ambulance-status-row { display: flex; gap: 8px; margin-top: 10px; }
+.ambulance-status-row .select { flex: 1; min-width: 0; }
+.detail-btn { margin-top: 6px; width: 100%; }
 
-.ambulance-card.status-enroute { border-left-color: #1565C0; }
-.ambulance-status-badge.status-enroute { background: #E3F2FD; color: #1565C0; }
+/* Detalle de la unidad + tripulación */
+.modal-backdrop { position: fixed; inset: 0; z-index: 1500; background: rgba(10, 10, 20, 0.55); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-dialog { background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-md); width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto; }
+.modal-dialog .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+.modal-dialog .modal-title { margin: 0; font: 600 22px var(--font-display); }
+.modal-dialog .modal-body { padding: 14px 18px 18px; display: grid; gap: 4px; }
+.detail-panel-title { margin: 12px 0 4px; font: 600 16px var(--font-display); }
+.ambulance-crew-empty { font-size: 14px; color: var(--text-2); }
+.ambulance-crew-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.crew-online-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+.crew-name { font-weight: 600; font-size: 14px; }
+.crew-name.crew-on-schedule { color: var(--ok); }
+.crew-schedule { font: 500 12.5px var(--font-id); color: var(--text-2); }
 
-.ambulance-card.status-onscene { border-left-color: #E67E22; }
-.ambulance-status-badge.status-onscene { background: #FDF2E3; color: #E67E22; }
-
-.ambulance-card.status-transporting { border-left-color: #E65100; }
-.ambulance-status-badge.status-transporting { background: #FBE9E7; color: #E65100; }
-
-.ambulance-card.status-outofservice { border-left-color: #757575; }
-.ambulance-status-badge.status-outofservice { background: #F0F0F0; color: #757575; }
-
-.ambulance-card.status-maintenance { border-left-color: #757575; }
-.ambulance-status-badge.status-maintenance { background: #F0F0F0; color: #757575; }
-
-.ambulance-card.status-reserved { border-left-color: #7B1FA2; }
-.ambulance-status-badge.status-reserved { background: #F3E5F5; color: #7B1FA2; }
-
-.ambulance-card.status-unknown { border-left-color: #ccc; }
-.ambulance-status-badge.status-unknown { background: #F0F0F0; color: #666; }
-
-.ambulance-status-row { display: flex; gap: 6px; margin-top: 12px; }
-.ambulance-status-row select {
-    flex: 1; border: 1px solid #dcdce4; border-radius: 6px; padding: 8px; font-size: 12.5px;
-}
-
-.update-btn {
-    background: #1565C0; color: white; border: 1px solid #1565C0;
-    border-radius: 6px; padding: 8px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
-    transition: background 0.15s ease;
-}
-.update-btn:hover:not(:disabled) { background: #104e96; }
-.update-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.detail-btn {
-    margin-top: 12px; width: 100%;
-    background: white; color: #1565C0;
-    border: 1px solid #1565C0; border-radius: 6px;
-    padding: 8px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
-    transition: background 0.15s ease;
-}
-.detail-btn:hover { background: #E3F2FD; }
-
-/* Modal de detalle de la unidad + tripulación */
-.modal-backdrop {
-    position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-}
-
-.modal-dialog {
-    background: white; border-radius: 12px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-    width: 100%; max-width: 460px;
-    max-height: 85vh; overflow-y: auto;
-}
-
-.modal-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 18px 12px;
-    border-bottom: 1px solid #e4e4ec;
-    position: sticky; top: 0; background: white;
-}
-
-.modal-title {
-    font-size: 16px; font-weight: 800; color: #1a1a2e;
-}
-
-.modal-close {
-    background: #f1f1f6; border: none; border-radius: 50%;
-    width: 30px; height: 30px;
-    font-size: 20px; line-height: 1; color: #555; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-}
-.modal-close:hover { background: #e2e2ec; color: #1a1a2e; }
-
-.modal-body {
-    padding: 14px 18px 18px;
-    display: flex; flex-direction: column; gap: 5px;
-}
-
-.detail-panel-title {
-    font-size: 11px; font-weight: 700; color: #1a1a2e;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    margin-top: 10px; padding-bottom: 4px; border-bottom: 1px solid #e4e4ec;
-}
-.detail-panel-title:first-child { margin-top: 0; }
-
-.ambulance-crew-empty { font-size: 12.5px; color: #999; padding: 2px 0; }
-
-.ambulance-crew-row {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 12.5px; padding: 3px 0;
-    border-bottom: 1px solid #eee;
-}
-.ambulance-crew-row:last-child { border-bottom: none; }
-
-.crew-online-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #2fbf4f; flex-shrink: 0;
-}
-
-.crew-name { color: #333; }
-.crew-name.crew-on-schedule { font-weight: 800; color: #1a1a2e; }
-
-.crew-schedule {
-    color: #666; font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    white-space: nowrap;
-}
-
-.crew-online-label {
-    margin-left: auto; font-size: 10.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.4px; color: #2fbf4f;
-}
+.ambulance-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ambulance-head h2 { margin: 0; }
+.ambulance-sub { margin: 2px 0 0; font-size: 13.5px; color: var(--text-2); }
+.ambulance-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 22px; margin: 0; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ambulance-facts > div { min-width: 0; }
+.ambulance-facts dt { font-size: 12px; color: var(--text-3); font-weight: 600; }
+.ambulance-facts dd { margin: 1px 0 0; font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.ambulance-online { color: var(--ok); font-weight: 600; }
+.ambulance-status-row { margin-top: 0; }

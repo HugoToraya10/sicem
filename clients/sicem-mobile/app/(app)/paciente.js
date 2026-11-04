@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
+import { Alert } from '../../utils/alert'
 import { useRouter } from 'expo-router'
 import { useFocusEffect } from '@react-navigation/native'
 import { useAuth } from '../../context/AuthContext'
@@ -7,6 +8,8 @@ import { useAmbulance } from '../../context/AmbulanceContext'
 import { useSocketAlerts } from '../../context/SocketContext'
 import { API_BASE_URL } from '../../constants/api'
 import { toLowerCaseKeys } from '../../utils/formatData'
+import { colors, contentColumn, TOUCH } from '../../constants/theme'
+import { Reveal, Button } from '../../components/ui'
 
 const PacienteScreen = () => {
     const { token } = useAuth()
@@ -46,9 +49,11 @@ const PacienteScreen = () => {
             headers,
             body: JSON.stringify({ emergencyPatientId, newDestinationInstitutionId })
         })
-            .then((res) => res.json())
-            .then((body) => {
+            .then((res) => res.json().then((body) => {
                 if (!res.ok) throw new Error(body.message || 'No se pudo reasignar el destino')
+                return body
+            }))
+            .then(() => {
                 setReassigningPatientId(null)
                 fetchEmergencyPatients()
             })
@@ -86,7 +91,7 @@ const PacienteScreen = () => {
         setSearching(true)
         setFound(null)
 
-        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-curp/${curp.trim()}`, { headers: { 'Content-Type': 'application/json' } })
+        fetch(`${API_BASE_URL}/usuarios/obtener-usuario-curp/${encodeURIComponent(curp.trim().toUpperCase())}`, { headers: { 'Content-Type': 'application/json' } })
             .then((res) => res.json())
             .then(({ data }) => {
                 setSearching(false)
@@ -111,13 +116,14 @@ const PacienteScreen = () => {
     }
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
             <Text style={styles.title}>Pacientes</Text>
+            <Text style={styles.lead}>{acceptedEmergency ? 'Quién va en tu emergencia y a qué hospital lo llevas.' : 'Busca un paciente por CURP para consultar o completar su expediente.'}</Text>
 
             {acceptedEmergency && (
-                <View style={styles.section}>
+                <Reveal><View style={styles.section}>
                     <Text style={styles.sectionTitle}>Pacientes de esta emergencia</Text>
-                    {loadingEmergencyPatients && <ActivityIndicator color="#1565C0" style={{ marginVertical: 8 }} />}
+                    {loadingEmergencyPatients && <ActivityIndicator color={colors.steel} style={{ marginVertical: 8 }} />}
                     {!loadingEmergencyPatients && emergencyPatients.length === 0 && (
                         <Text style={styles.hint}>Todavía no hay pacientes registrados en esta emergencia.</Text>
                     )}
@@ -135,11 +141,11 @@ const PacienteScreen = () => {
                                             {p.first_name ? `${p.first_name} ${p.first_surname || ''}` : 'Paciente no identificado'}
                                             {isMine && <Text style={styles.mineTag}> · tu unidad</Text>}
                                         </Text>
-                                        <Text style={styles.patientRowMeta}>
-                                            CURP: {p.curp || 'sin registrar'}
-                                            {'\n'}{p.destination_institution_name ? `→ ${p.destination_institution_name}` : 'Sin hospital destino'}
-                                            {p.reception_status_name ? ` · ${p.reception_status_name}` : ''}
+                                        <Text style={styles.patientRowMeta}>CURP: {p.curp || 'sin registrar'}</Text>
+                                        <Text style={[styles.destination, !p.destination_institution_name && styles.destinationMissing]}>
+                                            {p.destination_institution_name ? `→ ${p.destination_institution_name}` : 'Sin hospital destino'}
                                         </Text>
+                                        {p.reception_status_name ? <Text style={styles.statusPill}>{p.reception_status_name}</Text> : null}
                                     </View>
                                     <Text style={styles.chevron}>›</Text>
                                 </TouchableOpacity>
@@ -171,21 +177,21 @@ const PacienteScreen = () => {
                             </View>
                         )
                     })}
-                    <TouchableOpacity
-                        style={styles.linkButton}
+                    <Button
+                        label="Registrar paciente en esta emergencia"
+                        tone={emergencyPatients.length === 0 ? 'steel' : 'neutral'}
                         onPress={() => router.push({ pathname: '/registrar-paciente', params: { emergencyId: acceptedEmergency.emergencyId } })}
-                    >
-                        <Text style={styles.linkButtonText}>+ Registrar paciente nuevo en esta emergencia</Text>
-                    </TouchableOpacity>
-                </View>
+                        style={{ marginTop: 14 }}
+                    />
+                </View></Reveal>
             )}
 
-            <View style={styles.section}>
+            <Reveal delay={90}><View style={styles.section}>
                 <Text style={styles.sectionTitle}>Buscar cualquier paciente por CURP</Text>
                 <View style={styles.row}>
-                    <TextInput style={[styles.input, { flex: 1 }]} placeholder="CURP del paciente" value={curp} onChangeText={setCurp} autoCapitalize="characters" maxLength={18} />
+                    <TextInput style={[styles.input, { flex: 1 }]} placeholder="CURP del paciente" value={curp} onChangeText={(v) => setCurp(v.toUpperCase())} autoCapitalize="characters" maxLength={18} />
                     <TouchableOpacity style={styles.searchBtn} onPress={handleSearch} disabled={searching}>
-                        {searching ? <ActivityIndicator color="#1565C0" /> : <Text style={styles.searchBtnText}>Buscar</Text>}
+                        {searching ? <ActivityIndicator color={colors.steel} /> : <Text style={styles.searchBtnText}>Buscar</Text>}
                     </TouchableOpacity>
                 </View>
 
@@ -217,36 +223,41 @@ const PacienteScreen = () => {
                         <Text style={styles.chevron}>›</Text>
                     </TouchableOpacity>
                 )}
-            </View>
+            </View></Reveal>
         </ScrollView>
     )
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    title: { fontSize: 20, fontWeight: '700', color: '#1a1a2e', marginBottom: 12 },
-    section: { marginBottom: 20 },
-    sectionTitle: { fontSize: 12, fontWeight: '700', color: '#555', textTransform: 'uppercase', marginBottom: 8 },
+    container: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: 16, gap: 4, ...contentColumn },
+    title: { fontSize: 22, fontWeight: '700', color: colors.text },
+    lead: { fontSize: 14, color: colors.text2, marginTop: 2, marginBottom: 14 },
+    section: { marginBottom: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 16, shadowColor: '#101828', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 8 },
     row: { flexDirection: 'row', gap: 8 },
-    input: { borderWidth: 1, borderColor: '#dcdce4', borderRadius: 8, padding: 10, fontSize: 14 },
-    searchBtn: { borderWidth: 1, borderColor: '#1565C0', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14 },
-    searchBtnText: { color: '#1565C0', fontWeight: '600', fontSize: 13 },
-    hint: { fontSize: 12, color: '#999', marginTop: 4 },
+    input: { borderWidth: 1, borderColor: colors.lineStrong, borderRadius: 8, paddingHorizontal: 12, minHeight: TOUCH, fontSize: 15, color: colors.text, backgroundColor: colors.surface },
+    searchBtn: { borderWidth: 1, borderColor: colors.steel, borderRadius: 8, minHeight: TOUCH, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
+    searchBtnText: { color: colors.steel, fontWeight: '700', fontSize: 14 },
+    hint: { fontSize: 13, color: colors.text3, marginTop: 4 },
     notFoundBox: { marginTop: 12 },
-    notFoundText: { color: '#E67E22', fontSize: 13, fontStyle: 'italic' },
-    patientRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e4e4ec', borderRadius: 8, padding: 12, marginTop: 8 },
-    patientRowName: { fontSize: 14, fontWeight: '700', color: '#222' },
-    mineTag: { fontSize: 11, fontWeight: '600', color: '#2E7D32' },
-    patientRowMeta: { fontSize: 11, color: '#888', marginTop: 2 },
-    chevron: { fontSize: 22, color: '#ccc', marginLeft: 8 },
-    linkButton: { marginTop: 12, padding: 6 },
-    linkButtonText: { color: '#1565C0', fontSize: 13, fontWeight: '600' },
-    reassignBox: { borderWidth: 1, borderColor: '#b39ddb', borderRadius: 8, padding: 10, marginTop: 8, backgroundColor: '#f3eefb' },
-    reassignTitle: { fontSize: 12, fontWeight: '700', color: '#6a1b9a', marginBottom: 8 },
-    reassignOption: { paddingVertical: 8, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: '#e0d4f0' },
-    reassignOptionText: { fontSize: 13, color: '#222' },
-    reassignCancel: { marginTop: 8, padding: 6, alignItems: 'center' },
-    reassignCancelText: { color: '#888', fontSize: 13, fontWeight: '600' },
+    notFoundText: { color: colors.warn, fontSize: 14, fontWeight: '600' },
+    patientRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.line, borderLeftWidth: 4, borderLeftColor: colors.steel, borderRadius: 8, padding: 12, marginTop: 8, backgroundColor: colors.surface2, minHeight: TOUCH },
+    patientRowName: { fontSize: 15, fontWeight: '700', color: colors.text },
+    mineTag: { fontSize: 13, fontWeight: '600', color: colors.ok },
+    patientRowMeta: { fontSize: 13, color: colors.text3, marginTop: 2 },
+    destination: { fontSize: 14, fontWeight: '600', color: colors.steel, marginTop: 4 },
+    destinationMissing: { color: colors.brand },
+    statusPill: { alignSelf: 'flex-start', marginTop: 6, fontSize: 12.5, fontWeight: '600', color: colors.text2, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 11, paddingHorizontal: 10, paddingVertical: 2, overflow: 'hidden' },
+    chevron: { fontSize: 24, color: colors.text3, marginLeft: 8 },
+    linkButton: { marginTop: 10, minHeight: TOUCH, justifyContent: 'center', paddingHorizontal: 4 },
+    linkButtonText: { color: colors.steel, fontSize: 14, fontWeight: '700' },
+    reassignBox: { borderWidth: 1, borderColor: colors.hosp, borderRadius: 8, padding: 10, marginTop: 8, backgroundColor: colors.surface2 },
+    reassignTitle: { fontSize: 14, fontWeight: '700', color: colors.hosp, marginBottom: 6 },
+    reassignOption: { minHeight: TOUCH, justifyContent: 'center', paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: colors.line },
+    reassignOptionText: { fontSize: 15, color: colors.text },
+    reassignCancel: { marginTop: 4, minHeight: TOUCH, alignItems: 'center', justifyContent: 'center' },
+    reassignCancelText: { color: colors.text2, fontSize: 14, fontWeight: '600' },
 })
 
 export default PacienteScreen

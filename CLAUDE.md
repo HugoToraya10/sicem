@@ -7,3 +7,6 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## Diseño de sicem-web
+- Antes de tocar UI en `clients/sicem-web`, lee `clients/sicem-web/DESIGN.md` (tokens en `src/styles/tokens.css`; no usar colores escritos a mano).
